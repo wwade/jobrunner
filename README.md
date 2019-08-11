@@ -2,10 +2,13 @@
 Job runner with logging
 
 ## Installation
+Install system-wide:
 ```
-git clone https://github.com/wwade/jobrunner.git
-pip install [--user] $PWD/jobrunner
-rm -r jobrunner # optional cleanup
+pip install git+https://github.com/wwade/jobrunner.git
+```
+Install just for the current user:
+```
+pip install --user git+https://github.com/wwade/jobrunner.git
 ```
 
 ## Uninstallation
