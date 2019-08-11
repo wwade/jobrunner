@@ -1,0 +1,4 @@
+#!/bin/sh
+set -xe
+autopep8 -j32 -rai job setup.py jobrunner
+pylint job setup.py jobrunner
