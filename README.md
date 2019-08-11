@@ -4,7 +4,8 @@ Job runner with logging
 ## Installation
 ```
 git clone https://github.com/wwade/jobrunner.git
-pip install [--user] $PWD/job
+pip install [--user] $PWD/jobrunner
+rm -r jobrunner # optional cleanup
 ```
 
 ## Uninstallation
