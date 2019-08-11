@@ -288,7 +288,7 @@ class Jobs(object):
             if curWs:
                 jobList = [j for j in jobList if curWs == j.workspace]
         if filterPane:
-            curPane = os.environ.get('TMUX_PANE', None)
+            curPane = os.getenv('TMUX_PANE', None)
             if curPane:
                 jobList = [
                     j for j in jobList if j.matchEnv(

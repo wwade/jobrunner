@@ -33,7 +33,7 @@ class Config(object):
         cfgParser = ConfigParser.ConfigParser()
         cfgParser.read(rcFile)
         self._mailDomain = _getConfig(
-            cfgParser, "mail", "domain", os.environ.get('HOSTNAME'))
+            cfgParser, "mail", "domain", os.getenv('HOSTNAME'))
         self._mailProgram = _getConfig(cfgParser, "mail", "program", "mail")
 
     @property

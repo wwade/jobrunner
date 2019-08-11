@@ -39,11 +39,11 @@ class JobInfo(object):
         self._stop = None
         self._depends = None
         self._alldeps = set()
-        self._host = os.environ['HOSTNAME']
-        self._user = os.environ['USER']
+        self._host = os.getenv('HOSTNAME')
+        self._user = os.getenv('USER')
         self._env = {key: value for key, value in os.environ.items()}
         self._workspace = workspaceIdentity()
-        self._proj = os.environ['WP'] if 'WP' in os.environ else None
+        self._proj = os.getenv('WP')
         self._rc = None
         self.logfile = None
         self._key = key

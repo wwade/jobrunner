@@ -137,7 +137,7 @@ def main(args=None):
     op.add_argument("-t", "--to", metavar="ADDRESS",
                     help="Specify 'to' address for mail notification "
                     "(default=%(default)s)",
-                    default=os.environ['USER'])
+                    default=os.getenv('USER'))
     op.add_argument("--cc", metavar="ADDRESS", action="append",
                     help="Specify 'CC' address for mail notification")
 
@@ -149,9 +149,7 @@ def main(args=None):
         dest='stateDir',
         metavar="DIR",
         help="Specify state directory (default='%(default)s')",
-        default=os.environ.get(
-            'JOBRUNNER_STATE_DIR',
-            "~/.local/share/jobDb"))
+        default=os.getenv('JOBRUNNER_STATE_DIR', "~/.local/share/jobDb"))
     op.add_argument("--rc-file", dest="rcFile",
                     help="Specify path to rc-file (default=\"%(default)s\")",
                     default="~/.config/jobrc")
@@ -164,10 +162,10 @@ def main(args=None):
                     help='Show dependency graph for active jobs')
     op.add_argument("--png", action='store_true',
                     help='Create dependency graph svg for active jobs in '
-                    '~%s/output/job.svg' % os.environ.get('USER'))
+                    '~%s/output/job.svg' % os.getenv('USER'))
     op.add_argument("--svg", action='store_true',
                     help='Create dependency graph png for active jobs in '
-                    '~%s/output/job.svg' % os.environ.get('USER'))
+                    '~%s/output/job.svg' % os.getenv('USER'))
     op.add_argument("--index", "-n", action='append', type=int,
                     help='Get log file name, by index, from recent jobs')
     op.add_argument("-L", "--list-inactive", action="store_true",
@@ -293,7 +291,7 @@ def main(args=None):
         if options.dot:
             print(dot)
         else:
-            fName = '~%s/output/job.svg' % os.environ.get('USER')
+            fName = '~%s/output/job.svg' % os.getenv('USER')
             ofile = os.path.expanduser(fName)
             cmd = ['dot', '-Tsvg', '-o', ofile]
             proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
