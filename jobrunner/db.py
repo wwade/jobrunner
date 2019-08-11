@@ -718,7 +718,7 @@ class Jobs(object):
                 if depSuccess is not None:
                     depSuccess.append(depJob)
 
-    def uidx(self):
+    def uidx(self, what=None):
         return self.active.uidx()
 
     def new(self, cmd, isolate, autoJob=False, key=None, reminder=None):
