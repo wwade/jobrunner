@@ -2,7 +2,7 @@ language: python
 python:
     - "2.7"
 install:
-    - python setup.py install
+    - pip install .
 script:
     - pytest
     - pylint job setup.py jobrunner

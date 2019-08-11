@@ -1,4 +1,5 @@
 . venv/bin/activate
 export JOBRUNNER_STATE_DIR=${PWD}/cfg/
-pip install pudb pdbpp autopep8 ipython nose mock
+pip install -r requirements.txt
+pip install pudb pdbpp autopep8 ipython
 python setup.py develop

@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='jobrunner',
     version='1.0',
+    description='Job runner with logging',
     packages=find_packages(exclude=[
         'jobrunner.test',
         'jobrunner.test.*',
