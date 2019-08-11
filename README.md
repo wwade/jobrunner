@@ -8,7 +8,9 @@ pip install [--user] $PWD/job
 ```
 
 ## Uninstallation
+```
 pip uninstall jobrunner
+```
 
 ## Examples
 * Run `sleep 5` in the background
