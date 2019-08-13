@@ -20,7 +20,31 @@ def _getConfig(cfgParser, section, option, defaultValue=None):
     return cfgParser.get(section, option)
 
 
+class ConfigError(Exception):
+    pass
+
+
 class Config(object):
+    validConfig = {
+        'mail': {'domain', 'program'},
+    }
+
+    def _validateConfigParser(self, cfgParser):
+        cfgSections = set(cfgParser.sections())
+        unknownSections = cfgSections - set(self.validConfig.keys())
+        if unknownSections:
+            raise ConfigError(
+                "RC file has unknown configuration sections: {}".format(
+                    ", ".join(sorted(unknownSections))))
+        for section in cfgSections:
+            cfgValues = set(cfgParser.options(section))
+            unknownOptions = cfgValues - self.validConfig[section]
+            if unknownOptions:
+                raise ConfigError(
+                    "RC file has unknown configuration options in "
+                    "section \"{}\": {}".format(section,
+                                                ", ".join(sorted(unknownOptions))))
+
     def __init__(self, options):
         stateDir = options.stateDir
         self.options = options
@@ -35,6 +59,7 @@ class Config(object):
         self._mailDomain = _getConfig(
             cfgParser, "mail", "domain", os.getenv('HOSTNAME'))
         self._mailProgram = _getConfig(cfgParser, "mail", "program", "mail")
+        self._validateConfigParser(cfgParser)
 
     @property
     def verbose(self):
