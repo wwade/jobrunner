@@ -7,6 +7,3 @@ install:
 script:
     - pytest
     - pylint job setup.py jobrunner
-os:
-    - linux
-    - osx
