@@ -16,7 +16,7 @@ setup(
     test_suite='nose.collector',
     tests_require=[
         'mock',
-        'nose',
+        'pytest',
     ],
     scripts=[
         'job',
