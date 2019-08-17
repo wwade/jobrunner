@@ -14,15 +14,15 @@ jobs:
                 architecture: 'x64'
   
           - script:
-              python -m pip install --upgrade pip
-              pip install -r requirements.txt
+              - python -m pip install --upgrade pip
+              - pip install -r requirements.txt
             displayName: 'Install dependencies'
   
           - script :
-              pylint job setup.py jobrunner
-              autopep8 -j32 -ra job setup.py jobrunner
+              - pylint job setup.py jobrunner
+              - autopep8 -j32 -ra job setup.py jobrunner
             displayName: 'Run linters'
   
           - script :
-              pytest
+              - pytest
             displayName: 'Run tests'
