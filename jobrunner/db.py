@@ -1,5 +1,5 @@
 from __future__ import absolute_import, division, print_function
-import dumbdbm
+import anydbm
 import datetime
 import fcntl
 import os
@@ -21,7 +21,7 @@ PRUNE_NUM = 5000
 
 
 class Database(object):
-    schemaVersion = "3"
+    schemaVersion = "4"
     SV = '_schemaVersion_'
     LASTKEY = '_lastKey_'
     ITEMCOUNT = '_itemCount_'
@@ -38,11 +38,11 @@ class Database(object):
 
     @property
     def db(self):
-        db = dumbdbm.open(self.dbFile, 'c')
+        db = anydbm.open(self.dbFile, 'c')
         if (self.SV not in db or
                 db[self.SV] != self.schemaVersion):
             db.close()
-            db = dumbdbm.open(self.dbFile, 'n')
+            db = anydbm.open(self.dbFile, 'n')
             db[self.SV] = self.schemaVersion
             db[self.LASTKEY] = ""
             db[self.LASTJOB] = ""
