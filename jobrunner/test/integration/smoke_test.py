@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from contextlib import contextmanager
 from shutil import rmtree
-from subprocess import check_call, check_output, STDOUT
+from subprocess import check_call, check_output, STDOUT, CalledProcessError
 from tempfile import mkdtemp
 from unittest import TestCase, main
 import os
@@ -60,10 +60,14 @@ def testEnv():
 
 def run(cmd, capture=False):
     print('+', ' '.join(cmd))
-    if capture:
-        return check_output(cmd, stderr=STDOUT)
-    else:
-        return check_call(cmd)
+    try:
+        if capture:
+            return check_output(cmd, stderr=STDOUT)
+        else:
+            return check_call(cmd)
+    except CalledProcessError as er:
+        print(er.output)
+        raise
 
 
 def waitFor(func, timeout=10.0, failArg=True):
