@@ -36,8 +36,7 @@ class Database(object):
         self.dbFile = self.config.dbDir + dbFile
         self._parent = parent
 
-    @property
-    def db(self):
+    def _openDb(self):
         db = anydbm.open(self.dbFile, 'c')
         if (self.SV not in db or
                 db[self.SV] != self.schemaVersion):
@@ -49,6 +48,16 @@ class Database(object):
             db[self.ITEMCOUNT] = "0"
             db[self.CHECKPOINT] = ""
         return db
+
+    @property
+    def db(self):
+        for _ in range(5):
+            try:
+                return self._openDb()
+            except anydbm.error as error:  # pylint: disable=catching-non-exception
+                if error.args[0] != 11:
+                    raise
+                time.sleep(0.25)
 
     def filterJobs(self, k):
         return k not in self.special
