@@ -109,7 +109,7 @@ def main(args=None):
                     help="Specify complete bash command to execute "
                     "(argument to bash -c)")
     op.add_argument("--count", action="store_true",
-                    help="Count jobs in inactive database" )
+                    help="Count jobs in inactive database")
     op.add_argument("--retry", metavar="KEY", action="store",
                     help="Retry job specified by KEY")
     op.add_argument(
