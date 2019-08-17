@@ -20,7 +20,7 @@ jobs:
           - script: pylint job setup.py jobrunner
             displayName: 'Run pylint'
 
-          - script: autopep8 --exit-code -j32 -ra job setup.py jobrunner
+          - script: autopep8 --exit-code -ra --diff job setup.py jobrunner
             displayName: 'Run autopep8'
   
           - script: pytest
