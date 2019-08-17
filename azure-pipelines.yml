@@ -1,30 +1,12 @@
 jobs:
-    - job: 'jobrunner'
+    - job: 'jobrunner_Linux'
       pool:
           vmImage: 'Ubuntu-16.04'
-      strategy:
-          matrix:
-              Python27:
-                  python.version: '2.7'
-  
       steps:
-          - task: UsePythonVersion@0
-            inputs:
-                versionSpec: '$(python.version)'
-                architecture: 'x64'
-  
-          - script:
-              pip install --upgrade pip && pip install -r requirements.txt
-            displayName: 'Install dependencies'
-  
-          - script: pylint job setup.py jobrunner
-            displayName: 'Run pylint'
+          - template: templates/steps.yaml
 
-          - script: autopep8 --exit-code -ra --diff job setup.py jobrunner
-            displayName: 'Run autopep8'
-
-          - script: python setup.py install
-            displayName: 'Install jobrunner'
-  
-          - script: pytest
-            displayName: 'Run tests'
+    - job: 'jobrunner_Mojave'
+      pool:
+          vmImage: 'macOS-10.14'
+      steps:
+          - template: templates/steps.yaml
