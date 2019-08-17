@@ -374,6 +374,9 @@ class Jobs(object):
         dot += '}'
         return dot
 
+    def countInactive(self):
+        return len(self.inactive.db)
+
     def listActive(self, thisWs, pane, useCp):
         self.listDb(
             self.active,

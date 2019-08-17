@@ -108,6 +108,8 @@ def main(args=None):
     op.add_argument("-c", "--command", metavar="CMD",
                     help="Specify complete bash command to execute "
                     "(argument to bash -c)")
+    op.add_argument("--count", action="store_true",
+                    help="Count jobs in inactive database" )
     op.add_argument("--retry", metavar="KEY", action="store",
                     help="Retry job specified by KEY")
     op.add_argument(
@@ -303,6 +305,9 @@ def main(args=None):
         sys.exit(0)
     elif options.list_inactive:
         jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
+        sys.exit(0)
+    elif options.count:
+        print(jobs.countInactive())
         sys.exit(0)
     elif options.get_all_logs:
         logs = []
