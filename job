@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import errno
 import hashlib
 import os
 import subprocess
@@ -336,7 +337,12 @@ def main(args=None):
             j = jobs.getJobMatch(k, options.tw)
             print("==============================================")
             print(j)
-            print(subprocess.check_output(['pstree', '-alpg', str(j.pid)]))
+            try:
+                print(subprocess.check_output(['pstree', '-alpg', str(j.pid)]))
+            except OSError as error:
+                if error.errno != errno.ENOENT:
+                    raise
+                print(subprocess.check_output(['ps', '-fp', str(j.pid)]))
             print("==============================================")
         sys.exit(0)
     elif options.last_key:
