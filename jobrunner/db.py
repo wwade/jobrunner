@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import anydbm
-import datetime
+from datetime import datetime
 import errno
 import fcntl
 import os
@@ -9,7 +9,8 @@ import sys
 import tempfile
 import time
 
-import dateutil.tz
+from dateutil import parser
+from dateutil.tz import tzlocal, tzutc
 import simplejson as json
 
 import jobrunner.utils as utils
@@ -90,27 +91,27 @@ class Database(object):
     def getCheckpoint(self):
         try:
             return dateTimeFromJson(json.loads(self.db[self.CHECKPOINT]))
-        except KeyError:
-            return datetime.datetime.utcfromtimestamp(0)
-        except EOFError:
-            return datetime.datetime.utcfromtimestamp(0)
+        except (KeyError, EOFError):
+            epoch = datetime.utcfromtimestamp(0)
+            return epoch.replace(tzinfo=tzutc())
 
     def setCheckpoint(self, val):
         if isinstance(val, str):
             if val.strip() == ".":
                 checkpoint = utcNow()
             else:
-                checkpoint = dateutil.parser.parse(val)
+                checkpoint = parser.parse(val)
                 if not checkpoint.tzinfo:
-                    checkpoint = checkpoint.replace(
-                        tzinfo=dateutil.tz.tzlocal())
-        elif isinstance(val, datetime.datetime):
-            if not checkpoint.tzinfo:
-                checkpoint = checkpoint.replace(tzinfo=dateutil.tz.tzlocal())
+                    checkpoint = checkpoint.replace(tzinfo=tzlocal())
+        elif isinstance(val, datetime):
+            if not val.tzinfo:
+                checkpoint = val.replace(tzinfo=tzlocal())
+            else:
+                checkpoint = val
         else:
             raise ValueError(
                 "Expecting either a string or a datetime.datetime")
-        utc = checkpoint.astimezone(dateutil.tz.tzutc())
+        utc = checkpoint.astimezone(tzutc())
         self.db[self.CHECKPOINT] = json.dumps(dateTimeToJson(utc))
 
     checkpoint = property(getCheckpoint, setCheckpoint)
@@ -535,7 +536,7 @@ class Jobs(object):
                   verbose)
 
     def showJobList(self, joblist, tag, clearLen):
-        timestr = datetime.datetime.now().strftime(utils.DATETIME_FMT)
+        timestr = datetime.now().strftime(utils.DATETIME_FMT)
         joblist = sorted(joblist)
         for jobKey in joblist:
             workspace = ""
@@ -585,7 +586,7 @@ class Jobs(object):
             finishedJobs = set(curJobs) - set(newJobs)
             curJobs = newJobs
             sys.stdout.write("\r")
-            now = datetime.datetime.now()
+            now = datetime.now()
             timeNow = time.time()
             if finishedJobs:
                 self.showJobList(finishedJobs, "done", clearLen)
@@ -644,7 +645,7 @@ class Jobs(object):
         else:
             activityLevel = 1
         today = []
-        tnow = datetime.datetime.now()
+        tnow = datetime.now()
         unow = utcNow()
         perWs = {}
         remind = {}
