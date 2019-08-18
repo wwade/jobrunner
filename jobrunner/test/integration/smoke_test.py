@@ -252,13 +252,12 @@ class RunNonExecOptionsTest(TestCase):
             # --info
             self.assertIn("activeJobs", job('--info'))
 
-            # TODO
-            # --set-checkpoint
-            #job('--set-checkpoint', '.')
+            #  --set-checkpoint
+            job('--set-checkpoint', '.')
             # --since-checkpoint
-            # self.assertIn(
-            #    '(None)', job(
-            #        '--since-checkpoint', '--list-inactive'))
+            self.assertIn(
+                '(None)', job(
+                    '--since-checkpoint', '--list-inactive'))
 
             # --prune-except
             job('--prune-except', '1')

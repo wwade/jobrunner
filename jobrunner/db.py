@@ -13,7 +13,14 @@ import dateutil.tz
 
 import jobrunner.utils as utils
 from .info import JobInfo, encodeJobInfo, decodeJobInfo
-from .utils import utcNow, stackDetails, pidDebug, doMsg
+from .utils import (
+    dateTimeFromJson,
+    dateTimeToJson,
+    doMsg,
+    pidDebug,
+    stackDetails,
+    utcNow,
+)
 
 NUM_RECENT = 100
 PRUNE_NUM = 5000
@@ -80,7 +87,7 @@ class Database(object):
 
     def getCheckpoint(self):
         try:
-            return json.loads(self.db[self.CHECKPOINT])
+            return dateTimeFromJson(json.loads(self.db[self.CHECKPOINT]))
         except KeyError:
             return datetime.datetime.utcfromtimestamp(0)
         except EOFError:
@@ -102,7 +109,7 @@ class Database(object):
             raise ValueError(
                 "Expecting either a string or a datetime.datetime")
         utc = checkpoint.astimezone(dateutil.tz.tzutc())
-        self.db[self.CHECKPOINT] = json.dumps(utc)
+        self.db[self.CHECKPOINT] = json.dumps(dateTimeToJson(utc))
 
     checkpoint = property(getCheckpoint, setCheckpoint)
 
