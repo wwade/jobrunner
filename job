@@ -12,23 +12,23 @@ import tempfile
 import dateutil.parser
 import dateutil.tz
 
+from jobrunner.config import RC_FILE_HELP, Config
 from jobrunner.db import Jobs
+from jobrunner.plugins import Plugins
 from jobrunner.utils import (
     DATETIME_FMT,
-    keyEscape,
-    doMsg,
-    showMsgs,
-    setQuiet,
-    quiet,
-    STOP_STOP,
-    STOP_DONE,
+    MOD_STATE,
+    SPACER_EACH,
     STOP_ABORT,
     STOP_DEPFAIL,
-    SPACER_EACH,
-    MOD_STATE,
+    STOP_DONE,
+    STOP_STOP,
+    doMsg,
+    keyEscape,
+    quiet,
+    setQuiet,
+    showMsgs,
 )
-from jobrunner.config import Config, RC_FILE_HELP
-from jobrunner.plugins import Plugins
 
 
 def safeWrite(fp, value):

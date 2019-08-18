@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+
 import anydbm
 import datetime
 import errno
@@ -8,11 +9,12 @@ import sys
 import tempfile
 import time
 
-import simplejson as json
 import dateutil.tz
+import simplejson as json
 
 import jobrunner.utils as utils
-from .info import JobInfo, encodeJobInfo, decodeJobInfo
+
+from .info import JobInfo, decodeJobInfo, encodeJobInfo
 from .utils import (
     dateTimeFromJson,
     dateTimeToJson,

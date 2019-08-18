@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, division, print_function
+
+import os.path
 import sys
 import time
-import os.path
 
 fileName = sys.argv[1]
 exitCode = int(sys.argv[2])

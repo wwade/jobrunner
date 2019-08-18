@@ -1,13 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
 from contextlib import contextmanager
-from shutil import rmtree
-from subprocess import check_call, check_output, STDOUT, CalledProcessError
-from tempfile import mkdtemp
-from unittest import TestCase, main
 import os
 import re
+from shutil import rmtree
+from subprocess import STDOUT, CalledProcessError, check_call, check_output
+from tempfile import mkdtemp
 import time
+from unittest import TestCase, main
 
 HOSTNAME = 'host.example.com'
 HOME = '/home/me'
