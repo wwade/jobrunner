@@ -1,0 +1,12 @@
+jobs:
+    - job: 'jobrunner_Linux'
+      pool:
+          vmImage: 'Ubuntu-16.04'
+      steps:
+          - template: templates/steps.yaml
+
+    - job: 'jobrunner_Mojave'
+      pool:
+          vmImage: 'macOS-10.14'
+      steps:
+          - template: templates/steps.yaml

@@ -65,8 +65,8 @@ def run(cmd, capture=False):
             return check_output(cmd, stderr=STDOUT)
         else:
             return check_call(cmd)
-    except CalledProcessError as er:
-        print(er.output)
+    except CalledProcessError as error:
+        print(error.output)
         raise
 
 
@@ -86,10 +86,10 @@ def activeJobs():
 
 
 def noJobs(fail=False):
-    jobs = activeJobs().splitlines()
+    jobs = activeJobs()
     if fail:
         print(jobs)
-    return jobs[0] == '(None)'
+    return jobs.splitlines()[0] == '(None)'
 
 
 class SmokeTest(TestCase):

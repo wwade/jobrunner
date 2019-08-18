@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 import anydbm
 import datetime
+import errno
 import fcntl
 import os
 import sys
@@ -55,7 +56,8 @@ class Database(object):
             try:
                 return self._openDb()
             except anydbm.error as error:  # pylint: disable=catching-non-exception
-                if error.args[0] != 11:
+                errNum = error.args[0]
+                if errNum != errno.EAGAIN:
                     raise
                 time.sleep(0.25)
 
