@@ -1,12 +1,12 @@
 from __future__ import absolute_import, division, print_function
-import unittest
+
 import os
-import simplejson as json
+import unittest
+
 import mock
-from jobrunner import db
-from jobrunner import info
-from jobrunner import plugins
-from jobrunner import utils
+import simplejson as json
+
+from jobrunner import db, info, plugins, utils
 
 
 def setUpModule():

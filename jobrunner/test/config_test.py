@@ -1,8 +1,11 @@
 from __future__ import absolute_import, division, print_function
-from mock import MagicMock, patch
+
 import os
 import tempfile
 import unittest
+
+from mock import MagicMock, patch
+
 from jobrunner import config
 
 HOSTNAME = 'host.example.com'

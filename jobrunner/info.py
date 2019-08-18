@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+
 import curses
 import errno
 import os
@@ -7,7 +8,9 @@ import signal
 import time
 
 import dateutil.tz
+
 import jobrunner.utils as utils
+
 from .utils import (
     dateTimeFromJson,
     dateTimeToJson,
