@@ -8,8 +8,11 @@ import simplejson as json
 
 from jobrunner import db, info, plugins, utils
 
+from .helpers import resetEnv
+
 
 def setUpModule():
+    resetEnv()
     os.environ['HOSTNAME'] = 'testHostname'
     os.environ['USER'] = 'somebody'
     if 'WP' in os.environ:
@@ -17,7 +20,8 @@ def setUpModule():
 
 
 class TestJobInfoJson(unittest.TestCase):
-    def newJob(self, uidx, cmd):
+    @staticmethod
+    def newJob(uidx, cmd):
         mockPlug = mock.MagicMock(plugins.Plugins)
         mockPlug.workspaceIdentity.return_value = "WS"
         utils.MOD_STATE.plugins = mockPlug
