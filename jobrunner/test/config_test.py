@@ -8,6 +8,8 @@ from mock import MagicMock, patch
 
 from jobrunner import config
 
+from .helpers import resetEnv
+
 HOSTNAME = 'host.example.com'
 HOME = '/home/me'
 
@@ -23,12 +25,14 @@ BAD_SECTION = """\
 
 
 def setUpModule():
+    resetEnv()
     os.environ['HOSTNAME'] = HOSTNAME
     os.environ['HOME'] = HOME
 
 
 class TestMixin(object):
-    def config(self, tempFp=None):
+    @staticmethod
+    def config(tempFp=None):
         options = MagicMock()
         options.rcFile = tempFp.name if tempFp else '/a-file-does-not-exist.cfg'
         options.stateDir = '~/x'
@@ -37,7 +41,7 @@ class TestMixin(object):
 
 class TestRcParser(unittest.TestCase, TestMixin):
     @patch('os.makedirs')
-    def testStateDir(self, makedirs):
+    def testStateDir(self, _makedirs):
         cfgObj = self.config()
         self.assertEqual(os.path.join(HOME, 'x/db/'), cfgObj.dbDir)
 

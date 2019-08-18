@@ -9,6 +9,8 @@ from tempfile import mkdtemp
 import time
 from unittest import TestCase, main
 
+from ..helpers import resetEnv
+
 HOSTNAME = 'host.example.com'
 HOME = '/home/me'
 
@@ -20,9 +22,10 @@ domain=ex.com
 
 
 def setUpModule():
-    os.environ['JOBRUNNER_STATE_DIR'] = '/tmp/BADDIR'
+    resetEnv()
     os.environ['HOME'] = HOME
     os.environ['HOSTNAME'] = HOSTNAME
+    os.environ['JOBRUNNER_STATE_DIR'] = '/tmp/BADDIR'
 
 
 class Env(object):

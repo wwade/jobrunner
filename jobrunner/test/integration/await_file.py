@@ -5,9 +5,15 @@ import os.path
 import sys
 import time
 
-fileName = sys.argv[1]
-exitCode = int(sys.argv[2])
-for _ in range(1000):
-    time.sleep(0.1)
-    if os.path.exists(fileName):
-        sys.exit(exitCode)
+
+def main():
+    fileName = sys.argv[1]
+    exitCode = int(sys.argv[2])
+    for _ in range(1000):
+        time.sleep(0.1)
+        if os.path.exists(fileName):
+            sys.exit(exitCode)
+
+
+if __name__ == '__main__':
+    main()
