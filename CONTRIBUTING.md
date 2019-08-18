@@ -6,7 +6,7 @@ Thanks for helping out!  I'll make every effort to respond to PRs in a relateive
 - virtualenv >= 16.7.3 `pip install virtualenv` or `pip install --user virtualenv`
 ### Enivronment
 ```
-$ git checkout git@github.com:wwade/jobrunner.git
+$ git clone git@github.com:wwade/jobrunner.git
 $ cd jobrunner
 $ . testenv
 (venv27)$ 
