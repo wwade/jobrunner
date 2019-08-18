@@ -4,4 +4,6 @@ steps:
       versionSpec: '2.7'
       architecture: 'x64'
 - script: pip install --upgrade pip tox
+  displayName: 'Install tox'
 - script: tox
+  displayName: 'Run tox'

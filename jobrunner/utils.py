@@ -47,6 +47,28 @@ def utcNow():
     return datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc())
 
 
+def dateTimeToJson(dtObj):
+    if dtObj is None:
+        return None
+    return [
+        dtObj.year,
+        dtObj.month,
+        dtObj.day,
+        dtObj.hour,
+        dtObj.minute,
+        dtObj.second,
+        dtObj.microsecond,
+    ]
+
+
+def dateTimeFromJson(dtJson):
+    if dtJson is None:
+        return None
+    args = list(dtJson)
+    args.append(dateutil.tz.tzutc())
+    return datetime.datetime(*args)
+
+
 def pidDebug(*args):
     print("+%05d+ %s" % (os.getpid(), " ".join(map(str, args))))
 

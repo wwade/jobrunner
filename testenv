@@ -10,5 +10,6 @@ fi
 export JOBRUNNER_STATE_DIR=${PWD}/cfg/
 if [[ $_TESTENV_IN_NEWENV -eq 1 ]]; then
     pip install --upgrade pip
-    pip install --upgrade tox
+    pip install --upgrade tox pdbpp nose
+    python setup.py develop
 fi

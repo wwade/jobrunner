@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 import curses
-import datetime
 import errno
 import os
 import re
@@ -10,6 +9,8 @@ import time
 import dateutil.tz
 import jobrunner.utils as utils
 from .utils import (
+    dateTimeFromJson,
+    dateTimeToJson,
     doMsg,
     keyEscape,
     locked,
@@ -524,28 +525,6 @@ class JobInfo(object):
 
 
 DATETIME_KEYS = ('_create', '_start', '_stop')
-
-
-def dateTimeToJson(dtObj):
-    if dtObj is None:
-        return None
-    return [
-        dtObj.year,
-        dtObj.month,
-        dtObj.day,
-        dtObj.hour,
-        dtObj.minute,
-        dtObj.second,
-        dtObj.microsecond,
-    ]
-
-
-def dateTimeFromJson(dtJson):
-    if dtJson is None:
-        return None
-    args = list(dtJson)
-    args.append(dateutil.tz.tzutc())
-    return datetime.datetime(*args)
 
 
 def encodeJobInfo(obj):
