@@ -274,8 +274,6 @@ class RunExecOptionsTest(TestCase):
             pprint(out.replace('\r', '\n').splitlines())
             # While it was running...
             self.assertIn('1 job running', out)
-            # When it was finished...
-            self.assertIn('sleep 3', out)
 
 
 MAIL_CONFIG = """
