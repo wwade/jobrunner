@@ -335,8 +335,7 @@ class JobInfo(object):
         k = self.persistKey(parent.inactive)
         parent.inactive[k] = self
 
-    def killPgrp(self):
-        runMeAsRoot()
+    def _killPgrp(self):
         pgrp = os.getpgid(self.pid)
         sig = signal.SIGINT
         os.killpg(pgrp, sig)
@@ -351,6 +350,13 @@ class JobInfo(object):
                     return
             print('Still trying to kill pgrp', pgrp)
             time.sleep(1.5)
+
+    def killPgrp(self):
+        try:
+            self._killPgrp()
+        except OSError:
+            runMeAsRoot()
+            self._killPgrp()
 
     @locked
     def pidIs(self, parent, pid):
