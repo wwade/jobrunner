@@ -2,9 +2,17 @@ from __future__ import absolute_import, division, print_function
 
 from contextlib import contextmanager
 import os
+from pprint import pprint
 import re
 from shutil import rmtree
-from subprocess import STDOUT, CalledProcessError, check_call, check_output
+from subprocess import (
+    PIPE,
+    STDOUT,
+    CalledProcessError,
+    Popen,
+    check_call,
+    check_output,
+)
 from tempfile import NamedTemporaryFile, mkdtemp
 import time
 from unittest import TestCase, main
@@ -34,8 +42,8 @@ class Env(object):
     def __init__(self, tmpDir):
         self.tmpDir = tmpDir
 
-    def path(self, fileName):
-        return os.path.join(self.tmpDir, fileName)
+    def path(self, subPath):
+        return os.path.join(self.tmpDir, subPath)
 
 
 def curDir():
@@ -143,7 +151,6 @@ class RunExecOptionsTest(TestCase):
     Test the following (exec related) options
         --quiet
         --foreground
-        -v
         --command
         --retry
         --reminder
@@ -164,7 +171,111 @@ class RunExecOptionsTest(TestCase):
         --debugLocking
         --auto-job
     """
-    # TODO
+
+    def test(self):
+        # pylint: disable=too-many-statements
+        with testEnv() as env:
+            os.environ['TMUX_PANE'] = 'pane1'
+            # --quiet
+            # --foreground
+            out = jobf('--quiet', 'true')
+            self.assertEqual(out, '')
+
+            # --command
+            out = jobf('--command', 'false || true')
+            self.assertIn('return code: 0', out)
+
+            # --retry
+            out = jobf('--retry', '||')
+            self.assertIn('false || true', out)
+            self.assertIn('return code: 0', out)
+
+            # --reminder
+            # --done
+            jobf('--reminder', 'do something')
+            out = jobf('-l')
+            self.assertIn('Reminder: do something', out)
+            jobf('--done', 'something')
+            out = jobf('-l')
+            self.assertNotIn('Reminder: do something', out)
+
+            # --key
+            jobf('--key', 'explicitTrue', 'true')
+            self.assertEqual('explicitTrue', lastKey())
+
+            # --state-dir
+            newStateDir = env.path('newStateDir')
+            jobf('--state-dir', newStateDir, 'true')
+            out = jobf('--state-dir', newStateDir, '--count')
+            self.assertEqual(int(out), 1)
+
+            # --tw
+            out = jobf('--tw', '-L')
+            # Without a workspaceIdentity plugin, all workspaces should match.
+            self.assertIn('[explicitTrue]', out)
+
+            # --tp
+            os.environ['TMUX_PANE'] = 'pane2'
+            out = jobf('--tp', '-L')
+            self.assertIn('(None)', out)
+
+            # --blocked-by
+            # --blocked-by-success
+            # See SmokeTest
+
+            # --pid
+            # --int
+            run(['job', 'sleep', '60'])
+            out = jobf('--pid', 'sleep')
+            self.assertIn('sleep', out)
+            job('--int', 'sleep')
+            waitFor(noJobs)
+
+            # --delete
+            # --stop
+            with self.assertRaises(CalledProcessError) as error:
+                jobf('--stop', 'explicitTrue')
+            self.assertIn('KeyError:', error.exception.output)
+
+            jobf('--delete', 'explicitTrue')
+            with self.assertRaises(CalledProcessError) as error:
+                jobf('--show', 'explicitTrue')
+                self.assertIn('No job for key', error.exception.output)
+
+            # --auto-job
+            # --debugLocking
+            out = jobf('--auto-job', '--debugLocking', 'true')
+            print(out)
+
+            inFile = NamedTemporaryFile()
+            data = 'this is the input\n'
+            inFile.write('this is the input\n')
+            inFile.flush()
+            # --input
+            jobf('--input', inFile.name, '--', 'cat')
+            catOutFile = jobf('-g', 'cat').strip()
+            outData = open(catOutFile).read()
+            self.assertEqual(outData, data)
+
+            # --watch
+            # --wait
+            print('+ job --watch')
+            sub = Popen(['job', '--watch'], stdout=PIPE)
+            jobf('sleep', '3')
+            out = ''
+            out += sub.stdout.read(10)
+            out += sub.stdout.read(10)
+            out += sub.stdout.read(10)
+            job('--wait', 'sleep')
+            time.sleep(2)
+            sub.terminate()
+            sub.wait()
+            out += sub.stdout.read()
+            pprint(out.replace('\r', '\n').splitlines())
+            # While it was running...
+            self.assertIn('1 job running', out)
+            # When it was finished...
+            self.assertIn('sleep 3', out)
 
 
 MAIL_CONFIG = """
@@ -215,18 +326,24 @@ class RunMailTest(TestCase):
             self.assertIn('another@example.com', args2)
 
 
-class UnTestedOptionsTest(TestCase):
+class OtherCommandSmokeTest(TestCase):
     """
-    Following are not (yet) tested
+    Smoke test a couple less-frequently used options
+        --get-all-logs
 
+    Following are not (yet) tested
         --dot
         --png
         --svg
-        --isolate
         --debug
-        --get-all-logs
+        --isolate
     """
-    # TODO
+    @staticmethod
+    def testSmoke():
+        with testEnv():
+            # --get-all-logs
+            jobf('true')
+            jobf('--get-all-logs')
 
 
 class RunNonExecOptionsTest(TestCase):
@@ -250,7 +367,7 @@ class RunNonExecOptionsTest(TestCase):
         --activity-window
     """
 
-    def testRunAllNonExecOptions(self):
+    def test(self):
         with testEnv():
             # --last-key
             jobf('-v', 'echo', 'first')
@@ -281,6 +398,7 @@ class RunNonExecOptionsTest(TestCase):
             self.assertNotEqual(multiLogFiles[0], multiLogFiles[1])
 
             # --list-inactive
+            # -v
             listInactive = job('--list-inactive')
             self.assertIn("echo first", listInactive)
             self.assertIn("echo second", listInactive)
