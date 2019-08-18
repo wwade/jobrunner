@@ -105,6 +105,8 @@ def main(args=None):
         const=1)
     op.add_argument('-q', '--quiet', action='store_true',
                     help='Do not print any messages')
+    op.add_argument("-f", "--foreground", action="store_true",
+                    help="Do not fork, run in foreground.")
     op.add_argument("-c", "--command", metavar="CMD",
                     help="Specify complete bash command to execute "
                     "(argument to bash -c)")
@@ -477,7 +479,7 @@ def main(args=None):
     jobs.unlock()
 
     scriptName = os.path.basename(sys.argv[0])
-    if scriptName == 'job':
+    if scriptName == 'job' and not options.foreground:
         childPid = os.fork()
         if childPid > 0:
             sys.exit(0)

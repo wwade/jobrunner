@@ -6,6 +6,7 @@ from subprocess import check_call, check_output, STDOUT, CalledProcessError
 from tempfile import mkdtemp
 from unittest import TestCase, main
 import os
+import re
 import time
 
 HOSTNAME = 'host.example.com'
@@ -70,6 +71,16 @@ def run(cmd, capture=False):
         raise
 
 
+def jobf(*cmd):
+    jobCmd = ['job', '--foreground'] + list(cmd)
+    return run(jobCmd, capture=True)
+
+
+def job(*cmd):
+    jobCmd = ['job'] + list(cmd)
+    return run(jobCmd, capture=True)
+
+
 def waitFor(func, timeout=10.0, failArg=True):
     interval = 0.1
     for _ in range(int(timeout / interval)):
@@ -90,6 +101,11 @@ def noJobs(fail=False):
     if fail:
         print(jobs)
     return jobs.splitlines()[0] == '(None)'
+
+
+def lastKey():
+    [ret] = run(['job', '-K'], capture=True).splitlines()
+    return ret
 
 
 class SmokeTest(TestCase):
@@ -115,6 +131,148 @@ class SmokeTest(TestCase):
             self.assertEqual(6, inactiveCount())
             self.assertTrue(os.path.exists(found))
             self.assertFalse(os.path.exists(notFound))
+
+
+class RunExecOptionsTest(TestCase):
+    """
+    Test the following (exec related) options
+        --quiet
+        --foreground
+        -v
+        --command
+        --retry
+        --reminder
+        --done
+        --key
+        --state-dir
+        --tw
+        --tp
+        --blocked-by
+        --blocked-by-success
+        --wait
+        --watch
+        --pid
+        --input
+        --int
+        --stop
+        --delete
+        --debugLocking
+    """
+    # TODO
+
+
+class RunMailTest(TestCase):
+    """
+    Test mail-related options
+
+        --mail
+        --to
+        --cc
+        --rc-file
+    """
+    # TODO
+
+
+class UnTestedOptionsTest(TestCase):
+    """
+    Following are not (yet) tested
+
+        --dot
+        --png
+        --svg
+        --isolate
+        --debug
+        --auto-job
+        --get-all-logs
+    """
+    # TODO
+
+
+class RunNonExecOptionsTest(TestCase):
+    """
+    Test the following (non-exec related) options
+
+        --help
+        --count
+        --last-key
+        --list
+        --index
+        --list-inactive
+        --show
+        --get-log
+        --info
+        --prune
+        --prune-except
+        --since-checkpoint
+        --set-checkpoint
+        --activity
+        --activity-window
+    """
+
+    def testRunAllNonExecOptions(self):
+        with testEnv():
+            # --last-key
+            jobf('-v', 'echo', 'first')
+            firstKey = lastKey()
+            jobf('echo', 'second')
+            secondKey = lastKey()
+            self.assertNotEqual(firstKey, secondKey)
+
+            # --help
+            self.assertIn("Job runner with logging", job('--help'))
+
+            # --count
+            self.assertEqual(int(job('--count')), 2)
+
+            # --list
+            self.assertEqual('(None)', job('--list').strip())
+
+            # --index
+            # --get-log
+            [file1] = job('--index', '1').splitlines()
+            [firstLog] = job('--get-log', firstKey).splitlines()
+            self.assertEqual(file1, firstLog)
+            [file2] = job('--index', '0').splitlines()
+            for (fileName, value) in ((file1, "first"), (file2, "second")):
+                self.assertIn(value, open(fileName, 'r').read())
+            multiLogFiles = job('-g', firstKey, '-g', secondKey).split()
+            self.assertEqual(len(multiLogFiles), 2)
+            self.assertNotEqual(multiLogFiles[0], multiLogFiles[1])
+
+            # --list-inactive
+            listInactive = job('--list-inactive')
+            self.assertIn("echo first", listInactive)
+            self.assertIn("echo second", listInactive)
+            listInactiveVerbose = job('--list-inactive', '-v')
+            progEchoRe = re.compile(r'^Program\s*echo$', re.M)
+            self.assertRegexpMatches(listInactiveVerbose, progEchoRe)
+
+            # --show
+            self.assertRegexpMatches(job('--show', secondKey), progEchoRe)
+            # --info
+            self.assertIn("activeJobs", job('--info'))
+
+            # TODO
+            # --set-checkpoint
+            #job('--set-checkpoint', '.')
+            # --since-checkpoint
+            # self.assertIn(
+            #    '(None)', job(
+            #        '--since-checkpoint', '--list-inactive'))
+
+            # --prune-except
+            job('--prune-except', '1')
+            jobList = job('--list-inactive').splitlines()
+            self.assertEqual(jobList, [jobList[0]])
+
+            # --prune
+            oldList = job('--list-inactive').splitlines()
+            job('--prune').splitlines()
+            newList = job('--list-inactive').splitlines()
+            self.assertEqual(oldList, newList)
+
+            # --activity
+            # --activity-window
 
 
 if __name__ == '__main__':
