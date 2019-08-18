@@ -5,9 +5,11 @@ import os
 import re
 from shutil import rmtree
 from subprocess import STDOUT, CalledProcessError, check_call, check_output
-from tempfile import mkdtemp
+from tempfile import NamedTemporaryFile, mkdtemp
 import time
 from unittest import TestCase, main
+
+import simplejson as json
 
 from ..helpers import resetEnv
 
@@ -160,8 +162,16 @@ class RunExecOptionsTest(TestCase):
         --stop
         --delete
         --debugLocking
+        --auto-job
     """
     # TODO
+
+
+MAIL_CONFIG = """
+[mail]
+program=./send_email.py
+domain=example.com
+"""
 
 
 class RunMailTest(TestCase):
@@ -173,7 +183,36 @@ class RunMailTest(TestCase):
         --cc
         --rc-file
     """
-    # TODO
+
+    @staticmethod
+    def getMailArgs(mailKey):
+        lastLog = job('-g', mailKey).splitlines()[0]
+        return json.load(open(lastLog))
+
+    def test(self):
+        with testEnv():
+            rcFile = NamedTemporaryFile()
+            rcFile.write(MAIL_CONFIG)
+            rcFile.flush()
+            # --mail
+            # --rc-file
+            jobf('true')
+            jobf('--rc-file', rcFile.name, '--mail', '.')
+            args1 = self.getMailArgs(lastKey())
+            self.assertIn('-s', args1)
+            self.assertIn('-a', args1)
+            self.assertIn('me', args1)
+            # --to
+            # --cc
+            jobf('--rc-file', rcFile.name, '--mail', 'true', '--to', 'someone',
+                 '--cc', 'another')
+            args2 = self.getMailArgs(lastKey())
+            print(repr(args2))
+            self.assertIn('-s', args2)
+            self.assertIn('-a', args2)
+            self.assertNotIn('me', args2)
+            self.assertIn('someone', args2)
+            self.assertIn('another@example.com', args2)
 
 
 class UnTestedOptionsTest(TestCase):
@@ -185,7 +224,6 @@ class UnTestedOptionsTest(TestCase):
         --svg
         --isolate
         --debug
-        --auto-job
         --get-all-logs
     """
     # TODO
