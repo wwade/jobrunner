@@ -1,5 +1,14 @@
-. venv/bin/activate
+#!/bin/sh
+VENV=${VENV:-venv27}
+if ! test -d ${VENV}; then
+    export _TESTENV_IN_NEWENV=1
+    virtualenv --python=python2.7 ${VENV}
+else
+    export _TESTENV_IN_NEWENV=0
+fi
+. ${VENV}/bin/activate
 export JOBRUNNER_STATE_DIR=${PWD}/cfg/
-pip install -r requirements.txt
-pip install pudb pdbpp autopep8 ipython
-python setup.py develop
+if [[ $_TESTENV_IN_NEWENV -eq 1 ]]; then
+    pip install --upgrade pip
+    pip install --upgrade tox
+fi
