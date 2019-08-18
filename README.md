@@ -1,6 +1,8 @@
 # job
 Job runner with logging
 
+[![Build Status](https://dev.azure.com/wadecarpenter/jobrunner/_apis/build/status/wwade.jobrunner?branchName=master)](https://dev.azure.com/wadecarpenter/jobrunner/_build/latest?definitionId=1&branchName=master)
+
 ## Installation
 Install system-wide:
 ```
