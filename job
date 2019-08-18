@@ -32,376 +32,19 @@ from jobrunner.utils import (
 )
 
 
-def safeWrite(fp, value):
-    if isinstance(value, unicode):
-        value = str(value)
-    fp.write(value.translate(None, "\x1B\x0d"))
-
-
-def postCommand(cmd):
-    return cmd
-
-
-def finish(job, rc):
-    doMsg("key:", job.key)
-    doMsg("return code:", rc)
-    if rc != 0 and quiet():
-        showMsgs()
-
-
-DESC = """\
-job - Job runner with logging
-
-Note: `.` is a common alias for any `key` argument and refers to the most recently
-started job.
-
-
-Examples:
-    # Run `sleep 5` in the background
-    $ job sleep 5
-
-    # Run `ls` only if last job passed.
-    $ job -B. ls
-
-    # Runs `ls` when last job finishes (pass / fail)
-    $ job -b. ls
-
-    # Monitor job execution
-    $ job -W
-
-    # Retry a job
-    $ job --retry ls
-
-
-Configuration:
-    The default configuration file location is `~/.config/jobrc`, but can be
-    overwritten using the --rc-file option.
-
-{rcfile}
-""".format(rcfile=RC_FILE_HELP)
-
-
 def main(args=None):
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    if args is None:
-        prog = sys.argv[0]
-        args = sys.argv[1:]
-    else:
-        prog = None
-
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-statements
     plugins = Plugins()
     MOD_STATE.plugins = plugins
 
-    op = argparse.ArgumentParser(
-        prog=os.path.basename(prog),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=DESC)
-    op.add_argument("program", nargs='?')
-    op.add_argument("args", nargs=argparse.REMAINDER)
-    op.add_argument(
-        "-v",
-        dest="verbose",
-        help="Increase verbosity (multiple times for more verbose)",
-        action="append_const",
-        const=1)
-    op.add_argument('-q', '--quiet', action='store_true',
-                    help='Do not print any messages')
-    op.add_argument("-f", "--foreground", action="store_true",
-                    help="Do not fork, run in foreground.")
-    op.add_argument("-c", "--command", metavar="CMD",
-                    help="Specify complete bash command to execute "
-                    "(argument to bash -c)")
-    op.add_argument("--count", action="store_true",
-                    help="Count jobs in inactive database")
-    op.add_argument("--retry", metavar="KEY", action="store",
-                    help="Retry job specified by KEY")
-    op.add_argument(
-        "-r",
-        "--reminder",
-        metavar="REMINDER",
-        action="store",
-        help="Specify a reminder job (must be stopped manually with "
-        "--done).")
-    op.add_argument(
-        "--done",
-        metavar="KEY",
-        action="append",
-        help="Mark reminder as 'done' for the reminder specified by "
-        "KEY")
-    op.add_argument(
-        "-k",
-        "--key",
-        metavar="KEY",
-        help="Specify job key to use (must be unique among active jobs)")
-    op.add_argument(
-        "-m",
-        "--mail",
-        metavar="KEY",
-        action="append",
-        help="Send mail on job completion for job specified by KEY")
-    op.add_argument("-t", "--to", metavar="ADDRESS",
-                    help="Specify 'to' address for mail notification "
-                    "(default=%(default)s)",
-                    default=os.getenv('USER'))
-    op.add_argument("--cc", metavar="ADDRESS", action="append",
-                    help="Specify 'CC' address for mail notification")
-
-    op.add_argument("-K", "--last-key", action="store_true",
-                    help="Get the latest key")
-    op.add_argument(
-        "-d",
-        "--state-dir",
-        dest='stateDir',
-        metavar="DIR",
-        help="Specify state directory (default='%(default)s')",
-        default=os.getenv('JOBRUNNER_STATE_DIR', "~/.local/share/jobDb"))
-    op.add_argument("--rc-file", dest="rcFile",
-                    help="Specify path to rc-file (default=\"%(default)s\")",
-                    default="~/.config/jobrc")
-    op.add_argument(
-        "-l",
-        "--list",
-        action="store_true",
-        help="List active jobs")
-    op.add_argument("--dot", action='store_true',
-                    help='Show dependency graph for active jobs')
-    op.add_argument("--png", action='store_true',
-                    help='Create dependency graph svg for active jobs in '
-                    '~%s/output/job.svg' % os.getenv('USER'))
-    op.add_argument("--svg", action='store_true',
-                    help='Create dependency graph png for active jobs in '
-                    '~%s/output/job.svg' % os.getenv('USER'))
-    op.add_argument("--index", "-n", action='append', type=int,
-                    help='Get log file name, by index, from recent jobs')
-    op.add_argument("-L", "--list-inactive", action="store_true",
-                    help="List inactive jobs")
-    op.add_argument("--tw", "--this-workspace", action="store_true",
-                    help="Filter by jobs in this workspace")
-    op.add_argument("--tp", "--this-pane", action="store_true",
-                    help="Filter by jobs in this tmux pane")
-    op.add_argument(
-        "-b",
-        "--blocked-by",
-        metavar="KEY",
-        action="append",
-        help="Specify that this job depends on the job specified by "
-        "KEY")
-    op.add_argument(
-        "-B",
-        "--blocked-by-success",
-        metavar="KEY",
-        action="append",
-        help="Specify that this job depends on the successful execution "
-        "of the job specified by KEY")
-    op.add_argument("-w", "--wait", metavar="KEY", action="append",
-                    help="Wait for job specified by KEY to finish")
-    op.add_argument("-W", "--watch", action="store_true",
-                    help="Watch for any job acitvity")
-    op.add_argument("-s", "--show", metavar="KEY", action="append",
-                    help="Get details for job specified by KEY")
-    op.add_argument("--pid", metavar="KEY", action="append",
-                    help="Show pstree for job specified by KEY")
-    op.add_argument("-g", "--get-log", metavar="KEY", action="append",
-                    help="Get log file name for job specified by KEY")
-    op.add_argument("-G", "--get-all-logs", action="store_true",
-                    help="Get all log file names for running jobs")
-    op.add_argument("--info", action="store_true", help="Show DB info")
-    op.add_argument(
-        "-i",
-        "--isolate",
-        action="store_true",
-        help="Isolate execution of the job using netns and isolate")
-    op.add_argument("--input", metavar="FILENAME", action="store",
-                    help="Specify input file (default='%(default)s')",
-                    default="/dev/null")
-    op.add_argument(
-        "--int",
-        metavar="KEY",
-        action="append",
-        help='Kill (INT) the specified job using its process group ID')
-    op.add_argument(
-        "--stop",
-        metavar="KEY",
-        action="append",
-        help="Force job status 'stopped' for the job specified by KEY")
-    op.add_argument("--delete", metavar="KEY", action="append",
-                    help="Remove inactive job specified by KEY")
-    op.add_argument("--prune", action="store_true",
-                    help="Prune inactive jobs and log files")
-    op.add_argument(
-        "--prune-except",
-        type=int,
-        metavar='COUNT',
-        action="store",
-        help="Prune inactive jobs and log files, leaving the "
-        "last COUNT jobs in the database.")
-    op.add_argument("--debug", action="store_true",
-                    help="Launch debugger to examine database")
-    op.add_argument("--debugLocking", dest="debugLevel", action="append_const",
-                    const="lock", help="Debug database locking")
-    op.add_argument("-p", "--since-checkpoint", action="store_true",
-                    help="Only display jobs since the checkpoint")
-    op.add_argument("-P", "--set-checkpoint", metavar="TIME", action="store",
-                    help="Set checkpoint for -p.  Use '.' for now")
-    op.add_argument("--auto-job", action="store_true",
-                    help="Specify that this job is an automatic job (not user "
-                    "initiated).  This will stop it from being picked up as "
-                    "the implicit job key '.' when using -B")
-    op.add_argument(
-        "-a",
-        "--activity",
-        action="append_const",
-        const=1,
-        help="Display recent activity per workspace (repeat multiple "
-        "times for a longer activity window)")
-    op.add_argument("-A", "--activity-window", metavar='HOURS', type=float,
-                    action="store",
-                    help="Display recent activity per workspace within the "
-                    "specified window")
-
-    options = op.parse_args(args)
-
+    options = parseArgs(args)
     config = Config(options)
     jobs = Jobs(config, plugins)
 
-    if options.debug:
-        doneDebug = False
-        try:
-            import pudb
-            pudb.set_trace()
-            doneDebug = True
-        except ImportError:
-            pass
-
-        try:
-            if not doneDebug:
-                import pdb
-                pdb.set_trace()  # pylint: disable=no-member
-                doneDebug = True
-        except ImportError:
-            pass
-        assert doneDebug, "no debugger was started"
-
-    if options.list:
-        jobs.listActive(thisWs=options.tw, pane=options.tp,
-                        useCp=options.since_checkpoint)
-        sys.exit(0)
-    elif options.dot or options.png or options.svg:
-        dot = jobs.makeDot(
-            jobs.active,
-            jobs.inactive,
-            filterWs=options.tw,
-            filterPane=options.tp,
-            useCp=options.since_checkpoint)
-        if options.dot:
-            print(dot)
-        else:
-            fName = '~%s/output/job.svg' % os.getenv('USER')
-            ofile = os.path.expanduser(fName)
-            cmd = ['dot', '-Tsvg', '-o', ofile]
-            proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-            stdout, stderr = proc.communicate(input=dot)
-            if stdout.strip() or stderr.strip():
-                sys.exit(stdout + stderr)
-            else:
-                print('Saved output to', fName)
-        sys.exit(0)
-    elif options.list_inactive:
-        jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
-        sys.exit(0)
-    elif options.count:
-        print(jobs.countInactive())
-        sys.exit(0)
-    elif options.get_all_logs:
-        logs = []
-        for job in jobs.filterJobs(jobs.active, limit=30,
-                                   filterWs=options.tw,
-                                   filterPane=options.tp,
-                                   useCp=options.since_checkpoint):
-            logs.append(job.logfile)
-        print(" ".join(logs))
-        sys.exit(0)
-    elif options.get_log:
-        logs = []
-        for key in options.get_log:
-            logs.append(jobs.getLog(key, options.tw))
-        print(" ".join(logs))
-        sys.exit(0)
-    elif options.show:
-        for k in options.show:
-            j = jobs.getJobMatch(k, options.tw)
-            print(j.detail(options.verbose))
-        sys.exit(0)
-    elif options.pid:
-        for k in options.pid:
-            j = jobs.getJobMatch(k, options.tw)
-            print("==============================================")
-            print(j)
-            try:
-                print(subprocess.check_output(['pstree', '-alpg', str(j.pid)]))
-            except OSError as error:
-                if error.errno != errno.ENOENT:
-                    raise
-                print(subprocess.check_output(['ps', '-fp', str(j.pid)]))
-            print("==============================================")
-        sys.exit(0)
-    elif options.last_key:
-        print(jobs.inactive.lastKey)
-        sys.exit(0)
-    elif options.info:
-        print(jobs.active)
-        print(jobs.inactive)
-        sys.exit(0)
-    elif options.stop:
-        for k in options.stop:
-            j = jobs.getJobMatch(k, options.tw)
-            j.stop(jobs, STOP_STOP)
-        sys.exit(0)
-    elif options.int:
-        done = False
-        for k in options.int:
-            j = jobs.getJobMatch(k, options.tw)
-            j.killPgrp()
-            done = True
-        sys.exit(0 if done else 1)
-    elif options.done:
-        for k in options.done:
-            j = jobs.getJobMatch(k, options.tw)
-            if j.reminder:
-                print('Done with reminder: "%s"' % j.reminder)
-            j.stop(jobs, STOP_DONE)
-        sys.exit(0)
-    elif options.prune:
-        jobs.prune()
-        sys.exit(0)
-    elif options.prune_except:
-        jobs.prune(options.prune_except)
-        sys.exit(0)
-    elif options.delete:
-        for k in options.delete:
-            j = jobs.inactive[k]
-            print("Delete job '%s'" % j.key)
-            j.removeLog(verbose=True)
-            del jobs.inactive[j.key]
-        sys.exit(0)
-    elif options.set_checkpoint:
-        jobs.active.checkpoint = options.set_checkpoint
-        jobs.inactive.checkpoint = options.set_checkpoint
-        cpUtc = jobs.active.checkpoint
-        local = cpUtc.astimezone(dateutil.tz.tzlocal())
-        print("Set checkpoint: ", local.strftime(DATETIME_FMT))
-        sys.exit(0)
-    elif options.watch:
-        try:
-            jobs.watchActivity()
-        except KeyboardInterrupt:
-            print("")
-            print("Exit on user interrupt")
-            sys.exit(1)
-        sys.exit(0)
-    elif options.activity or options.activity_window:
-        jobs.activityWindow(options)
-        sys.exit(0)
+    maybeStartDebugger(options)
+    maybeHandleNonExecOptions(options, jobs)
 
     setQuiet(options.quiet)
     deps = []
@@ -453,12 +96,6 @@ def main(args=None):
             cmd = cmd + postCommand(options.args)
     elif options.wait:
         pass
-    elif options.index:
-        logs = []
-        for index in options.index:
-            logs.append(jobs.getLogByIndex(index, options.tw))
-        print(" ".join(logs))
-        sys.exit(0)
     else:
         print(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
         sys.exit(0)
@@ -561,6 +198,415 @@ def main(args=None):
                 cmd += ['-a', depJob.logfile]
         tmp.flush()
         cmd.append(lastArg)
+
+    runJob(cmd, options, jobs, job, fp, doIsolate)
+
+
+def safeWrite(fp, value):
+    if isinstance(value, unicode):
+        value = str(value)
+    fp.write(value.translate(None, "\x1B\x0d"))
+
+
+def postCommand(cmd):
+    return cmd
+
+
+def finish(job, rc):
+    doMsg("key:", job.key)
+    doMsg("return code:", rc)
+    if rc != 0 and quiet():
+        showMsgs()
+
+
+DESC = """\
+job - Job runner with logging
+
+Note: `.` is a common alias for any `key` argument and refers to the most recently
+started job.
+
+
+Examples:
+    # Run `sleep 5` in the background
+    $ job sleep 5
+
+    # Run `ls` only if last job passed.
+    $ job -B. ls
+
+    # Runs `ls` when last job finishes (pass / fail)
+    $ job -b. ls
+
+    # Monitor job execution
+    $ job -W
+
+    # Retry a job
+    $ job --retry ls
+
+
+Configuration:
+    The default configuration file location is `~/.config/jobrc`, but can be
+    overwritten using the --rc-file option.
+
+{rcfile}
+""".format(rcfile=RC_FILE_HELP)
+
+
+class ExitCode(Exception):
+    def __init__(self, rc):
+        super(ExitCode, self).__init__(self, rc)
+        self.rc = rc
+
+
+def addNonExecOptions(op):
+    op.add_argument("--count", action="store_true",
+                    help="Count jobs in inactive database")
+    op.add_argument(
+        "-l",
+        "--list",
+        action="store_true",
+        help="List active jobs")
+    op.add_argument("--dot", action='store_true',
+                    help='Show dependency graph for active jobs')
+    op.add_argument("--png", action='store_true',
+                    help='Create dependency graph svg for active jobs in '
+                    '~%s/output/job.svg' % os.getenv('USER'))
+    op.add_argument("--svg", action='store_true',
+                    help='Create dependency graph png for active jobs in '
+                    '~%s/output/job.svg' % os.getenv('USER'))
+    op.add_argument("-L", "--list-inactive", action="store_true",
+                    help="List inactive jobs")
+    op.add_argument("-W", "--watch", action="store_true",
+                    help="Watch for any job acitvity")
+    op.add_argument("-s", "--show", metavar="KEY", action="append",
+                    help="Get details for job specified by KEY")
+    op.add_argument("-K", "--last-key", action="store_true",
+                    help="Get the latest key")
+    op.add_argument("--index", "-n", action='append', type=int,
+                    help='Get log file name, by index, from recent jobs')
+    op.add_argument("--pid", metavar="KEY", action="append",
+                    help="Show pstree for job specified by KEY")
+    op.add_argument("-g", "--get-log", metavar="KEY", action="append",
+                    help="Get log file name for job specified by KEY")
+    op.add_argument("-G", "--get-all-logs", action="store_true",
+                    help="Get all log file names for running jobs")
+    op.add_argument("--info", action="store_true", help="Show DB info")
+    op.add_argument(
+        "--int",
+        metavar="KEY",
+        action="append",
+        help='Kill (INT) the specified job using its process group ID')
+    op.add_argument(
+        "--stop",
+        metavar="KEY",
+        action="append",
+        help="Force job status 'stopped' for the job specified by KEY")
+    op.add_argument("--delete", metavar="KEY", action="append",
+                    help="Remove inactive job specified by KEY")
+    op.add_argument("--prune", action="store_true",
+                    help="Prune inactive jobs and log files")
+    op.add_argument(
+        "--prune-except",
+        type=int,
+        metavar='COUNT',
+        action="store",
+        help="Prune inactive jobs and log files, leaving the "
+        "last COUNT jobs in the database.")
+    op.add_argument("-p", "--since-checkpoint", action="store_true",
+                    help="Only display jobs since the checkpoint")
+    op.add_argument("-P", "--set-checkpoint", metavar="TIME", action="store",
+                    help="Set checkpoint for -p.  Use '.' for now")
+    op.add_argument(
+        "-a",
+        "--activity",
+        action="append_const",
+        const=1,
+        help="Display recent activity per workspace (repeat multiple "
+        "times for a longer activity window)")
+    op.add_argument("-A", "--activity-window", metavar='HOURS', type=float,
+                    action="store",
+                    help="Display recent activity per workspace within the "
+                    "specified window")
+
+
+def handleNonExecOptions(options, jobs):
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-return-statements
+    # pylint: disable=too-many-statements
+    if options.list:
+        jobs.listActive(thisWs=options.tw, pane=options.tp,
+                        useCp=options.since_checkpoint)
+        return True
+    elif options.dot or options.png or options.svg:
+        dot = jobs.makeDot(
+            jobs.active,
+            jobs.inactive,
+            filterWs=options.tw,
+            filterPane=options.tp,
+            useCp=options.since_checkpoint)
+        if options.dot:
+            print(dot)
+        else:
+            fName = '~%s/output/job.svg' % os.getenv('USER')
+            ofile = os.path.expanduser(fName)
+            cmd = ['dot', '-Tsvg', '-o', ofile]
+            proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
+            stdout, stderr = proc.communicate(input=dot)
+            if stdout.strip() or stderr.strip():
+                raise ExitCode(stdout + stderr)
+            else:
+                print('Saved output to', fName)
+        return True
+    elif options.list_inactive:
+        jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
+        return True
+    elif options.count:
+        print(jobs.countInactive())
+        return True
+    elif options.get_all_logs:
+        logs = []
+        for job in jobs.filterJobs(jobs.active, limit=30,
+                                   filterWs=options.tw,
+                                   filterPane=options.tp,
+                                   useCp=options.since_checkpoint):
+            logs.append(job.logfile)
+        print(" ".join(logs))
+        return True
+    elif options.get_log:
+        logs = []
+        for key in options.get_log:
+            logs.append(jobs.getLog(key, options.tw))
+        print(" ".join(logs))
+        return True
+    elif options.show:
+        for k in options.show:
+            j = jobs.getJobMatch(k, options.tw)
+            print(j.detail(options.verbose))
+        return True
+    elif options.pid:
+        for k in options.pid:
+            j = jobs.getJobMatch(k, options.tw)
+            print("==============================================")
+            print(j)
+            try:
+                print(subprocess.check_output(['pstree', '-alpg', str(j.pid)]))
+            except OSError as error:
+                if error.errno != errno.ENOENT:
+                    raise
+                print(subprocess.check_output(['ps', '-fp', str(j.pid)]))
+            print("==============================================")
+        return True
+    elif options.last_key:
+        print(jobs.inactive.lastKey)
+        return True
+    elif options.index:
+        logs = []
+        for index in options.index:
+            logs.append(jobs.getLogByIndex(index, options.tw))
+        print(" ".join(logs))
+        sys.exit(0)
+    elif options.info:
+        print(jobs.active)
+        print(jobs.inactive)
+        return True
+    elif options.stop:
+        for k in options.stop:
+            j = jobs.getJobMatch(k, options.tw)
+            j.stop(jobs, STOP_STOP)
+        return True
+    elif options.int:
+        done = False
+        for k in options.int:
+            j = jobs.getJobMatch(k, options.tw)
+            j.killPgrp()
+            done = True
+        if not done:
+            raise ExitCode(1)
+        return True
+    elif options.done:
+        for k in options.done:
+            j = jobs.getJobMatch(k, options.tw)
+            if j.reminder:
+                print('Done with reminder: "%s"' % j.reminder)
+            j.stop(jobs, STOP_DONE)
+        return True
+    elif options.prune:
+        jobs.prune()
+        return True
+    elif options.prune_except:
+        jobs.prune(options.prune_except)
+        return True
+    elif options.delete:
+        for k in options.delete:
+            j = jobs.inactive[k]
+            print("Delete job '%s'" % j.key)
+            j.removeLog(verbose=True)
+            del jobs.inactive[j.key]
+        return True
+    elif options.set_checkpoint:
+        jobs.active.checkpoint = options.set_checkpoint
+        jobs.inactive.checkpoint = options.set_checkpoint
+        cpUtc = jobs.active.checkpoint
+        local = cpUtc.astimezone(dateutil.tz.tzlocal())
+        print("Set checkpoint: ", local.strftime(DATETIME_FMT))
+        return True
+    elif options.watch:
+        try:
+            jobs.watchActivity()
+        except KeyboardInterrupt:
+            print("")
+            print("Exit on user interrupt")
+            raise ExitCode(1)
+        return True
+    elif options.activity or options.activity_window:
+        jobs.activityWindow(options)
+        return True
+    else:
+        return False
+
+
+def parseArgs(args=None):
+    if args is None:
+        prog = sys.argv[0]
+        args = sys.argv[1:]
+    else:
+        prog = None
+
+    op = argparse.ArgumentParser(
+        prog=os.path.basename(prog),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=DESC)
+    op.add_argument("program", nargs='?')
+    op.add_argument("args", nargs=argparse.REMAINDER)
+    op.add_argument(
+        "-v",
+        dest="verbose",
+        help="Increase verbosity (multiple times for more verbose)",
+        action="append_const",
+        const=1)
+    op.add_argument('-q', '--quiet', action='store_true',
+                    help='Do not print any messages')
+    op.add_argument("-f", "--foreground", action="store_true",
+                    help="Do not fork, run in foreground.")
+    op.add_argument("-c", "--command", metavar="CMD",
+                    help="Specify complete bash command to execute "
+                    "(argument to bash -c)")
+    op.add_argument("--retry", metavar="KEY", action="store",
+                    help="Retry job specified by KEY")
+    op.add_argument(
+        "-r",
+        "--reminder",
+        metavar="REMINDER",
+        action="store",
+        help="Specify a reminder job (must be stopped manually with "
+        "--done).")
+    op.add_argument(
+        "--done",
+        metavar="KEY",
+        action="append",
+        help="Mark reminder as 'done' for the reminder specified by "
+        "KEY")
+    op.add_argument(
+        "-k",
+        "--key",
+        metavar="KEY",
+        help="Specify job key to use (must be unique among active jobs)")
+    op.add_argument(
+        "-m",
+        "--mail",
+        metavar="KEY",
+        action="append",
+        help="Send mail on job completion for job specified by KEY")
+    op.add_argument("-t", "--to", metavar="ADDRESS",
+                    help="Specify 'to' address for mail notification "
+                    "(default=%(default)s)",
+                    default=os.getenv('USER'))
+    op.add_argument("--cc", metavar="ADDRESS", action="append",
+                    help="Specify 'CC' address for mail notification")
+    op.add_argument(
+        "-d",
+        "--state-dir",
+        dest='stateDir',
+        metavar="DIR",
+        help="Specify state directory (default='%(default)s')",
+        default=os.getenv('JOBRUNNER_STATE_DIR', "~/.local/share/jobDb"))
+    op.add_argument("--rc-file", dest="rcFile",
+                    help="Specify path to rc-file (default=\"%(default)s\")",
+                    default="~/.config/jobrc")
+    op.add_argument("--tw", "--this-workspace", action="store_true",
+                    help="Filter by jobs in this workspace")
+    op.add_argument("--tp", "--this-pane", action="store_true",
+                    help="Filter by jobs in this tmux pane")
+    op.add_argument(
+        "-b",
+        "--blocked-by",
+        metavar="KEY",
+        action="append",
+        help="Specify that this job depends on the job specified by "
+        "KEY")
+    op.add_argument(
+        "-B",
+        "--blocked-by-success",
+        metavar="KEY",
+        action="append",
+        help="Specify that this job depends on the successful execution "
+        "of the job specified by KEY")
+    op.add_argument("-w", "--wait", metavar="KEY", action="append",
+                    help="Wait for job specified by KEY to finish")
+    op.add_argument(
+        "-i",
+        "--isolate",
+        action="store_true",
+        help="Isolate execution of the job using netns and isolate")
+    op.add_argument("--input", metavar="FILENAME", action="store",
+                    help="Specify input file (default='%(default)s')",
+                    default="/dev/null")
+    op.add_argument("--debug", action="store_true",
+                    help="Launch debugger to examine database")
+    op.add_argument("--debugLocking", dest="debugLevel", action="append_const",
+                    const="lock", help="Debug database locking")
+    op.add_argument("--auto-job", action="store_true",
+                    help="Specify that this job is an automatic job (not user "
+                    "initiated).  This will stop it from being picked up as "
+                    "the implicit job key '.' when using -B")
+
+    addNonExecOptions(op)
+
+    options = op.parse_args(args)
+    return options
+
+
+def maybeStartDebugger(options):
+    if options.debug:
+        doneDebug = False
+        try:
+            import pudb
+            pudb.set_trace()
+            doneDebug = True
+        except ImportError:
+            pass
+
+        try:
+            if not doneDebug:
+                import pdb
+                pdb.set_trace()  # pylint: disable=no-member
+                doneDebug = True
+        except ImportError:
+            pass
+        assert doneDebug, "no debugger was started"
+
+
+def maybeHandleNonExecOptions(options, jobs):
+    try:
+        handled = handleNonExecOptions(options, jobs)
+        if handled:
+            sys.exit(0)
+    except ExitCode as exitCode:
+        sys.exit(exitCode.rc)
+
+
+def runJob(cmd, options, jobs, job, fp, doIsolate):
+    # pylint: disable=too-many-arguments
     doMsg("execute:", job.cmdStr)
     fpIn = open(options.input, "r")
     rc = -1
