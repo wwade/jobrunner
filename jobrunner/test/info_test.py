@@ -30,7 +30,7 @@ class TestJobInfoJson(unittest.TestCase):
         parent.active = mock.MagicMock(db.Database)
         jobInfo = info.JobInfo(uidx)
         jobInfo.isolate = False
-        jobInfo.setCmd(cmd, False)
+        jobInfo.setCmd(cmd)
         jobInfo.parent = parent
         return jobInfo
 
@@ -58,3 +58,13 @@ class TestJobInfoJson(unittest.TestCase):
         jsonRepr = json.dumps(job, default=info.encodeJobInfo)
         jobOut = json.loads(jsonRepr, object_hook=info.decodeJobInfo)
         self.cmpObj(job, jobOut)
+
+
+class TestInfoHelpers(unittest.TestCase):
+    def testCmdString(self):
+        cmd = ['ls', '-l', 'some file']
+        self.assertEqual(info.cmdString(cmd), "ls -l 'some file'")
+        cmd = ['ls', '-l', 'some\tfile']
+        self.assertEqual(info.cmdString(cmd), "ls -l 'some\tfile'")
+        cmd = ['ls', '-l', 'some;file']
+        self.assertEqual(info.cmdString(cmd), "ls -l 'some;file'")

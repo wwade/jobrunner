@@ -29,6 +29,16 @@ def getUtcTime(val):
     return val
 
 
+def maybeQuoteCmdArg(cmd):
+    if re.search(r'[ \t"\';]', cmd):
+        return "'" + cmd.replace("'", "'\\''") + "'"
+    return cmd
+
+
+def cmdString(cmd):
+    return " ".join(map(maybeQuoteCmdArg, cmd))
+
+
 class JobInfo(object):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     def __init__(self, uidx, key=None):
@@ -207,12 +217,6 @@ class JobInfo(object):
         hashVal += hash(self._start)
         return hashVal
 
-    @staticmethod
-    def maybeQuoteCmdArg(cmd):
-        if re.search(r'[ \t"\';]', cmd):
-            return "'" + cmd.replace("'", "'\\''") + "'"
-        return cmd
-
     @property
     def cmdStr(self):
         try:
@@ -220,7 +224,7 @@ class JobInfo(object):
                 return self.reminder
         except AttributeError:
             pass
-        return " ".join(map(self.maybeQuoteCmdArg, self.cmd))
+        return cmdString(self.cmd)
 
     @property
     def key(self):
@@ -438,8 +442,8 @@ class JobInfo(object):
             'Directory': lambda: self.pwd,
             'Project': lambda: self._proj,
             'Log': lambda: self.logfile,
-            'Args': lambda: self.args if self.args else None,
-            'Command': lambda: self.cmd,
+            'Args': lambda: cmdString(self.args) if self.args else None,
+            'Command': lambda: cmdString(self.cmd),
             'Start': lambda: self.timeStr(self.startTime),
             'Stop': lambda: self.timeStr(self._stop),
             'Duration': self.getDuration,
