@@ -1,0 +1,7 @@
+autopep8
+isort
+mock
+nose
+pylint
+pytest
+tox

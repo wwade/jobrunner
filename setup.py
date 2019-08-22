@@ -10,15 +10,9 @@ setup(
         'jobrunner.test',
         'jobrunner.test.*',
     ]),
-    install_requires=[
-        'dateutils',
-        'simplejson',
-    ],
+    install_requires=open("requirements.in").readlines(),
+    tests_require=open("requirements.testing.in").readlines(),
     test_suite='nose.collector',
-    tests_require=[
-        'mock',
-        'pytest',
-    ],
     scripts=[
         'job',
     ],
