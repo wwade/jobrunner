@@ -1,16 +1,21 @@
 #!/bin/sh
-VENV=${VENV:-venv27}
-if ! test -d ${VENV}; then
-    export _TESTENV_IN_NEWENV=1
-    virtualenv --python=python2.7 ${VENV}
-else
-    export _TESTENV_IN_NEWENV=0
-fi
-. ${VENV}/bin/activate
-export JOBRUNNER_STATE_DIR=${PWD}/cfg/
-if [[ $_TESTENV_IN_NEWENV -eq 1 ]]; then
-    pip install --upgrade pip
-    pip install --upgrade tox pdbpp ipython
-    pip install -r requirements.txt
-    python setup.py develop
+function setup() {
+    VENV=${VENV:-venv}
+    echo "Create virtualenv $VENV"
+    if ! test -d ${VENV}; then
+        export _TESTENV_IN_NEWENV=1
+        virtualenv --python=python2.7 ${VENV} || return 1
+    else
+        export _TESTENV_IN_NEWENV=0
+    fi
+}
+if setup; then
+    . ${VENV}/bin/activate
+    export JOBRUNNER_STATE_DIR=${PWD}/cfg/
+    if [[ $_TESTENV_IN_NEWENV -eq 1 ]]; then
+        pip install --upgrade pip
+        pip install --upgrade tox pdbpp ipython
+        pip install -r requirements.txt
+        python setup.py develop
+    fi
 fi
