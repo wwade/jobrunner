@@ -410,9 +410,19 @@ def handleNonExecOptions(options, jobs):
         print(jobs.inactive)
         return True
     elif options.stop:
+        errors = []
         for k in options.stop:
-            j = jobs.getJobMatch(k, options.tw)
-            j.stop(jobs, STOP_STOP)
+            try:
+                j = jobs.getJobMatch(k, options.tw)
+                if j.key in jobs.active:
+                    print("Stopping job:", j)
+                    j.stop(jobs, STOP_STOP)
+                else:
+                    errors.append(j.key)
+            except KeyError:
+                errors.append(k)
+        if errors:
+            raise ExitCode("Jobs not active: {}".format(", ".join(errors)))
         return True
     elif options.int:
         done = False

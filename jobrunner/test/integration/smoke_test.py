@@ -235,7 +235,7 @@ class RunExecOptionsTest(TestCase):
             # --stop
             with self.assertRaises(CalledProcessError) as error:
                 jobf('--stop', 'explicitTrue')
-            self.assertIn('KeyError:', error.exception.output)
+            self.assertIn('Jobs not active:', error.exception.output)
 
             jobf('--delete', 'explicitTrue')
             with self.assertRaises(CalledProcessError) as error:
