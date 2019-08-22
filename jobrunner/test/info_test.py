@@ -81,6 +81,18 @@ class TestJobProperties(unittest.TestCase):
         self.assertTrue(job.matchEnv('XY', '1'))
         self.assertFalse(job.matchEnv('XY', '0'))
 
+    def testWorkspaceInfo(self):
+        job = newJob(14, 'true')
+        job.start(job.parent)
+        self.assertEqual(job.wsBasename(), "WS")
+        self.assertEqual(job.workspace, "WS")
+
+    def testWorkspaceInfoNoPlugin(self):
+        job = newJob(14, 'true', workspaceIdentity="")
+        job.start(job.parent)
+        self.assertEqual(job.wsBasename(), "")
+        self.assertEqual(job.workspace, "")
+
 
 class TestInfoHelpers(unittest.TestCase):
     def testCmdString(self):

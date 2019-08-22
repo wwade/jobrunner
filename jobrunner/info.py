@@ -152,13 +152,7 @@ class JobInfo(object):
     persistKeyGenerated = property(persistKeyGeneratedGet)
 
     def wsBasename(self):
-        if hasattr(self, '_workspace'):
-            return self._workspace
-        else:
-            chroot = self.env('A4_CHROOT')
-            if chroot:
-                chroot = os.path.basename(chroot)
-            return chroot
+        return getattr(self, '_workspace')
 
     def cmpCommon(self, other, order):
         for func in order:
@@ -431,10 +425,7 @@ class JobInfo(object):
 
     @property
     def workspace(self):
-        if hasattr(self, '_workspace'):
-            return self._workspace
-        else:
-            return self.env('A4_CHROOT')
+        return getattr(self, '_workspace')
 
     def getValue(self, what):
         items = {
