@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-import curses
+from curses.ascii import isprint
 import errno
 import os
 import re
@@ -383,7 +383,7 @@ class JobInfo(object):
     def escEnv(value):
         ret = ""
         for char in value:
-            if curses.ascii.isprint(char):
+            if isprint(char):
                 ret += char
             else:
                 ret += "\\x%02x" % ord(char)

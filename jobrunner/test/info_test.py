@@ -19,21 +19,27 @@ def setUpModule():
         del os.environ['WP']
 
 
-class TestJobInfoJson(unittest.TestCase):
-    @staticmethod
-    def newJob(uidx, cmd):
-        mockPlug = mock.MagicMock(plugins.Plugins)
-        mockPlug.workspaceIdentity.return_value = "WS"
-        utils.MOD_STATE.plugins = mockPlug
-        parent = mock.MagicMock(db.Jobs)
-        parent.inactive = mock.MagicMock(db.Database)
-        parent.active = mock.MagicMock(db.Database)
-        jobInfo = info.JobInfo(uidx)
-        jobInfo.isolate = False
-        jobInfo.setCmd(cmd)
-        jobInfo.parent = parent
-        return jobInfo
+def setJobEnv(jobInfo, newEnv):
+    # pylint: disable=protected-access
+    jobInfo._env = newEnv
 
+
+def newJob(uidx, cmd, workspaceIdentity="WS"):
+    mockPlug = mock.MagicMock(plugins.Plugins)
+    mockPlug.workspaceIdentity.return_value = workspaceIdentity
+    utils.MOD_STATE.plugins = mockPlug
+    parent = mock.MagicMock(db.Jobs)
+    parent.inactive = mock.MagicMock(db.Database)
+    parent.active = mock.MagicMock(db.Database)
+    jobInfo = info.JobInfo(uidx)
+    jobInfo.isolate = False
+    jobInfo.setCmd(cmd)
+    jobInfo.parent = parent
+    setJobEnv(jobInfo, {'NOENV': '1'})
+    return jobInfo
+
+
+class TestJobInfoJson(unittest.TestCase):
     def cmpObj(self, objA, objB):
         print(objA.detail(3 * ['v']))
         print(objB.detail(3 * ['v']))
@@ -45,19 +51,35 @@ class TestJobInfoJson(unittest.TestCase):
                                  {key: objB.__dict__[key]})
 
     def testStarted(self):
-        job = self.newJob(12, ['ls', '/tmp'])
+        job = newJob(12, ['ls', '/tmp'])
         job.start(job.parent)
         jsonRepr = json.dumps(job, default=info.encodeJobInfo)
         jobOut = json.loads(jsonRepr, object_hook=info.decodeJobInfo)
         self.cmpObj(job, jobOut)
 
     def testStopped(self):
-        job = self.newJob(13, ['ls', '/tmp'])
+        job = newJob(13, ['ls', '/tmp'])
         job.start(job.parent)
         job.stop(job.parent, 1)
         jsonRepr = json.dumps(job, default=info.encodeJobInfo)
         jobOut = json.loads(jsonRepr, object_hook=info.decodeJobInfo)
         self.cmpObj(job, jobOut)
+
+
+class TestJobProperties(unittest.TestCase):
+    def testEnv(self):
+        job = newJob(14, ['ls', '/tmp'])
+        job.start(job.parent)
+        env = {'XY': '1', 'VAL_WITH_NEWLINE': 'first\nsecond'}
+        setJobEnv(job, env)
+        out = job.getEnvironment()
+        self.assertIn("XY=1\n", out)
+        self.assertIn("VAL_WITH_NEWLINE=first\\x0asecond", out)
+        self.assertEqual(job.env('XY'), '1')
+        self.assertIsNone(job.env('XYZ'))
+        self.assertEqual(job.environ, env)
+        self.assertTrue(job.matchEnv('XY', '1'))
+        self.assertFalse(job.matchEnv('XY', '0'))
 
 
 class TestInfoHelpers(unittest.TestCase):
