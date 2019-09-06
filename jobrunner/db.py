@@ -135,7 +135,10 @@ class Database(object):
 
     def recentGet(self):
         if self.RECENT in self.db:
-            return json.loads(self.db[self.RECENT])
+            try:
+                return json.loads(self.db[self.RECENT])
+            except json.JSONDecodeError:
+                return None
         else:
             return None
 

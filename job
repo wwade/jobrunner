@@ -125,6 +125,12 @@ def main(args=None):
     if scriptName == 'job' and not options.foreground:
         childPid = os.fork()
         if childPid > 0:
+            if options.monitor:
+                monitor = ["tail", "-n+0", "-f", job.logfile]
+                print("Monitoring with 'tail -f', use Ctrl-C to stop "
+                      "monitoring\n\n")
+                sys.stdout.flush()
+                os.execvp(monitor[0], monitor)
             sys.exit(0)
         os.setsid()
         job.pid = os.getpid()
@@ -496,8 +502,11 @@ def parseArgs(args=None):
         const=1)
     op.add_argument('-q', '--quiet', action='store_true',
                     help='Do not print any messages')
-    op.add_argument("-f", "--foreground", action="store_true",
-                    help="Do not fork, run in foreground.")
+    execMode = op.add_mutually_exclusive_group()
+    execMode.add_argument("-f", "--foreground", action="store_true",
+                          help="Do not fork, run in foreground.")
+    execMode.add_argument("--monitor", action="store_true",
+                          help="Run in the background, but monitor output")
     op.add_argument("-c", "--command", metavar="CMD",
                     help="Specify complete bash command to execute "
                     "(argument to bash -c)")
