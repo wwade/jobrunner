@@ -151,6 +151,7 @@ class RunExecOptionsTest(TestCase):
     Test the following (exec related) options
         --quiet
         --foreground
+        --monitor
         --command
         --retry
         --reminder
@@ -274,6 +275,22 @@ class RunExecOptionsTest(TestCase):
             pprint(out.replace('\r', '\n').splitlines())
             # While it was running...
             self.assertIn('1 job running', out)
+
+    def testMonitor(self):
+        # --monitor
+        with testEnv():
+            print('+ job --monitor -c "echo MARKOUTPUT"')
+            sub = Popen(['job', '--monitor', '-c',
+                         'echo MARKOUTPUT'], stdout=PIPE)
+            out = sub.stdout.read(50)
+            self.assertIn("Monitoring with", out)
+            waitFor(noJobs)
+            sub.terminate()
+            sub.wait()
+            out += sub.stdout.read()
+            pprint(out.replace('\r', '\n').splitlines())
+            self.assertIn("MARKOUTPUT", out)
+            self.assertIn("return code: 0", out)
 
 
 MAIL_CONFIG = """
