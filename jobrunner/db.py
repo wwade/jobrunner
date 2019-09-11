@@ -32,6 +32,7 @@ PRUNE_NUM = 5000
 
 
 class Database(object):
+    # pylint: disable=too-many-instance-attributes
     schemaVersion = "4"
     SV = '_schemaVersion_'
     LASTKEY = '_lastKey_'
@@ -42,13 +43,18 @@ class Database(object):
     CHECKPOINT = '_checkPoint_'
     special = [SV, LASTKEY, LASTJOB, ITEMCOUNT, RECENT, IDX, CHECKPOINT]
 
-    def __init__(self, parent, config, dbFile):
+    def __init__(self, parent, config, dbFile, cached=False):
         self.config = config
         self.dbFile = self.config.dbDir + dbFile
         self._parent = parent
+        self._dbCache = None
+        self._cached = cached
 
     def _openDb(self):
-        db = anydbm.open(self.dbFile, 'c')
+        if self._dbCache:
+            return self._dbCache
+        mode = 'r' if self._cached else 'c'
+        db = anydbm.open(self.dbFile, mode)
         if (self.SV not in db or
                 db[self.SV] != self.schemaVersion):
             db.close()
@@ -58,6 +64,10 @@ class Database(object):
             db[self.LASTJOB] = ""
             db[self.ITEMCOUNT] = "0"
             db[self.CHECKPOINT] = ""
+            db.close()
+            db = anydbm.open(self.dbFile, mode)
+        if self._cached:
+            self._dbCache = db
         return db
 
     @property
@@ -209,6 +219,18 @@ class Jobs(object):
         self.inactive = Database(self, config, 'inactiveJobs')
         self.lockFp = None
         self.displayPending = set()
+        self._cached = False
+
+    def setDbCaching(self, enabled):
+        if self._cached == enabled:
+            return
+        self._cached = enabled
+        self.active = Database(self, self.config, 'activeJobs', cached=enabled)
+        self.inactive = Database(
+            self,
+            self.config,
+            'inactiveJobs',
+            cached=enabled)
 
     def debugPrint(self, msg):
         if "lock" not in self.config.debugLevel:

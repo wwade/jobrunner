@@ -45,6 +45,7 @@ def main(args=None):
 
     maybeStartDebugger(options)
     maybeHandleNonExecOptions(options, jobs)
+    maybeHandleNonExecWriteOptions(options, jobs)
 
     setQuiet(options.quiet)
     deps = []
@@ -415,7 +416,17 @@ def handleNonExecOptions(options, jobs):
         print(jobs.active)
         print(jobs.inactive)
         return True
-    elif options.stop:
+    elif options.activity or options.activity_window:
+        jobs.activityWindow(options)
+        return True
+    else:
+        return False
+
+
+def handleNonExecWriteOptions(options, jobs):
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-return-statements
+    if options.stop:
         errors = []
         for k in options.stop:
             try:
@@ -473,9 +484,6 @@ def handleNonExecOptions(options, jobs):
             print("")
             print("Exit on user interrupt")
             raise ExitCode(1)
-        return True
-    elif options.activity or options.activity_window:
-        jobs.activityWindow(options)
         return True
     else:
         return False
@@ -615,13 +623,23 @@ def maybeStartDebugger(options):
         assert doneDebug, "no debugger was started"
 
 
-def maybeHandleNonExecOptions(options, jobs):
+def maybeHandle(options, jobs, handler):
     try:
-        handled = handleNonExecOptions(options, jobs)
+        handled = handler(options, jobs)
         if handled:
             sys.exit(0)
     except ExitCode as exitCode:
         sys.exit(exitCode.rc)
+
+
+def maybeHandleNonExecOptions(options, jobs):
+    jobs.setDbCaching(True)
+    maybeHandle(options, jobs, handleNonExecOptions)
+    jobs.setDbCaching(False)
+
+
+def maybeHandleNonExecWriteOptions(options, jobs):
+    maybeHandle(options, jobs, handleNonExecWriteOptions)
 
 
 def runJob(cmd, options, jobs, job, fp, doIsolate):
