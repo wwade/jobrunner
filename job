@@ -61,6 +61,7 @@ def main(args=None):
 
     doIsolate = options.isolate
     cmd = []
+    jobs.setDbCaching(True)
     if options.mail:
         oneJob = jobs.getJobMatch(options.mail[0], options.tw)
         subj = '[job-status] '
@@ -98,9 +99,9 @@ def main(args=None):
     elif options.wait:
         pass
     else:
-        jobs.setDbCaching(True)
         print(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
         sys.exit(0)
+    jobs.setDbCaching(False)
 
     if depWait:
         while depWait:
