@@ -98,6 +98,7 @@ def main(args=None):
     elif options.wait:
         pass
     else:
+        jobs.setDbCaching(True)
         print(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
         sys.exit(0)
 
