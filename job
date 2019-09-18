@@ -53,10 +53,12 @@ def main(args=None):
     depWait = []
 
     jobs.lock()
+    jobs.setDbCaching(True)
     jobs.addDeps(options.blocked_by, options.tw, deps, None)
     jobs.addDeps(options.wait, options.tw, deps, depWait)
     jobs.addDeps(options.blocked_by_success, options.tw, deps, depSuccess)
     jobs.addDeps(options.mail, options.tw, deps, None)
+    jobs.setDbCaching(False)
     jobs.unlock()
 
     doIsolate = options.isolate
