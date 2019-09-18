@@ -41,6 +41,33 @@ Sat Aug 10, 2019 20:48:23  No jobs running, load: 0/0/0
 $ job --retry ls
 ```
 
+### Query Examples
+
+**NOTE** `.` is available as an alias to the most recently executed job (as in the Examples above).
+
+* View recently executed job log file
+```
+$ job ls
+$ view `job`   # Opens the output from ls using "view"
+```
+* View two most recently executed
+```
+$ job echo 1
+$ job echo 2
+$ view `job -n0 -n1`  
+```
+* Query by job name
+```
+$ job echo foo
+$ job echo bar
+$ view `job -g foo`
+```
+* Show job info by name
+```
+$ job ls
+$ job -s ls
+```
+
 ## Configuration
 The default configuration file location is `~/.config/jobrc`, but can be
 overwritten using the --rc-file option.
