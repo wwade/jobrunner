@@ -264,7 +264,7 @@ class JobInfo(object):
         else:
             assert reminder is not None, "Must specify reminder"
             self.reminder = reminder
-            self.cmd = "(reminder)"
+            self.cmd = ["(reminder)"]
             self.prog = None
             self.args = None
 
@@ -444,6 +444,7 @@ class JobInfo(object):
             'Environment': self.getEnvironment,
             'Workspace': lambda: self.workspace,
             'Key': lambda: self._key,
+            'Reminder': lambda: self.reminder,
             'Persistent Key': self.showPersistKey,
             'State': self.getState,
             'PID': lambda: self.pid,
@@ -454,7 +455,46 @@ class JobInfo(object):
         except AttributeError:
             return "N/A"
 
+    def showInOrder(self, order, level):
+        longLine = 0
+        for k in order:
+            if len(k) > longLine:
+                longLine = len(k)
+        ret = utils.SPACER + "\n"
+        for k in order:
+            fmt = "%%-%ds   %%s\n" % longLine
+            try:
+                v = self.getValue(k)
+                if level:
+                    if v is None:
+                        v = "N/A"
+                if v is not None:
+                    ret += fmt % (k, v)
+            except AttributeError:
+                pass
+        ret += utils.SPACER
+        return ret
+
+    def showReminder(self):
+        order = [
+            'Key',
+            'Persistent Key',
+            'Reminder',
+        ]
+        if self._stop:
+            order += ['State']
+        order += [
+            'Directory',
+            'Workspace',
+            'Start',
+            'Stop',
+        ]
+        return self.showInOrder(order, None)
+
     def detail(self, level):
+        if self.reminder:
+            return self.showReminder()
+
         order = [
             'Key',
             'Persistent Key',
@@ -486,25 +526,7 @@ class JobInfo(object):
                 order += verb1
             if len(level) >= 2:
                 order += verb2
-
-        longLine = 0
-        for k in order:
-            if len(k) > longLine:
-                longLine = len(k)
-        ret = utils.SPACER + "\n"
-        for k in order:
-            fmt = "%%-%ds   %%s\n" % longLine
-            try:
-                v = self.getValue(k)
-                if level:
-                    if v is None:
-                        v = "N/A"
-                if v is not None:
-                    ret += fmt % (k, v)
-            except AttributeError:
-                pass
-        ret += utils.SPACER
-        return ret
+        return self.showInOrder(order, level)
 
     @staticmethod
     def localTime(val):
