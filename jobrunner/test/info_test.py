@@ -66,6 +66,25 @@ class TestJobInfoJson(unittest.TestCase):
         self.cmpObj(job, jobOut)
 
 
+class TestReminder(unittest.TestCase):
+    def testInfo(self):
+        job = newJob(14, ['(reminder)'])
+        job.start(job.parent)
+        job.reminder = 'This is a reminder'
+        outDetail1 = job.detail(["v", "v", "v"])
+        out1 = job.detail([])
+        print(out1)
+        self.assertEqual(outDetail1, out1)
+        self.assertRegexpMatches(out1, r"\nReminder\s+This is a reminder\n")
+        self.assertNotIn("\nState ", out1)
+        job.stop(job.parent, utils.STOP_DONE)
+        out2 = job.detail("vvv")
+        self.assertRegexpMatches(out2, r"\nReminder\s+This is a reminder\n")
+        self.assertRegexpMatches(
+            out2, r"\nState\s+Finished \(Completed Reminder\)\n")
+        print(out2)
+
+
 class TestJobProperties(unittest.TestCase):
     def testEnv(self):
         job = newJob(14, ['ls', '/tmp'])
