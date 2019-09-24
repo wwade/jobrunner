@@ -121,3 +121,7 @@ class TestInfoHelpers(unittest.TestCase):
         self.assertEqual(info.cmdString(cmd), "ls -l 'some\tfile'")
         cmd = ['ls', '-l', 'some;file']
         self.assertEqual(info.cmdString(cmd), "ls -l 'some;file'")
+
+    def testCmdStringBang(self):
+        cmd = ['ls', '-l', '!something']
+        self.assertEqual(info.cmdString(cmd), "ls -l '!something'")
