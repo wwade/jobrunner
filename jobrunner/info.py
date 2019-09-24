@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 from curses.ascii import isprint
 import errno
 import os
-import re
+import pipes
 import signal
 import time
 
@@ -29,14 +29,8 @@ def getUtcTime(val):
     return val
 
 
-def maybeQuoteCmdArg(cmd):
-    if re.search(r'[ \t"\';]', cmd):
-        return "'" + cmd.replace("'", "'\\''") + "'"
-    return cmd
-
-
 def cmdString(cmd):
-    return " ".join(map(maybeQuoteCmdArg, cmd))
+    return " ".join(map(pipes.quote, cmd))
 
 
 class JobInfo(object):
