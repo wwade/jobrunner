@@ -5,10 +5,10 @@ steps:
       architecture: 'x64'
 - script: pip install --upgrade pip tox
   displayName: 'Install tox'
-- script: tox
+- script: tox $TOXARGS
   displayName: 'Run tox + XML'
 - task: PublishTestResults@2
   condition: succeededOrFailed()
   inputs:
       testResultsFiles: '**/test-*.xml'
-      testRunTitle: 'Publish test results for $(job)'
+      testRunTitle: Publish test results for $(Agent.JobName)
