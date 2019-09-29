@@ -330,6 +330,9 @@ class JobInfo(object):
         parent.inactive[k] = self
 
     def _killPgrp(self):
+        if not self.pid:
+            print('not running')
+            return
         pgrp = os.getpgid(self.pid)
         sig = signal.SIGINT
         os.killpg(pgrp, sig)
