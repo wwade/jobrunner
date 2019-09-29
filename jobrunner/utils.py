@@ -120,15 +120,36 @@ def setQuiet(value):
 
 
 def quiet():
-    return _DEBUGGER.quiet
+    return _DEBUGGER.quiet == "quiet"
+
+
+def robot():
+    return _DEBUGGER.quiet == "robot"
 
 
 def doMsg(*args):
     msg = " ".join(map(str, args))
     if quiet():
         _DEBUGGER.msgQueue.append(msg)
+    elif robot():
+        return
     else:
         print(msg)
+
+
+def robotInfo(*info):
+    if not robot():
+        return
+    msg = []
+    for item in info:
+        if isinstance(item, dict):
+            for key, val in item.items():
+                msg.append('{}={}'.format(key, val))
+        else:
+            msg.append(str(item))
+    if robot():
+        print('\x00'.join(msg))
+        sys.stdout.flush()
 
 
 def showMsgs():

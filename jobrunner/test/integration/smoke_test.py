@@ -276,6 +276,19 @@ class RunExecOptionsTest(TestCase):
             # While it was running...
             self.assertIn('1 job running', out)
 
+    def testRobot(self):
+        with testEnv():
+            out = jobf('--robot-format', 'true')
+            sep = '\x00'
+            matchOut = r"""
+            new{sep}key=(\S*_true)\n               # job added to DB
+            execute{sep}key=\1{sep}command=true\n  # actual job execution
+            finish{sep}key=\1{sep}rc=0\n           # job finishes
+            """
+            reg = re.compile(matchOut.format(sep=sep),
+                             re.MULTILINE | re.VERBOSE)
+            self.assertRegexpMatches(out, reg)
+
     def testMonitor(self):
         # --monitor
         with testEnv():
