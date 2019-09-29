@@ -94,8 +94,8 @@ def job(*cmd):
     return run(jobCmd, capture=True)
 
 
-def waitFor(func, timeout=10.0, failArg=True):
-    interval = [0, 0.1, 0.1, 0.2, 0.2, 0.5, 1]
+def waitFor(func, timeout=60.0, failArg=True):
+    interval = [0] * 3 + [0.1] * 10 + [0.25] * 10
     elapsed = 0
     while elapsed <= timeout:
         startTime = time.time()
@@ -165,7 +165,7 @@ class SmokeTest(TestCase):
             open(waitFile1, 'w').write('')
             print("write wait file 2")
             open(waitFile2, 'w').write('')
-            waitFor(noJobs, timeout=25)
+            waitFor(noJobs)
             print(run(['job', '-L'], capture=True))
             self.assertEqual(6, inactiveCount())
             self.assertTrue(os.path.exists(found))
