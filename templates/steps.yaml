@@ -6,4 +6,9 @@ steps:
 - script: pip install --upgrade pip tox
   displayName: 'Install tox'
 - script: tox
-  displayName: 'Run tox'
+  displayName: 'Run tox + XML'
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
