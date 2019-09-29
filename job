@@ -27,6 +27,7 @@ from jobrunner.utils import (
     doMsg,
     keyEscape,
     quiet,
+    robotInfo,
     setQuiet,
     showMsgs,
 )
@@ -226,6 +227,7 @@ def postCommand(cmd):
 def finish(job, rc):
     doMsg("key:", job.key)
     doMsg("return code:", rc)
+    robotInfo("finish", {"key": job.key}, {"rc": rc})
     if rc != 0 and quiet():
         showMsgs()
 
@@ -512,8 +514,11 @@ def parseArgs(args=None):
         help="Increase verbosity (multiple times for more verbose)",
         action="append_const",
         const=1)
-    op.add_argument('-q', '--quiet', action='store_true',
-                    help='Do not print any messages')
+    out = op.add_mutually_exclusive_group()
+    out.add_argument('--robot-format', dest='quiet', action='store_const',
+                     const='robot', help='Output job execution formatted for robots')
+    out.add_argument('-q', '--quiet', action='store_const', const='quiet',
+                     help='Do not print any messages')
     execMode = op.add_mutually_exclusive_group()
     execMode.add_argument("-f", "--foreground", action="store_true",
                           help="Do not fork, run in foreground.")
@@ -649,6 +654,7 @@ def maybeHandleNonExecWriteOptions(options, jobs):
 def runJob(cmd, options, jobs, job, fp, doIsolate):
     # pylint: disable=too-many-arguments
     doMsg("execute:", job.cmdStr)
+    robotInfo("execute", {"key": job.key}, {"command": job.cmdStr})
     fpIn = open(options.input, "r")
     rc = -1
     if doIsolate:
@@ -669,6 +675,9 @@ def runJob(cmd, options, jobs, job, fp, doIsolate):
     except KeyboardInterrupt:
         print("\ninterrupted")
         rc = -1
+    except OSError as err:
+        rc = -1 * err.errno
+        print(err, file=open(job.logfile, 'a'))
     except subprocess.CalledProcessError as err:
         rc = err.returncode
     except Exception:

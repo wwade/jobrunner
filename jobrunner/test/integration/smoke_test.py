@@ -95,18 +95,42 @@ def job(*cmd):
 
 
 def waitFor(func, timeout=10.0, failArg=True):
-    interval = 0.1
-    for _ in range(int(timeout / interval)):
+    interval = [0, 0.1, 0.1, 0.2, 0.2, 0.5, 1]
+    elapsed = 0
+    while elapsed <= timeout:
+        startTime = time.time()
         if func():
             return
-        time.sleep(interval)
+        endTime = time.time()
+        if endTime > startTime:
+            elapsed += endTime - startTime
+        if interval:
+            sleepTime = interval.pop(0)
+        else:
+            sleepTime = 1
+        elapsed += sleepTime
+        time.sleep(sleepTime)
     if failArg:
+        print('elapsed', elapsed)
         func(fail=True)
     raise Exception('timed out waiting for %r' % func)
 
 
 def activeJobs():
     return run(['job', '-l'], capture=True)
+
+
+def runningJob(name, fail=False):
+    out = run(['job', '-s', name], capture=True)
+    reg1 = re.compile(r'\nState\s+Running\n')
+    reg2 = re.compile(r'\nDuration\s+Blocked\n')
+    pid = re.compile(r'\nPID\s+(\d+)\n')
+    running = reg1.search(out)
+    blocked = reg2.search(out)
+    pidMatch = pid.search(out)
+    if fail:
+        print(out)
+    return running and pidMatch and not blocked
 
 
 def noJobs(fail=False):
@@ -126,10 +150,10 @@ class SmokeTest(TestCase):
         with testEnv() as env:
             waitFile1 = env.path('waitFile1')
             waitFile2 = env.path('waitFile2')
-            run(['job'] + awaitFile(waitFile1, 1))
-            run(['job'] + awaitFile(waitFile2, 0))
-            run(['job', '-B.', 'true'])
-            run(['job', '-B.', 'false'])
+            print(run(['job'] + awaitFile(waitFile1, 1)))
+            print(run(['job'] + awaitFile(waitFile2, 0)))
+            print(run(['job', '-B.', 'true']))
+            print(run(['job', '-B.', 'false']))
             notFound = env.path('canaryNotFound')
             run(['job', '-B.', '-c', 'touch {}'.format(notFound)])
             found = env.path('canaryFound')
@@ -137,9 +161,11 @@ class SmokeTest(TestCase):
             run(['job', '-c', touchFound, '-b', 'waitFile1', '-B', 'waitFile2', ])
             waitFor(lambda: touchFound in activeJobs(), failArg=False)
             time.sleep(1)
+            print("write wait file 1")
             open(waitFile1, 'w').write('')
+            print("write wait file 2")
             open(waitFile2, 'w').write('')
-            waitFor(noJobs)
+            waitFor(noJobs, timeout=25)
             print(run(['job', '-L'], capture=True))
             self.assertEqual(6, inactiveCount())
             self.assertTrue(os.path.exists(found))
@@ -224,14 +250,6 @@ class RunExecOptionsTest(TestCase):
             # --blocked-by-success
             # See SmokeTest
 
-            # --pid
-            # --int
-            run(['job', 'sleep', '60'])
-            out = jobf('--pid', 'sleep')
-            self.assertIn('sleep', out)
-            job('--int', 'sleep')
-            waitFor(noJobs)
-
             # --delete
             # --stop
             with self.assertRaises(CalledProcessError) as error:
@@ -275,6 +293,38 @@ class RunExecOptionsTest(TestCase):
             pprint(out.replace('\r', '\n').splitlines())
             # While it was running...
             self.assertIn('1 job running', out)
+
+    def testInt(self):
+        with testEnv():
+            # --pid
+            # --int
+            run(['job', 'sleep', '20'])
+
+            def _findJob(fail=False):
+                return runningJob('sleep 20', fail=fail)
+            waitFor(_findJob)
+            out = jobf('--pid', 'sleep')
+            print("pid", out)
+            self.assertIn('sleep', out)
+            job('--int', 'sleep')
+            try:
+                job('--int', 'sleep')
+            except CalledProcessError:
+                pass
+            waitFor(noJobs)
+
+    def testRobot(self):
+        with testEnv():
+            out = jobf('--robot-format', 'true')
+            sep = '\x00'
+            matchOut = r"""
+            new{sep}key=(\S*_true)\n               # job added to DB
+            execute{sep}key=\1{sep}command=true\n  # actual job execution
+            finish{sep}key=\1{sep}rc=0\n           # job finishes
+            """
+            reg = re.compile(matchOut.format(sep=sep),
+                             re.MULTILINE | re.VERBOSE)
+            self.assertRegexpMatches(out, reg)
 
     def testMonitor(self):
         # --monitor

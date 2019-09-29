@@ -17,6 +17,7 @@ from .utils import (
     doMsg,
     keyEscape,
     locked,
+    robotInfo,
     runMeAsRoot,
     utcNow,
     workspaceIdentity,
@@ -224,6 +225,7 @@ class JobInfo(object):
                      str(self._uidx) + "_" +
                      keyEscape(keySource))
         doMsg("set key", self._key)
+        robotInfo("new", {"key": self._key})
         return self._key
 
     @property
@@ -328,6 +330,9 @@ class JobInfo(object):
         parent.inactive[k] = self
 
     def _killPgrp(self):
+        if not self.pid:
+            print('not running')
+            return
         pgrp = os.getpgid(self.pid)
         sig = signal.SIGINT
         os.killpg(pgrp, sig)
