@@ -25,7 +25,7 @@ class BaseMixin(object):
         openDb = args[-1]
         openDb.return_value = self.myDict
         initMock.return_value = None
-        testObj = db.Database(None, None, None)
+        testObj = db.Database(None, None, None, "xxx")
         return testObj
 
 

@@ -5,9 +5,12 @@ from datetime import datetime
 import errno
 import fcntl
 import os
+import os.path
+import shutil
 import sys
 import tempfile
 import time
+from uuid import uuid4
 
 from dateutil import parser
 from dateutil.tz import tzlocal, tzutc
@@ -43,12 +46,14 @@ class Database(object):
     CHECKPOINT = '_checkPoint_'
     special = [SV, LASTKEY, LASTJOB, ITEMCOUNT, RECENT, IDX, CHECKPOINT]
 
-    def __init__(self, parent, config, dbFile, cached=False):
+    def __init__(self, parent, config, dbFile, instanceId, cached=False):
+        # pylint: disable=too-many-arguments
         self.config = config
         self.dbFile = self.config.dbDir + dbFile
         self._parent = parent
         self._dbCache = None
         self._cached = cached
+        self._instanceId = instanceId
 
     def _openDb(self):
         if self._dbCache:
@@ -58,6 +63,9 @@ class Database(object):
         if (self.SV not in db or
                 db[self.SV] != self.schemaVersion):
             db.close()
+            if os.path.exists(self.dbFile):
+                backup = self.dbFile + '.' + self._instanceId
+                shutil.copy(self.dbFile, backup)
             db = anydbm.open(self.dbFile, 'n')
             db[self.SV] = self.schemaVersion
             db[self.LASTKEY] = ""
@@ -212,11 +220,14 @@ class Database(object):
 
 class Jobs(object):
     # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, config, plugins):
         self.config = config
         self.plugins = plugins
-        self.active = Database(self, config, 'activeJobs')
-        self.inactive = Database(self, config, 'inactiveJobs')
+        self._instanceId = uuid4().hex
+        self.active = Database(self, config, 'activeJobs', self._instanceId)
+        self.inactive = Database(
+            self, config, 'inactiveJobs', self._instanceId)
         self.lockFp = None
         self.displayPending = set()
         self._cached = False
@@ -225,11 +236,17 @@ class Jobs(object):
         if self._cached == enabled:
             return
         self._cached = enabled
-        self.active = Database(self, self.config, 'activeJobs', cached=enabled)
+        self.active = Database(
+            self,
+            self.config,
+            'activeJobs',
+            self._instanceId,
+            cached=enabled)
         self.inactive = Database(
             self,
             self.config,
             'inactiveJobs',
+            self._instanceId,
             cached=enabled)
 
     def debugPrint(self, msg):
