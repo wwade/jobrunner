@@ -2,9 +2,12 @@ from __future__ import absolute_import, division, print_function
 
 import collections
 import datetime
+import errno
 import inspect
 import os
+import signal
 import sys
+import time
 
 import dateutil.tz
 
@@ -157,7 +160,18 @@ def showMsgs():
     _DEBUGGER.msgQueue = []
 
 
-def runMeAsRoot():
-    if os.getuid() == 0:
-        return
-    os.execvp("sudo", ["sudo", "python"] + sys.argv)
+def killProcGroup(pid):
+    pgrp = os.getpgid(pid)
+    sig = signal.SIGINT
+    os.killpg(pgrp, sig)
+    for sig in [signal.SIGINT, signal.SIGTERM,
+                signal.SIGKILL, signal.SIGKILL]:
+        try:
+            os.killpg(pgrp, sig)
+            print('killpg', pgrp, 'signal', sig)
+        except OSError as err:
+            if err.errno == errno.ESRCH:
+                # no such process
+                return
+        print('Still trying to kill pgrp', pgrp)
+        time.sleep(1.5)

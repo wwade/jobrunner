@@ -1,11 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 from curses.ascii import isprint
-import errno
 import os
 import pipes
-import signal
-import time
 
 import dateutil.tz
 
@@ -18,7 +15,6 @@ from .utils import (
     keyEscape,
     locked,
     robotInfo,
-    runMeAsRoot,
     utcNow,
     workspaceIdentity,
 )
@@ -329,31 +325,13 @@ class JobInfo(object):
         k = self.persistKey(parent.inactive)
         parent.inactive[k] = self
 
-    def _killPgrp(self):
-        if not self.pid:
-            print('not running')
-            return
-        pgrp = os.getpgid(self.pid)
-        sig = signal.SIGINT
-        os.killpg(pgrp, sig)
-        for sig in [signal.SIGINT, signal.SIGTERM,
-                    signal.SIGKILL, signal.SIGKILL]:
-            try:
-                os.killpg(pgrp, sig)
-                print('killpg', pgrp, 'signal', sig)
-            except OSError as err:
-                if err.errno == errno.ESRCH:
-                    # no such process
-                    return
-            print('Still trying to kill pgrp', pgrp)
-            time.sleep(1.5)
-
     def killPgrp(self):
+        if not self.pid:
+            print("Not running")
         try:
-            self._killPgrp()
-        except OSError:
-            runMeAsRoot()
-            self._killPgrp()
+            utils.killProcGroup(self.pid)
+        except OSError as error:
+            print("Unable to kill process group for", self.pid, error)
 
     @locked
     def pidIs(self, parent, pid):
