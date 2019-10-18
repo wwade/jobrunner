@@ -276,8 +276,9 @@ def addNonExecOptions(op):
     op.add_argument(
         "-l",
         "--list",
-        action="store_true",
-        help="List active jobs")
+        action="append_const",
+        const=True,
+        help="List active jobs, -ll to include active reminders")
     op.add_argument("--dot", action='store_true',
                     help='Show dependency graph for active jobs')
     op.add_argument("--png", action='store_true',
@@ -347,8 +348,10 @@ def handleNonExecOptions(options, jobs):
     # pylint: disable=too-many-return-statements
     # pylint: disable=too-many-statements
     if options.list:
+        includeReminders = len(options.list) > 1
         jobs.listActive(thisWs=options.tw, pane=options.tp,
-                        useCp=options.since_checkpoint)
+                        useCp=options.since_checkpoint,
+                        includeReminders=includeReminders)
         return True
     elif options.dot or options.png or options.svg:
         dot = jobs.makeDot(
