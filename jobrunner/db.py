@@ -358,17 +358,22 @@ class Jobs(object):
                         'TMUX_PANE', curPane)]
         return jobList
 
-    def listDb(self, db, limit, filterWs=False, filterPane=False, useCp=False):
+    def listDb(self, db, limit, filterWs=False, filterPane=False, useCp=False,
+               includeReminders=False):
         # pylint: disable=too-many-arguments
         jobList = self.filterJobs(db, limit, filterWs, filterPane, useCp)
         hasDeps = False
         for job in jobList:
+            if not includeReminders and job.reminder:
+                continue
             if job.depends:
                 hasDeps = self.walkDepTree(
                     lambda j, d: d == 1, db, job.depends, 1)
         if hasDeps:
             print(utils.SPACER)
         for job in jobList:
+            if not includeReminders and job.reminder:
+                continue
             if self.config.verbose:
                 print(job.detail(self.config.verbose[1:]))
             else:
@@ -440,13 +445,14 @@ class Jobs(object):
     def countInactive(self):
         return len(self.inactive.db) - (len(self.inactive.special) - 1)
 
-    def listActive(self, thisWs, pane, useCp):
+    def listActive(self, thisWs, pane, useCp, includeReminders):
         self.listDb(
             self.active,
             None,
             filterWs=thisWs,
             filterPane=pane,
-            useCp=useCp)
+            useCp=useCp,
+            includeReminders=includeReminders)
 
     def listInactive(self, thisWs, pane, useCp, limit=5):
         self.listDb(

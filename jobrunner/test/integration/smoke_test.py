@@ -220,10 +220,12 @@ class RunExecOptionsTest(TestCase):
             # --reminder
             # --done
             jobf('--reminder', 'do something')
-            out = jobf('-l')
+            out = jobf('-ll')
             self.assertIn('Reminder: do something', out)
-            jobf('--done', 'something')
             out = jobf('-l')
+            self.assertNotIn('Reminder: do something', out)
+            jobf('--done', 'something')
+            out = jobf('-ll')
             self.assertNotIn('Reminder: do something', out)
 
             # --key
