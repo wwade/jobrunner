@@ -328,10 +328,16 @@ class JobInfo(object):
     def killPgrp(self):
         if not self.pid:
             print("Not running")
+        pgrp = os.getpgid(self.pid)
         try:
-            utils.killProcGroup(self.pid)
+            killed = utils.killProcGroup(pgrp)
         except OSError as error:
-            print("Unable to kill process group for", self.pid, error)
+            print("Unable to kill process group", pgrp, error)
+            killed = False
+        if not killed:
+            error = utils.sudoKillProcGroup(pgrp)
+            if error:
+                print("Failed to kill with sudo as well:", error)
 
     @locked
     def pidIs(self, parent, pid):
