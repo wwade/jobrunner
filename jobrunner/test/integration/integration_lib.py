@@ -20,6 +20,12 @@ domain=ex.com
 """
 
 
+class IntegrationTestTimeout(Exception):
+    def __init__(self, message):
+        super(IntegrationTestTimeout, self).__init__(message)
+        self.message = message
+
+
 def setUpModuleHelper():
     resetEnv()
     os.environ['HOME'] = HOME
@@ -94,7 +100,7 @@ def waitFor(func, timeout=60.0, failArg=True):
     if failArg:
         print('elapsed', elapsed)
         func(fail=True)
-    raise Exception('timed out waiting for %r' % func)
+    raise IntegrationTestTimeout('timed out waiting for %r' % func)
 
 
 def activeJobs():

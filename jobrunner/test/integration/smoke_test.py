@@ -6,7 +6,7 @@ import re
 from subprocess import PIPE, CalledProcessError, Popen
 from tempfile import NamedTemporaryFile
 import time
-from unittest import TestCase, main
+from unittest import TestCase
 
 import simplejson as json
 
@@ -18,7 +18,6 @@ from .integration_lib import (
     lastKey,
     noJobs,
     run,
-    runningJob,
     setUpModuleHelper,
     testEnv,
     waitFor,
@@ -78,7 +77,6 @@ class RunExecOptionsTest(TestCase):
         --blocked-by-success
         --wait
         --watch
-        --pid
         --input
         --stop
         --delete
@@ -366,7 +364,3 @@ class RunNonExecOptionsTest(TestCase):
 
             # --activity
             # --activity-window
-
-
-if __name__ == '__main__':
-    main()
