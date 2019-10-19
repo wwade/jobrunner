@@ -218,6 +218,29 @@ class Database(object):
         return cur
 
 
+def reminderWatchSummary(activeReminder):
+    if activeReminder:
+        return " (\033[32m{} reminders\033[0m)".format(len(activeReminder))
+    else:
+        return ""
+
+
+def reminderWatchFull(activeReminder):
+    reminders = ""
+    if activeReminder:
+        reminderList = []
+        for remindJob in activeReminder:
+            workspace = ""
+            wsVal = remindJob.wsBasename()
+            if wsVal:
+                workspace = "%s: " % wsVal
+            reminderList.append(
+                '[%s%s]' %
+                (workspace, remindJob.cmdStr))
+        reminders = " " + " ".join(reminderList)
+    return reminders
+
+
 class Jobs(object):
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
@@ -654,22 +677,14 @@ class Jobs(object):
                 else:
                     jobInfo = "%d jobs" % count
 
-                reminders = ""
-                if activeReminder:
-                    reminderList = []
-                    for remindJob in activeReminder:
-                        workspace = ""
-                        wsVal = remindJob.wsBasename()
-                        if wsVal:
-                            workspace = "%s: " % wsVal
-                        reminderList.append(
-                            '[%s%s]' %
-                            (workspace, remindJob.cmdStr))
-                    reminders = " " + " ".join(reminderList)
-
                 if timeNow >= resUpd + resUpdInterval:
                     resUpd = timeNow
                     resource = self.getResources()
+
+                reminderFunc = (
+                    reminderWatchSummary
+                    if self.config.uiWatchReminderSummary else reminderWatchFull)
+                reminders = reminderFunc(activeReminder)
 
                 outStr = (timestr + " " + jobInfo + " running" + reminders +
                           ", " + resource)

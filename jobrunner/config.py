@@ -8,7 +8,17 @@ Sample rcfile:
     [mail]
     program = mail
     domain = example.com
+    [ui]
+    watch reminder = full|summary  # default=summary
 """
+
+WATCH_REMINDER_FULL = "full"
+WATCH_REMINDER_SUMMARY = "summary"
+WATCH_REMINDER_OPTIONS = (
+    WATCH_REMINDER_FULL,
+    WATCH_REMINDER_SUMMARY,
+)
+WATCH_REMINDER_DEFAULT = WATCH_REMINDER_SUMMARY
 
 
 def _getConfig(cfgParser, section, option, defaultValue=None):
@@ -24,8 +34,10 @@ class ConfigError(Exception):
 
 
 class Config(object):
+    # pylint: disable=too-many-instance-attributes
     validConfig = {
         'mail': {'domain', 'program'},
+        'ui': {'watch reminder'},
     }
 
     def _validateConfigParser(self, cfgParser):
@@ -58,6 +70,14 @@ class Config(object):
         self._mailDomain = _getConfig(
             cfgParser, "mail", "domain", os.getenv('HOSTNAME'))
         self._mailProgram = _getConfig(cfgParser, "mail", "program", "mail")
+        self._uiWatchReminder = _getConfig(
+            cfgParser, "ui", "watch reminder", WATCH_REMINDER_DEFAULT)
+        if self._uiWatchReminder not in WATCH_REMINDER_OPTIONS:
+            raise ConfigError(
+                "RC file has invalid \"ui.watch reminder\" setting {}.  Valid "
+                "options: {}".format(self._uiWatchReminder,
+                                     ", ".join(WATCH_REMINDER_OPTIONS)))
+
         self._validateConfigParser(cfgParser)
 
     @property
@@ -90,3 +110,7 @@ class Config(object):
     @property
     def mailProgram(self):
         return self._mailProgram
+
+    @property
+    def uiWatchReminderSummary(self):
+        return self._uiWatchReminder == WATCH_REMINDER_SUMMARY

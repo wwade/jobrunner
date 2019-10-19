@@ -14,6 +14,8 @@ HOSTNAME = 'host.example.com'
 HOME = '/home/me'
 
 EXAMPLE_RCFILE = """\
+[ui]
+watch reminder = full
 [mail]
 program=mail-program
 domain=ex.com
@@ -45,9 +47,11 @@ class TestRcParser(unittest.TestCase, TestMixin):
         cfgObj = self.config()
         self.assertEqual(os.path.join(HOME, 'x/db/'), cfgObj.dbDir)
 
-    def assertCfg(self, cfgObj, domain=HOSTNAME, program='mail'):
+    def assertCfg(self, cfgObj, domain=HOSTNAME,
+                  program='mail', reminderSummary=True):
         self.assertEqual(domain, cfgObj.mailDomain)
         self.assertEqual(program, cfgObj.mailProgram)
+        self.assertEqual(reminderSummary, cfgObj.uiWatchReminderSummary)
 
     def testNoFile(self):
         cfgObj = self.config()
@@ -64,7 +68,15 @@ class TestRcParser(unittest.TestCase, TestMixin):
             tempFp.write(EXAMPLE_RCFILE)
             tempFp.flush()
             cfgObj = self.config(tempFp)
-            self.assertCfg(cfgObj, domain='ex.com', program='mail-program')
+            self.assertCfg(cfgObj, domain='ex.com', program='mail-program',
+                           reminderSummary=False)
+
+    def testConfigureSummary(self):
+        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+            tempFp.write("[ui]\nwatch reminder=summary\n")
+            tempFp.flush()
+            cfgObj = self.config(tempFp)
+            self.assertCfg(cfgObj, reminderSummary=True)
 
 
 class TestMalformedRcFile(unittest.TestCase, TestMixin):
@@ -81,5 +93,16 @@ class TestMalformedRcFile(unittest.TestCase, TestMixin):
             tempFp.write(EXAMPLE_RCFILE + "\n" + "xyz = foo\n")
             tempFp.flush()
             pattern = r'unknown configuration options in section "mail": xyz'
+            with self.assertRaisesRegexp(config.ConfigError, pattern):
+                self.config(tempFp)
+
+    def testReminderBadOption(self):
+        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+            tempFp.write("[ui]\nwatch reminder=foo\n")
+            tempFp.flush()
+            pattern = (
+                r'RC file has invalid "ui.watch reminder" setting foo.\s*' +
+                r'Valid options: (full, summary|summary, full)'
+            )
             with self.assertRaisesRegexp(config.ConfigError, pattern):
                 self.config(tempFp)
