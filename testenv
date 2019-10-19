@@ -1,7 +1,6 @@
 #!/bin/sh
 function setup() {
-    VENV=${VENV:-venv}
-    echo "Create virtualenv $VENV"
+    echo "Create virtualenv $VIRTUAL_ENV"
     if ! test -d ${VENV}; then
         export _TESTENV_IN_NEWENV=1
         virtualenv --python=python2.7 ${VENV} || return 1
@@ -9,8 +8,9 @@ function setup() {
         export _TESTENV_IN_NEWENV=0
     fi
 }
+VIRTUAL_ENV=${VIRTUAL_ENV:-venv}
 if setup; then
-    . ${VENV}/bin/activate
+    . ${VIRTUAL_ENV}/bin/activate
     export JOBRUNNER_STATE_DIR=${PWD}/cfg/
     if [[ $_TESTENV_IN_NEWENV -eq 1 ]]; then
         pip install --upgrade pip

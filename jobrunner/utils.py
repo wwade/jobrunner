@@ -6,7 +6,9 @@ import errno
 import inspect
 import os
 import signal
+import subprocess
 import sys
+import tempfile
 import time
 
 import dateutil.tz
@@ -160,18 +162,68 @@ def showMsgs():
     _DEBUGGER.msgQueue = []
 
 
-def killProcGroup(pid):
-    pgrp = os.getpgid(pid)
-    sig = signal.SIGINT
-    os.killpg(pgrp, sig)
-    for sig in [signal.SIGINT, signal.SIGTERM,
-                signal.SIGKILL, signal.SIGKILL]:
+def killWithSignal(pgrp, signum):
+    try:
+        os.killpg(pgrp, signum)
+        os.killpg(pgrp, 0)
+    except OSError as err:
+        print("killpg", pgrp, signum, "->", err)
+        if err.errno == errno.ESRCH:
+            # no such process -> it's done!
+            return True
+        elif err.errno == errno.EPERM:
+            # Operation not permitted
+            return False
+        else:
+            print("killpg", pgrp, signum, "->", err)
+
+    return False
+
+
+def killProcGroup(pgrp):
+    for signum in [signal.SIGINT, signal.SIGTERM,
+                   signal.SIGKILL, signal.SIGKILL]:
         try:
-            os.killpg(pgrp, sig)
-            print('killpg', pgrp, 'signal', sig)
+            os.killpg(pgrp, signum)
+            try:
+                os.killpg(pgrp, 0)
+            except OSError as checkForEsrch:
+                if checkForEsrch.errno == errno.ESRCH:
+                    # no such process -> it's done!
+                    return True
+                raise
         except OSError as err:
             if err.errno == errno.ESRCH:
-                # no such process
-                return
+                # no such process -> it's done!
+                return True
+            elif err.errno == errno.EPERM:
+                # Operation not permitted
+                return False
+            else:
+                print("killpg", pgrp, signum, "->", err)
         print('Still trying to kill pgrp', pgrp)
         time.sleep(1.5)
+    return False
+
+
+def sudoKillProcGroup(pgrp):
+    script = r"""
+from __future__ import absolute_import, division, print_function
+import os
+import sys
+sys.path = sys.argv[1].split(":-:")
+import jobrunner.utils
+assert os.getuid() == 0
+pgrp = int(sys.argv[2])
+jobrunner.utils.killProcGroup(pgrp)
+"""
+    myPath = ":-:".join(sys.path)
+    with tempfile.NamedTemporaryFile(mode="w") as tmpf:
+        tmpf.write(script)
+        tmpf.flush()
+        try:
+            subprocess.check_call(
+                ["sudo", "python", tmpf.name, myPath, str(pgrp)])
+        except subprocess.CalledProcessError as error:
+            return error.output
+    return None
