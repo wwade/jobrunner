@@ -109,7 +109,7 @@ class Database(object):
     def getCheckpoint(self):
         try:
             return dateTimeFromJson(json.loads(self.db[self.CHECKPOINT]))
-        except (KeyError, EOFError):
+        except (KeyError, EOFError, json.scanner.JSONDecodeError):
             epoch = datetime.utcfromtimestamp(0)
             return epoch.replace(tzinfo=tzutc())
 
