@@ -1,9 +1,9 @@
 #!/bin/sh
 function setup() {
     echo "Create virtualenv $VIRTUAL_ENV"
-    if ! test -d ${VENV}; then
+    if ! test -d ${VIRTUAL_ENV}; then
         export _TESTENV_IN_NEWENV=1
-        virtualenv --python=python2.7 ${VENV} || return 1
+        virtualenv --python=python2.7 ${VIRTUAL_ENV} || return 1
     else
         export _TESTENV_IN_NEWENV=0
     fi
