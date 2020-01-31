@@ -1,6 +1,8 @@
 from . import service
-from ..db import DbmDatabase, Jobs
+from ..db import Jobs
+from ..db.dbm_db import DbmDatabase
 
 
 def registerServices():
-    pass
+    service().register("db.jobs", Jobs)
+    service().register("db.database", DbmDatabase)

@@ -6,7 +6,7 @@ import unittest
 from dateutil.tz import tzlocal, tzutc
 from mock import patch
 
-from jobrunner import db
+from jobrunner.db.dbm_db import DbmDatabase
 
 from .helpers import resetEnv
 
@@ -25,12 +25,12 @@ class BaseMixin(object):
         openDb = args[-1]
         openDb.return_value = self.myDict
         initMock.return_value = None
-        testObj = db.Database(None, None, None, "xxx")
+        testObj = DbmDatabase(None, None, None, "xxx")
         return testObj
 
 
-@patch("jobrunner.db.Database._openDb")
-@patch("jobrunner.db.Database.__init__")
+@patch("jobrunner.db.dbm_db.DbmDatabase._openDb")
+@patch("jobrunner.db.dbm_db.DbmDatabase.__init__")
 @patch("jobrunner.db.utcNow")
 class DatabasePropertiesCheckpointTest(BaseMixin, unittest.TestCase):
     def testCheckpointUnset(self, *args):

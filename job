@@ -14,8 +14,9 @@ import dateutil.parser
 import dateutil.tz
 
 from jobrunner.config import RC_FILE_HELP, Config
-from jobrunner.db import Jobs
 from jobrunner.plugins import Plugins
+from jobrunner.service import service
+from jobrunner.service.registry import registerServices
 from jobrunner.utils import (
     DATETIME_FMT,
     MOD_STATE,
@@ -40,9 +41,11 @@ def main(args=None):
     plugins = Plugins()
     MOD_STATE.plugins = plugins
 
+    registerServices()
+
     options = parseArgs(args)
     config = Config(options)
-    jobs = Jobs(config, plugins)
+    jobs = service().db.jobs(config, plugins)
 
     maybeStartDebugger(options)
     maybeHandleNonExecOptions(options, jobs)

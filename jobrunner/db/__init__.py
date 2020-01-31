@@ -1,12 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
-import anydbm
 from datetime import datetime
-import errno
 import fcntl
 import os
 import os.path
-import shutil
 import sys
 import tempfile
 import time
@@ -18,8 +15,9 @@ import simplejson as json
 
 import jobrunner.utils as utils
 
-from .info import JobInfo, decodeJobInfo, encodeJobInfo
-from .utils import (
+from ..info import JobInfo, decodeJobInfo, encodeJobInfo
+from ..service import service
+from ..utils import (
     dateTimeFromJson,
     dateTimeToJson,
     doMsg,
@@ -34,9 +32,8 @@ PRUNE_NUM = 5000
 # pylint: disable=deprecated-lambda
 
 
-class Database(object):
+class DatabaseBase(object):
     # pylint: disable=too-many-instance-attributes
-    schemaVersion = "4"
     SV = '_schemaVersion_'
     LASTKEY = '_lastKey_'
     ITEMCOUNT = '_itemCount_'
@@ -55,39 +52,9 @@ class Database(object):
         self._cached = cached
         self._instanceId = instanceId
 
-    def _openDb(self):
-        if self._dbCache:
-            return self._dbCache
-        mode = 'r' if self._cached else 'c'
-        db = anydbm.open(self.dbFile, mode)
-        if (self.SV not in db or
-                db[self.SV] != self.schemaVersion):
-            db.close()
-            if os.path.exists(self.dbFile):
-                backup = self.dbFile + '.' + self._instanceId
-                shutil.copy(self.dbFile, backup)
-            db = anydbm.open(self.dbFile, 'n')
-            db[self.SV] = self.schemaVersion
-            db[self.LASTKEY] = ""
-            db[self.LASTJOB] = ""
-            db[self.ITEMCOUNT] = "0"
-            db[self.CHECKPOINT] = ""
-            db.close()
-            db = anydbm.open(self.dbFile, mode)
-        if self._cached:
-            self._dbCache = db
-        return db
-
     @property
     def db(self):
-        for _ in range(5):
-            try:
-                return self._openDb()
-            except anydbm.error as error:  # pylint: disable=catching-non-exception
-                errNum = error.args[0]
-                if errNum != errno.EAGAIN:
-                    raise
-                time.sleep(0.25)
+        raise NotImplementedError
 
     def filterJobs(self, k):
         return k not in self.special
@@ -248,8 +215,9 @@ class Jobs(object):
         self.config = config
         self.plugins = plugins
         self._instanceId = uuid4().hex
-        self.active = Database(self, config, 'activeJobs', self._instanceId)
-        self.inactive = Database(
+        self.active = service().db.database(
+            self, config, 'activeJobs', self._instanceId)
+        self.inactive = service().db.database(
             self, config, 'inactiveJobs', self._instanceId)
         self.lockFp = None
         self.displayPending = set()
@@ -259,18 +227,14 @@ class Jobs(object):
         if self._cached == enabled:
             return
         self._cached = enabled
-        self.active = Database(
+        self.active = service().db.database(
             self,
             self.config,
             'activeJobs',
             self._instanceId,
             cached=enabled)
-        self.inactive = Database(
-            self,
-            self.config,
-            'inactiveJobs',
-            self._instanceId,
-            cached=enabled)
+        self.inactive = service().db.database(
+            self, self.config, 'inactiveJobs', self._instanceId, cached=enabled)
 
     def debugPrint(self, msg):
         if "lock" not in self.config.debugLevel:
