@@ -1,12 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
-import anydbm
 from datetime import datetime
-import errno
-import fcntl
 import os
 import os.path
-import shutil
 import sys
 import tempfile
 import time
@@ -18,12 +14,14 @@ import simplejson as json
 
 import jobrunner.utils as utils
 
-from .info import JobInfo, decodeJobInfo, encodeJobInfo
-from .utils import (
+from ..info import JobInfo, decodeJobInfo, encodeJobInfo
+from ..utils import (
+    FileLock,
     dateTimeFromJson,
     dateTimeToJson,
     doMsg,
     pidDebug,
+    safeSleep,
     stackDetails,
     utcNow,
 )
@@ -34,9 +32,8 @@ PRUNE_NUM = 5000
 # pylint: disable=deprecated-lambda
 
 
-class Database(object):
+class DatabaseMeta(object):
     # pylint: disable=too-many-instance-attributes
-    schemaVersion = "4"
     SV = '_schemaVersion_'
     LASTKEY = '_lastKey_'
     ITEMCOUNT = '_itemCount_'
@@ -44,50 +41,24 @@ class Database(object):
     IDX = '_currentIndex_'
     LASTJOB = '_lastJob_'
     CHECKPOINT = '_checkPoint_'
-    special = [SV, LASTKEY, LASTJOB, ITEMCOUNT, RECENT, IDX, CHECKPOINT]
+    initvals = frozenset([SV, LASTKEY, LASTJOB, ITEMCOUNT, CHECKPOINT])
+    special = frozenset(list(initvals) + [RECENT, IDX])
 
-    def __init__(self, parent, config, dbFile, instanceId, cached=False):
-        # pylint: disable=too-many-arguments
+
+def resolveDbFile(config, filename):
+    return os.path.join(config.dbDir, filename)
+
+
+class DatabaseBase(DatabaseMeta):
+    def __init__(self, parent, config, instanceId):
         self.config = config
-        self.dbFile = self.config.dbDir + dbFile
         self._parent = parent
-        self._dbCache = None
-        self._cached = cached
         self._instanceId = instanceId
-
-    def _openDb(self):
-        if self._dbCache:
-            return self._dbCache
-        mode = 'r' if self._cached else 'c'
-        db = anydbm.open(self.dbFile, mode)
-        if (self.SV not in db or
-                db[self.SV] != self.schemaVersion):
-            db.close()
-            if os.path.exists(self.dbFile):
-                backup = self.dbFile + '.' + self._instanceId
-                shutil.copy(self.dbFile, backup)
-            db = anydbm.open(self.dbFile, 'n')
-            db[self.SV] = self.schemaVersion
-            db[self.LASTKEY] = ""
-            db[self.LASTJOB] = ""
-            db[self.ITEMCOUNT] = "0"
-            db[self.CHECKPOINT] = ""
-            db.close()
-            db = anydbm.open(self.dbFile, mode)
-        if self._cached:
-            self._dbCache = db
-        return db
+        self.ident = 'N/A'
 
     @property
     def db(self):
-        for _ in range(5):
-            try:
-                return self._openDb()
-            except anydbm.error as error:  # pylint: disable=catching-non-exception
-                errNum = error.args[0]
-                if errNum != errno.EAGAIN:
-                    raise
-                time.sleep(0.25)
+        raise NotImplementedError
 
     def filterJobs(self, k):
         return k not in self.special
@@ -178,7 +149,7 @@ class Database(object):
 
     def __setitem__(self, key, value):
         if "lock" in self.config.debugLevel:
-            pidDebug(self.dbFile, "[%s]" % key, "=", repr(value))
+            pidDebug(self.ident, "[%s]" % key, "=", repr(value))
         if key not in self.db:
             self.count = 1
             self.recent = key
@@ -207,7 +178,7 @@ class Database(object):
 
     def __str__(self):
         return "DB %d '%s' ver %s" % (
-            self.count, self.dbFile, self.db[self.SV])
+            self.count, self.ident, self.db[self.SV])
 
     def uidx(self):
         if self.IDX in self.db:
@@ -241,36 +212,20 @@ def reminderWatchFull(activeReminder):
     return reminders
 
 
-class Jobs(object):
+class JobsBase(object):
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
     def __init__(self, config, plugins):
         self.config = config
         self.plugins = plugins
         self._instanceId = uuid4().hex
-        self.active = Database(self, config, 'activeJobs', self._instanceId)
-        self.inactive = Database(
-            self, config, 'inactiveJobs', self._instanceId)
-        self.lockFp = None
         self.displayPending = set()
-        self._cached = False
+        self.active = None
+        self.inactive = None
+        self._lock = FileLock(self.config.lockFile)
 
     def setDbCaching(self, enabled):
-        if self._cached == enabled:
-            return
-        self._cached = enabled
-        self.active = Database(
-            self,
-            self.config,
-            'activeJobs',
-            self._instanceId,
-            cached=enabled)
-        self.inactive = Database(
-            self,
-            self.config,
-            'inactiveJobs',
-            self._instanceId,
-            cached=enabled)
+        pass
 
     def debugPrint(self, msg):
         if "lock" not in self.config.debugLevel:
@@ -283,17 +238,14 @@ class Jobs(object):
         pidDebug(msg, "from",
                  fnDetails.filename, fnDetails.funcname, fnDetails.lineno)
 
+    def isLocked(self):
+        raise NotImplementedError
+
     def lock(self):
         self.debugPrint("< LOCK DB")
-        assert self.lockFp is None
-        self.lockFp = open(self.config.lockFile, 'a')
-        fcntl.flock(self.lockFp, fcntl.LOCK_EX)
-        self.debugPrint("<< LOCKED")
 
     def unlock(self):
         self.debugPrint("< UNLOCK DB")
-        self.lockFp.close()
-        self.lockFp = None
 
     def prune(self, exceptNum=None):
         allJobs = []
@@ -577,20 +529,19 @@ class Jobs(object):
         key = recent[index]
         return self.getJobMatch(key, thisWs, skipReminders=True).logfile
 
-    @staticmethod
-    def wait(func, desc, verbose, _timeout=None):
+    def _wait(self, func, desc, verbose, _timeout=None):
         if func():
             return
         if verbose:
             print("\nWaiting for %s" % desc)
         while not func():
-            time.sleep(1)
+            safeSleep(1, self)
             if verbose:
                 sys.stdout.write(".")
                 sys.stdout.flush()
 
     def waitFor(self, job, verbose):
-        self.wait(
+        self._wait(
             lambda: job.key not in self.active.db,
             "job '%s'" %
             job,
@@ -603,8 +554,8 @@ class Jobs(object):
         return isinstance(j, JobInfo)
 
     def waitInactive(self, key, verbose):
-        self.wait(lambda: self.inactiveKey(key), 'inactive key "%s"' % key,
-                  verbose)
+        self._wait(lambda: self.inactiveKey(key), 'inactive key "%s"' % key,
+                   verbose)
 
     def showJobList(self, joblist, tag, clearLen):
         timestr = datetime.now().strftime(utils.DATETIME_FMT)
@@ -699,7 +650,7 @@ class Jobs(object):
                 if clearLen < 30:
                     clearLen = 30
                 sys.stdout.flush()
-            time.sleep(1)
+            safeSleep(1, self)
 
     def activityWindow(self, options):
         # pylint: disable=too-many-locals,too-many-branches

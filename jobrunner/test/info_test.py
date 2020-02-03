@@ -28,9 +28,9 @@ def newJob(uidx, cmd, workspaceIdentity="WS"):
     mockPlug = mock.MagicMock(plugins.Plugins)
     mockPlug.workspaceIdentity.return_value = workspaceIdentity
     utils.MOD_STATE.plugins = mockPlug
-    parent = mock.MagicMock(db.Jobs)
-    parent.inactive = mock.MagicMock(db.Database)
-    parent.active = mock.MagicMock(db.Database)
+    parent = mock.MagicMock(db.JobsBase)
+    parent.inactive = mock.MagicMock(db.DatabaseBase)
+    parent.active = mock.MagicMock(db.DatabaseBase)
     jobInfo = info.JobInfo(uidx)
     jobInfo.isolate = False
     jobInfo.setCmd(cmd)
