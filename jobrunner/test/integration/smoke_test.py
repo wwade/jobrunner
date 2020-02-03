@@ -1,13 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-from pprint import pprint
+from pipes import quote
 import re
-from subprocess import PIPE, CalledProcessError, Popen
+from subprocess import CalledProcessError
 from tempfile import NamedTemporaryFile
 import time
 from unittest import TestCase
 
+import pexpect
 import simplejson as json
 
 from .integration_lib import (
@@ -57,6 +58,12 @@ class SmokeTest(TestCase):
             self.assertEqual(6, inactiveCount())
             self.assertTrue(os.path.exists(found))
             self.assertFalse(os.path.exists(notFound))
+
+
+def spawn(cmd):
+    print(" ".join(map(quote, cmd)))
+    child = pexpect.spawn(cmd[0], cmd[1:], echo=True)
+    return child
 
 
 class RunExecOptionsTest(TestCase):
@@ -163,23 +170,20 @@ class RunExecOptionsTest(TestCase):
             outData = open(catOutFile).read()
             self.assertEqual(outData, data)
 
+    def testWatchWait(self):
+        with testEnv():
             # --watch
             # --wait
             print('+ job --watch')
-            sub = Popen(['job', '--watch'], stdout=PIPE)
-            jobf('sleep', '3')
-            out = ''
-            out += sub.stdout.read(10)
-            out += sub.stdout.read(10)
-            out += sub.stdout.read(10)
-            job('--wait', 'sleep')
-            time.sleep(2)
-            sub.terminate()
-            sub.wait()
-            out += sub.stdout.read()
-            pprint(out.replace('\r', '\n').splitlines())
-            # While it was running...
-            self.assertIn('1 job running', out)
+            child = spawn(['job', '--watch'])
+            child.expect('No jobs running')
+            child.expect(r'\r')
+            sleeper = spawn(['job', '--foreground', 'sleep', '60'])
+            sleeper.expect('execute: sleep 60')
+            child.expect('1 job running')
+            child.sendintr()
+            jobf('--int', 'sleep')
+            sleeper.close()
 
     def testRobot(self):
         with testEnv():
@@ -197,18 +201,11 @@ class RunExecOptionsTest(TestCase):
     def testMonitor(self):
         # --monitor
         with testEnv():
-            print('+ job --monitor -c "echo MARKOUTPUT"')
-            sub = Popen(['job', '--monitor', '-c',
-                         'echo MARKOUTPUT'], stdout=PIPE)
-            out = sub.stdout.read(50)
-            self.assertIn("Monitoring with", out)
-            waitFor(noJobs)
-            sub.terminate()
-            sub.wait()
-            out += sub.stdout.read()
-            pprint(out.replace('\r', '\n').splitlines())
-            self.assertIn("MARKOUTPUT", out)
-            self.assertIn("return code: 0", out)
+            child = spawn(['job', '--monitor', '-c', 'echo MARKOUTPUT'])
+            child.expect(r'Monitoring with')
+            child.expect(r'\sMARKOUTPUT\s')
+            child.expect(r'return code: 0')
+            child.sendintr()
 
 
 MAIL_CONFIG = """

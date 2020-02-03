@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from curses.ascii import isprint
+import errno
 import os
 import pipes
 
@@ -15,6 +16,7 @@ from .utils import (
     keyEscape,
     locked,
     robotInfo,
+    unlocked,
     utcNow,
     workspaceIdentity,
 )
@@ -69,6 +71,9 @@ class JobInfo(object):
 
     def __setstate__(self, dct):
         self.__dict__.update(dct)
+
+    def isLocked(self):
+        return self._parent.isLocked()
 
     def lock(self):
         self._parent.lock()
@@ -325,15 +330,24 @@ class JobInfo(object):
         k = self.persistKey(parent.inactive)
         parent.inactive[k] = self
 
-    def killPgrp(self):
+    @unlocked
+    def killPgrp(self, jobs):
         if not self.pid:
             print("Not running")
-        pgrp = os.getpgid(self.pid)
+            return
         try:
-            killed = utils.killProcGroup(pgrp)
+            pgrp = os.getpgid(self.pid)
         except OSError as error:
-            print("Unable to kill process group", pgrp, error)
-            killed = False
+            print("Unable to get process group for", self.pid, error)
+            if error.errno != errno.ESRCH:
+                raise
+            pgrp = None
+        killed = False
+        if pgrp:
+            try:
+                killed = utils.killProcGroup(pgrp, jobs)
+            except OSError as error:
+                print("Unable to kill process group", pgrp, error)
         if not killed:
             error = utils.sudoKillProcGroup(pgrp)
             if error:

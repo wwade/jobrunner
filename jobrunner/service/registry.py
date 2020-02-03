@@ -1,8 +1,10 @@
 from . import service
-from ..db import Jobs
-from ..db.dbm_db import DbmDatabase
+from ..db.dbm_db import DbmJobs
+from ..db.sqlite_db import Sqlite3Jobs
 
 
-def registerServices():
-    service().register("db.jobs", Jobs)
-    service().register("db.database", DbmDatabase)
+def registerServices(sqlite=False):
+    if sqlite:
+        service().register("db.jobs", Sqlite3Jobs)
+    else:
+        service().register("db.jobs", DbmJobs)

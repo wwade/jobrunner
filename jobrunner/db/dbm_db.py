@@ -1,10 +1,12 @@
+from __future__ import absolute_import, division, print_function
+
 import anydbm
 import errno
 import os
 import shutil
 import time
 
-from . import DatabaseBase
+from . import DatabaseBase, JobsBase, resolveDbFile
 
 
 class DbmDatabase(DatabaseBase):
@@ -12,8 +14,12 @@ class DbmDatabase(DatabaseBase):
 
     def __init__(self, parent, config, dbFile, instanceId, cached=False):
         # pylint: disable=too-many-arguments
-        super(DbmDatabase, self).__init__(parent, config, dbFile, instanceId,
-                                          cached=cached)
+        super(DbmDatabase, self).__init__(parent, config, instanceId)
+        self.ident = dbFile
+        self.dbFile = resolveDbFile(config, dbFile)
+        self._dbCache = None
+        self._cached = cached
+        self._instanceId = instanceId
 
     def _openDb(self):
         if self._dbCache:
@@ -48,3 +54,38 @@ class DbmDatabase(DatabaseBase):
                 if errNum != errno.EAGAIN:
                     raise
                 time.sleep(0.25)
+
+
+class DbmJobs(JobsBase):
+    def __init__(self, config, plugins):
+        super(DbmJobs, self).__init__(config, plugins)
+        self.active = DbmDatabase(
+            self, config, 'activeJobs', self._instanceId)
+        self.inactive = DbmDatabase(
+            self, config, 'inactiveJobs', self._instanceId)
+        self._cached = False
+
+    def setDbCaching(self, enabled):
+        if self._cached == enabled:
+            return
+        self._cached = enabled
+        self.active = DbmDatabase(
+            self,
+            self.config,
+            'activeJobs',
+            self._instanceId,
+            cached=enabled)
+        self.inactive = DbmDatabase(
+            self, self.config, 'inactiveJobs', self._instanceId, cached=enabled)
+
+    def isLocked(self):
+        return self._lock.isLocked()
+
+    def lock(self):
+        super(DbmJobs, self).lock()
+        self._lock.lock()
+        self.debugPrint("<< LOCKED")
+
+    def unlock(self):
+        super(DbmJobs, self).unlock()
+        self._lock.unlock()

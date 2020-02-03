@@ -2,6 +2,7 @@ autopep8
 isort
 mock
 nose
+pexpect
 pylint
 pytest
 tox

@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from contextlib import contextmanager
 import os
+from pipes import quote
 import re
 from shutil import rmtree
 from subprocess import STDOUT, CalledProcessError, check_call, check_output
@@ -60,7 +61,7 @@ def testEnv():
 
 
 def run(cmd, capture=False):
-    print('+', ' '.join(cmd))
+    print(' '.join(map(quote, cmd)))
     try:
         if capture:
             return check_output(cmd, stderr=STDOUT)
