@@ -1,14 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-from pipes import quote
 import re
 from subprocess import CalledProcessError
 from tempfile import NamedTemporaryFile
 import time
 from unittest import TestCase
 
-import pexpect
+from pexpect import EOF
 import simplejson as json
 
 from .integration_lib import (
@@ -20,6 +19,7 @@ from .integration_lib import (
     noJobs,
     run,
     setUpModuleHelper,
+    spawn,
     testEnv,
     waitFor,
 )
@@ -58,12 +58,6 @@ class SmokeTest(TestCase):
             self.assertEqual(6, inactiveCount())
             self.assertTrue(os.path.exists(found))
             self.assertFalse(os.path.exists(notFound))
-
-
-def spawn(cmd):
-    print(" ".join(map(quote, cmd)))
-    child = pexpect.spawn(cmd[0], cmd[1:], echo=True)
-    return child
 
 
 class RunExecOptionsTest(TestCase):
@@ -179,11 +173,20 @@ class RunExecOptionsTest(TestCase):
             child.expect('No jobs running')
             child.expect(r'\r')
             sleeper = spawn(['job', '--foreground', 'sleep', '60'])
-            sleeper.expect('execute: sleep 60')
-            child.expect('1 job running')
+            sleeper.expect(r'execute: sleep 60')
+
+            # Confirm --watch output
+            child.expect(r'1 job running')
             child.sendintr()
-            jobf('--int', 'sleep')
-            sleeper.close()
+
+            # Wait for the sleep 60
+            waiter = spawn(['job', '--wait', 'sleep'])
+            waiter.expect(r'adding dependency.*sleep 60')
+
+            # Kill the sleep 60
+            sleeper.sendintr()
+            waiter.expect(r'Dependent job failed:.*sleep 60')
+            waiter.expect(EOF)
 
     def testRobot(self):
         with testEnv():
