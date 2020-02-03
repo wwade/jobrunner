@@ -9,6 +9,8 @@ from subprocess import STDOUT, CalledProcessError, check_call, check_output
 from tempfile import mkdtemp
 import time
 
+import pexpect
+
 from ..helpers import resetEnv
 
 HOSTNAME = 'host.example.com'
@@ -135,3 +137,9 @@ def lastKey():
 
 def inactiveCount():
     return int(run(['job', '--count'], capture=True))
+
+
+def spawn(cmd):
+    print(" ".join(map(quote, cmd)))
+    child = pexpect.spawn(cmd[0], cmd[1:], echo=True)
+    return child
