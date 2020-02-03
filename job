@@ -5,8 +5,7 @@ import argparse
 import errno
 import hashlib
 import os
-import subprocess
-from subprocess import PIPE
+from subprocess import PIPE, CalledProcessError, Popen, check_call, check_output
 import sys
 import tempfile
 
@@ -197,8 +196,7 @@ def main(args=None):
             depJob = jobs.inactive[j.permKey]
             safeWrite(tmp, depJob.detail(options.verbose))
             safeWrite(tmp, "\n" + SPACER_EACH + "\n")
-            safeWrite(tmp, subprocess.check_output(['tail', '-n20',
-                                                    depJob.logfile]))
+            safeWrite(tmp, check_output(['tail', '-n20', depJob.logfile]))
             safeWrite(tmp, SPACER_EACH + "\n")
             safeWrite(tmp, "\n")
             try:
@@ -366,7 +364,7 @@ def handleNonExecOptions(options, jobs):
             fName = '~%s/output/job.svg' % os.getenv('USER')
             ofile = os.path.expanduser(fName)
             cmd = ['dot', '-Tsvg', '-o', ofile]
-            proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
+            proc = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
             stdout, stderr = proc.communicate(input=dot)
             if stdout.strip() or stderr.strip():
                 raise ExitCode(stdout + stderr)
@@ -405,11 +403,11 @@ def handleNonExecOptions(options, jobs):
             print("==============================================")
             print(j)
             try:
-                print(subprocess.check_output(['pstree', '-alpg', str(j.pid)]))
+                print(check_output(['pstree', '-alpg', str(j.pid)]))
             except OSError as error:
                 if error.errno != errno.ENOENT:
                     raise
-                print(subprocess.check_output(['ps', '-fp', str(j.pid)]))
+                print(check_output(['ps', '-fp', str(j.pid)]))
             print("==============================================")
         return True
     elif options.last_key:
@@ -674,14 +672,14 @@ def runJob(cmd, options, jobs, job, fp, doIsolate):
             print('Isolating command IS :', netnsd)
         cmd = netnsd
     try:
-        rc = subprocess.check_call(cmd, stdin=fpIn, stdout=fp, stderr=fp)
+        rc = check_call(cmd, stdin=fpIn, stdout=fp, stderr=fp)
     except KeyboardInterrupt:
         print("\ninterrupted")
         rc = -1
     except OSError as err:
         rc = -1 * err.errno
         print(err, file=open(job.logfile, 'a'))
-    except subprocess.CalledProcessError as err:
+    except CalledProcessError as err:
         rc = err.returncode
     except Exception:
         rc = -1
