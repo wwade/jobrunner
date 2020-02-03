@@ -1,8 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 import collections
+from contextlib import contextmanager
 import datetime
 import errno
+import fcntl
 import inspect
 import os
 import signal
@@ -43,15 +45,63 @@ MOD_STATE = ModState()
 
 def locked(func):
     def _locked(self, *args, **kwargs):
-        self.lock()
+        isLocked = self.isLocked()
+        if not isLocked:
+            self.lock()
         ret = func(self, *args, **kwargs)
-        self.unlock()
+        if not isLocked:
+            self.unlock()
         return ret
     return _locked
 
 
+@contextmanager
+def maybeUnlock(jobs):
+    isLocked = jobs.isLocked()
+    if isLocked:
+        jobs.unlock()
+    try:
+        yield
+    finally:
+        if isLocked:
+            jobs.lock()
+
+
+def unlocked(func):
+    def _unlocked(self, *args, **kwargs):
+        with maybeUnlock(self):
+            return func(self, *args, **kwargs)
+    return _unlocked
+
+
 def utcNow():
     return datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc())
+
+
+class FileLock(object):
+    def __init__(self, filename):
+        self._filename = filename
+        self._fp = None
+
+    def __del__(self):
+        if self._fp:
+            print(os.getpid(), "WARNING: termination without unlocking")
+            self.unlock()
+            self._fp.close()
+            self._fp = None
+
+    def isLocked(self):
+        return bool(self._fp)
+
+    def lock(self):
+        assert self._fp is None
+        self._fp = open(self._filename, 'a')
+        fcntl.flock(self._fp, fcntl.LOCK_EX)
+
+    def unlock(self):
+        assert self._fp is not None
+        self._fp.close()
+        self._fp = None
 
 
 def dateTimeToJson(dtObj):
@@ -180,7 +230,12 @@ def killWithSignal(pgrp, signum):
     return False
 
 
-def killProcGroup(pgrp):
+def safeSleep(howLong, jobs):
+    with maybeUnlock(jobs):
+        time.sleep(howLong)
+
+
+def killProcGroup(pgrp, jobs):
     for signum in [signal.SIGINT, signal.SIGTERM,
                    signal.SIGKILL, signal.SIGKILL]:
         try:
@@ -202,7 +257,10 @@ def killProcGroup(pgrp):
             else:
                 print("killpg", pgrp, signum, "->", err)
         print('Still trying to kill pgrp', pgrp)
-        time.sleep(1.5)
+        if jobs is None:
+            time.sleep(1.5)
+        else:
+            safeSleep(1.5, jobs)
     return False
 
 
@@ -215,7 +273,7 @@ sys.path = sys.argv[1].split(":-:")
 import jobrunner.utils
 assert os.getuid() == 0
 pgrp = int(sys.argv[2])
-jobrunner.utils.killProcGroup(pgrp)
+jobrunner.utils.killProcGroup(pgrp, None)
 """
     myPath = ":-:".join(sys.path)
     with tempfile.NamedTemporaryFile(mode="w") as tmpf:

@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from subprocess import CalledProcessError
+from subprocess import CalledProcessError, check_output
 from unittest import TestCase
 
 from pytest import mark
@@ -16,6 +16,24 @@ from .integration_lib import (
     testEnv,
     waitFor,
 )
+
+
+class _Module(object):
+    sudoOk = 0
+
+    def __init__(self):
+        try:
+            out = check_output(['sudo', '-l'])
+        except CalledProcessError as error:
+            print("Ignore sudo check error", error)
+            return
+        for line in out.splitlines():
+            if line.endswith(' ALL') and ' NOPASSWD:' in line:
+                self.sudoOk = 1
+                break
+
+
+_MODULE = _Module()
 
 
 def setUpModule():
@@ -44,6 +62,7 @@ class TestInterrupt(TestCase):
             waitFor(noJobs)
 
     @mark.xfail(raises=IntegrationTestTimeout)
+    @mark.skipif(_MODULE.sudoOk != 1, reason="no sudo rights")
     def testWithSudo(self):
         with testEnv():
             run(['job', 'sudo', 'sleep', '60'])
