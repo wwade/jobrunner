@@ -523,11 +523,11 @@ def getPstree(pid):
     pstree = Pstree(None)
     try:
         return Pstree(check_output(['pstree', '-alpg', str(pid)]))
-    except CalledProcessError as error:
+    except (OSError, CalledProcessError) as error:
         pstree.errors.append(error)
     try:
         return Pstree(check_output(['ps', '-fp', str(pid)]))
-    except CalledProcessError as error:
+    except (OSError, CalledProcessError) as error:
         pstree.errors.append(error)
     return pstree
 
