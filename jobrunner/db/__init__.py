@@ -15,6 +15,7 @@ import simplejson as json
 import jobrunner.utils as utils
 
 from ..info import JobInfo, decodeJobInfo, encodeJobInfo
+from ..service import service
 from ..utils import (
     FileLock,
     dateTimeFromJson,
@@ -763,7 +764,7 @@ class JobsBase(object):
         # pylint: disable=too-many-arguments
         if key and key in self.active.db:
             raise Exception("Active key conflict for key '%s'" % key)
-        job = JobInfo(self.uidx(), key)
+        job = service().db.jobInfo(self.uidx(), key)
         job.isolate = isolate
         job.setCmd(cmd, reminder)
         job.pid = os.getpid()

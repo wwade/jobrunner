@@ -9,6 +9,7 @@ import dateutil.tz
 
 import jobrunner.utils as utils
 
+from .service import service
 from .utils import (
     dateTimeFromJson,
     dateTimeToJson,
@@ -564,7 +565,7 @@ def decodeJobInfo(odict):
     if '_uidx' not in odict:
         return odict
     uidx = odict['_uidx']
-    newJob = JobInfo(uidx)
+    newJob = service().db.jobInfo(uidx)
     for dateTimeKey in DATETIME_KEYS:
         odict[dateTimeKey] = dateTimeFromJson(odict.get(dateTimeKey))
     odict['_alldeps'] = set(odict.get('_alldeps', set()))
