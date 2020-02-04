@@ -7,12 +7,14 @@ import mock
 import simplejson as json
 
 from jobrunner import db, info, plugins, utils
+from jobrunner.service.registry import registerServices
 
 from .helpers import resetEnv
 
 
 def setUpModule():
     resetEnv()
+    registerServices(testing=True)
     os.environ['HOSTNAME'] = 'testHostname'
     os.environ['USER'] = 'somebody'
     if 'WP' in os.environ:

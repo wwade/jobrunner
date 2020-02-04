@@ -110,7 +110,7 @@ def main(args=None):
 
     job, fp = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
                        key=options.key, reminder=options.reminder)
-    job.genPersistKey(jobs.inactive)
+    job.genPersistKey()
     jobs.active[job.key] = job
 
     scriptName = os.path.basename(sys.argv[0])

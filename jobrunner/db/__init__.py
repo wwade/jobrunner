@@ -15,6 +15,7 @@ import simplejson as json
 import jobrunner.utils as utils
 
 from ..info import JobInfo, decodeJobInfo, encodeJobInfo
+from ..service import service
 from ..utils import (
     FileLock,
     dateTimeFromJson,
@@ -43,6 +44,13 @@ class DatabaseMeta(object):
     CHECKPOINT = '_checkPoint_'
     initvals = frozenset([SV, LASTKEY, LASTJOB, ITEMCOUNT, CHECKPOINT])
     special = frozenset(list(initvals) + [RECENT, IDX])
+
+    def defaultValueGenerator(self, schemaVersion):
+        yield self.SV, schemaVersion
+        yield self.LASTKEY, ""
+        yield self.LASTJOB, ""
+        yield self.ITEMCOUNT, "0"
+        yield self.CHECKPOINT, ""
 
 
 def resolveDbFile(config, filename):
@@ -250,25 +258,19 @@ class JobsBase(object):
     def prune(self, exceptNum=None):
         allJobs = []
         db = self.inactive
-        for k in db.keys():
-            j = db[k]
-            if isinstance(j, str):
-                del db[k]
-            elif j.key != k:
-                print("Warning, key mismatch k=%s job key=%s" % (repr(k),
-                                                                 repr(j.key)))
-                print(j.detail("vvv"))
-                del db[k]
-            else:
-                allJobs.append(j)
+        for jobKey in db.keys():
+            job = db[jobKey]
+            assert job.key == jobKey, 'job key mismatch "{}" for job {}'.format(
+                jobKey, job)
+            allJobs.append(job)
         allJobs.sort()
         limit = PRUNE_NUM if exceptNum is None else exceptNum
         if len(allJobs) > limit:
-            for j in allJobs[: -1 * limit]:
+            for job in allJobs[: -1 * limit]:
                 if self.config.verbose:
-                    print("Prune '%s'" % j.key)
-                j.removeLog(self.config.verbose)
-                del self.inactive[j.key]
+                    print("Prune '%s'" % job.key)
+                job.removeLog(self.config.verbose)
+                del self.inactive[job.key]
 
     @staticmethod
     def getDbSorted(db, _limit, useCp=False, filterWs=False):
@@ -282,8 +284,6 @@ class JobsBase(object):
                 try:
                     job = db[k]
                 except KeyError:
-                    continue
-                if job in ['Not a valid entry', 'None']:
                     continue
                 if useCp:
                     refTime = job.createTime
@@ -673,8 +673,6 @@ class JobsBase(object):
             remind.setdefault(j.workspace, []).append(j)
         for k in self.inactive.keys():
             j = self.inactive[k]
-            if j in ['Not a valid entry', 'None']:
-                continue
             if not j.stopTime or j.autoJob:
                 continue
             if j.rc in utils.SPECIAL_STATUS:
@@ -763,7 +761,7 @@ class JobsBase(object):
         # pylint: disable=too-many-arguments
         if key and key in self.active.db:
             raise Exception("Active key conflict for key '%s'" % key)
-        job = JobInfo(self.uidx(), key)
+        job = service().db.jobInfo(self.uidx(), key)
         job.isolate = isolate
         job.setCmd(cmd, reminder)
         job.pid = os.getpid()

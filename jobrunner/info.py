@@ -9,6 +9,7 @@ import dateutil.tz
 
 import jobrunner.utils as utils
 
+from .service import service
 from .utils import (
     dateTimeFromJson,
     dateTimeToJson,
@@ -233,13 +234,11 @@ class JobInfo(object):
     def permKey(self):
         return self._persistKeyGenerated
 
-    def genPersistKey(self, inactive):
+    def genPersistKey(self):
         if self._persistKeyGenerated is not None:
             return
         assert self._key
         persistKey = self._key
-        if persistKey not in inactive.db:
-            inactive[persistKey] = 'Not a valid entry'
         self._persistKeyGenerated = persistKey
         return
 
@@ -298,26 +297,26 @@ class JobInfo(object):
     @locked
     def setDependencies(self, parent, onWhat):
         self.depends = onWhat
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
     def blocked(self, parent):
         self._blocked = True
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
     def unblocked(self, parent):
         self._blocked = False
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
     def start(self, parent):
         self._start = utcNow()
         parent.inactive.lastKey = self.key
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
@@ -326,7 +325,7 @@ class JobInfo(object):
         self._rc = rc
         self.pid = None
         del parent.active[self.key]
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         k = self.persistKey(parent.inactive)
         parent.inactive[k] = self
 
@@ -564,7 +563,7 @@ def decodeJobInfo(odict):
     if '_uidx' not in odict:
         return odict
     uidx = odict['_uidx']
-    newJob = JobInfo(uidx)
+    newJob = service().db.jobInfo(uidx)
     for dateTimeKey in DATETIME_KEYS:
         odict[dateTimeKey] = dateTimeFromJson(odict.get(dateTimeKey))
     odict['_alldeps'] = set(odict.get('_alldeps', set()))
