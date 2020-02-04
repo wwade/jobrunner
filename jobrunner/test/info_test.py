@@ -14,7 +14,7 @@ from .helpers import resetEnv
 
 def setUpModule():
     resetEnv()
-    registerServices()
+    registerServices(testing=True)
     os.environ['HOSTNAME'] = 'testHostname'
     os.environ['USER'] = 'somebody'
     if 'WP' in os.environ:

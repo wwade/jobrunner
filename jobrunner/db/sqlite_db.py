@@ -91,14 +91,7 @@ class Sqlite3KeyValueStore(DatabaseMeta):
             value TEXT
         )
         """.format(self._table))
-        initItems = (
-            (self.SV, self._schemaVersion),
-            (self.LASTKEY, ""),
-            (self.LASTJOB, ""),
-            (self.ITEMCOUNT, "0"),
-            (self.CHECKPOINT, ""),
-        )
-        for key, value in initItems:
+        for key, value in self.defaultValueGenerator(self._schemaVersion):
             cursor.execute("INSERT INTO " + self._table + " VALUES (?, ?)",
                            (key, value))
         cursor.connection.commit()

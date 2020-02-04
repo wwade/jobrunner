@@ -234,13 +234,11 @@ class JobInfo(object):
     def permKey(self):
         return self._persistKeyGenerated
 
-    def genPersistKey(self, inactive):
+    def genPersistKey(self):
         if self._persistKeyGenerated is not None:
             return
         assert self._key
         persistKey = self._key
-        if persistKey not in inactive.db:
-            inactive[persistKey] = 'Not a valid entry'
         self._persistKeyGenerated = persistKey
         return
 
@@ -299,26 +297,26 @@ class JobInfo(object):
     @locked
     def setDependencies(self, parent, onWhat):
         self.depends = onWhat
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
     def blocked(self, parent):
         self._blocked = True
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
     def unblocked(self, parent):
         self._blocked = False
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
     def start(self, parent):
         self._start = utcNow()
         parent.inactive.lastKey = self.key
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         parent.active[self.key] = self
 
     @locked
@@ -327,7 +325,7 @@ class JobInfo(object):
         self._rc = rc
         self.pid = None
         del parent.active[self.key]
-        self.genPersistKey(parent.inactive)
+        self.genPersistKey()
         k = self.persistKey(parent.inactive)
         parent.inactive[k] = self
 

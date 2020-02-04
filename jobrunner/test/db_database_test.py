@@ -4,9 +4,11 @@ from datetime import datetime
 import unittest
 
 from dateutil.tz import tzlocal, tzutc
-from mock import patch
+from mock import MagicMock, patch
 
-from jobrunner.db.dbm_db import DbmDatabase
+from jobrunner.db.dbm_db import DatabaseBase, DbmDatabase, JobsBase
+from jobrunner.info import JobInfo
+from jobrunner.service import service
 
 from .helpers import resetEnv
 
@@ -86,3 +88,86 @@ class DatabasePropertiesCheckpointTest(BaseMixin, unittest.TestCase):
         self.assertEqual(checkVal.tzinfo, UTC)
         self.assertEqual(checkVal, myTime)
         nowPatch.assert_not_called()
+
+
+class Kvs(object):
+    def __init__(self):
+        self.kvs = {}
+
+    def __setitem__(self, key, value):
+        self.kvs[unicode(key)] = unicode(value)
+
+    def __getitem__(self, key):
+        return self.kvs[unicode(key)]
+
+    def __delitem__(self, key):
+        del self.kvs[unicode(key)]
+
+    def __contains__(self, key):
+        return unicode(key) in self.kvs
+
+    def __len__(self):
+        return len(self.kvs)
+
+    def keys(self):
+        return self.kvs.keys()
+
+
+class MockDb(DatabaseBase):
+    def __init__(self, parent, config):
+        super(MockDb, self).__init__(parent, config, None)
+        self._db = Kvs()
+        for key, value in self.defaultValueGenerator("0"):
+            self._db[key] = value
+
+    def __len__(self):
+        return len(self._db)
+
+    @property
+    def db(self):
+        return self._db
+
+
+class MockJobs(JobsBase):
+    def __init__(self):
+        config = MagicMock()
+        config.debugLevel = []
+        super(MockJobs, self).__init__(config, None)
+        self.active = MockDb(self, config)
+        self.inactive = MockDb(self, config)
+
+    def isLocked(self):
+        return False
+
+    def countInactive(self):
+        return len([k for k in self.inactive.keys()
+                    if k not in self.inactive.special])
+
+
+class MockJob(JobInfo):
+    pass
+
+
+@patch("tempfile.mkstemp", return_value=(None, "/tmp/fubar"))
+@patch("jobrunner.info.workspaceIdentity", return_value=None)
+class DatabasePruneTest(unittest.TestCase):
+    def setUp(self):
+        service().clear(thisIsATest=True)
+        service().register("db.jobInfo", MockJob)
+
+    def testBasic(self, _wsIdent, _mkstemp):
+        jobs = MockJobs()
+        jobList = []
+        for _ in range(30):
+            job = jobs.new(['fake', 'cmd1'], False)[0]
+            job.start(jobs)
+            jobList.append(job)
+        jobs.prune(exceptNum=2)
+        self.assertEqual(0, jobs.countInactive())
+
+        for job in jobList:
+            job.stop(jobs, 0)
+
+        self.assertEqual(30, jobs.countInactive())
+        jobs.prune(exceptNum=2)
+        self.assertEqual(2, jobs.countInactive())
