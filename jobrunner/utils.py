@@ -6,6 +6,7 @@ import datetime
 import errno
 import fcntl
 import inspect
+import logging
 import os
 import signal
 import subprocess
@@ -25,6 +26,19 @@ SPECIAL_STATUS = [STOP_STOP, STOP_ABORT, STOP_DONE, STOP_DEPFAIL]
 
 SPACER_EACH = "========================================"
 SPACER = SPACER_EACH + SPACER_EACH
+
+LOG = logging.getLogger(__name__)
+
+
+def sprint(*args, **kwargs):
+    """sprint: "safe" print - ignore IOError"""
+    try:
+        print(*args, **kwargs)
+    except IOError:
+        LOG.debug("sprint ignore IOError", exc_info=1)
+    except BaseException:
+        LOG.debug("sprint caught error", exc_info=1)
+        raise
 
 
 class ModState(object):
@@ -85,7 +99,7 @@ class FileLock(object):
 
     def __del__(self):
         if self._fp:
-            print(os.getpid(), "WARNING: termination without unlocking")
+            sprint(os.getpid(), "WARNING: termination without unlocking")
             self.unlock()
             self._fp.close()
             self._fp = None
@@ -127,7 +141,7 @@ def dateTimeFromJson(dtJson):
 
 
 def pidDebug(*args):
-    print("+%05d+ %s" % (os.getpid(), " ".join(map(str, args))))
+    sprint("+%05d+ %s" % (os.getpid(), " ".join(map(str, args))))
 
 
 FnDetails = collections.namedtuple('FnDetails', 'filename, lineno, funcname')
@@ -184,12 +198,16 @@ def robot():
 
 def doMsg(*args):
     msg = " ".join(map(str, args))
+    LOG.debug("doMsg(%s)", repr(args))
     if quiet():
+        LOG.debug("enqueue message")
         _DEBUGGER.msgQueue.append(msg)
     elif robot():
+        LOG.debug("robot - skip message")
         return
     else:
-        print(msg)
+        LOG.debug("print message")
+        sprint(msg)
 
 
 def robotInfo(*info):
@@ -203,13 +221,15 @@ def robotInfo(*info):
         else:
             msg.append(str(item))
     if robot():
-        print('\x00'.join(msg))
+        sprint('\x00'.join(msg))
         sys.stdout.flush()
 
 
 def showMsgs():
-    print('\n'.join(_DEBUGGER.msgQueue) + '\n')
+    LOG.debug("showMsgs for %d messages", len(_DEBUGGER.msgQueue))
+    sprint('\n'.join(_DEBUGGER.msgQueue) + '\n')
     _DEBUGGER.msgQueue = []
+    LOG.debug("showMsgs finished")
 
 
 def killWithSignal(pgrp, signum):
@@ -217,7 +237,7 @@ def killWithSignal(pgrp, signum):
         os.killpg(pgrp, signum)
         os.killpg(pgrp, 0)
     except OSError as err:
-        print("killpg", pgrp, signum, "->", err)
+        sprint("killpg", pgrp, signum, "->", err)
         if err.errno == errno.ESRCH:
             # no such process -> it's done!
             return True
@@ -225,7 +245,7 @@ def killWithSignal(pgrp, signum):
             # Operation not permitted
             return False
         else:
-            print("killpg", pgrp, signum, "->", err)
+            sprint("killpg", pgrp, signum, "->", err)
 
     return False
 
@@ -236,6 +256,8 @@ def safeSleep(howLong, jobs):
 
 
 def killProcGroup(pgrp, jobs):
+    if not pgrp:
+        return False
     for signum in [signal.SIGINT, signal.SIGTERM,
                    signal.SIGKILL, signal.SIGKILL]:
         try:
@@ -255,8 +277,8 @@ def killProcGroup(pgrp, jobs):
                 # Operation not permitted
                 return False
             else:
-                print("killpg", pgrp, signum, "->", err)
-        print('Still trying to kill pgrp', pgrp)
+                sprint("killpg", pgrp, signum, "->", err)
+        sprint('Still trying to kill pgrp', pgrp)
         if jobs is None:
             time.sleep(1.5)
         else:
@@ -265,6 +287,8 @@ def killProcGroup(pgrp, jobs):
 
 
 def sudoKillProcGroup(pgrp):
+    if not pgrp:
+        return "No PID for job?"
     script = r"""
 from __future__ import absolute_import, division, print_function
 import os

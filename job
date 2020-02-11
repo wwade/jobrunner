@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 import argparse
 import errno
 import hashlib
+import logging
 import os
 from subprocess import PIPE, CalledProcessError, Popen, check_call, check_output
 import sys
@@ -30,7 +31,10 @@ from jobrunner.utils import (
     robotInfo,
     setQuiet,
     showMsgs,
+    sprint,
 )
+
+LOG = logging.getLogger(__name__)
 
 
 def main(args=None):
@@ -46,7 +50,18 @@ def main(args=None):
     config = Config(options)
     jobs = service().db.jobs(config, plugins)
 
-    maybeStartDebugger(options)
+    fmt = (
+        '+%(process)-6d %(levelname)-9s '
+        '%(name)-20s %(filename)20s:%(lineno)-5d '
+        '[%(asctime)s] %(message)s')
+    if options.debug:
+        logging.basicConfig(
+            filename='/tmp/job.log',
+            level=logging.DEBUG,
+            format=fmt)
+    else:
+        logging.basicConfig(stream=sys.stderr, level=logging.ERROR, format=fmt)
+    LOG.debug("starting with args %s", options)
     jobs.lock()
     maybeHandleNonExecOptions(options, jobs)
     maybeHandleNonExecWriteOptions(options, jobs)
@@ -82,11 +97,11 @@ def main(args=None):
     elif options.retry:
         oldJob = jobs.getJobMatch(options.retry, options.tw)
         if os.getcwd() != oldJob.pwd:
-            print(
+            sprint(
                 "NOTE: Changing directory to '%s' to retry job." %
                 oldJob.pwd)
             os.chdir(oldJob.pwd)
-        print("retry job '%s'" % oldJob.cmdStr)
+        sprint("retry job '%s'" % oldJob.cmdStr)
         cmd = oldJob.cmd
         if oldJob.isolate:
             doIsolate = oldJob.isolate
@@ -99,7 +114,7 @@ def main(args=None):
     elif options.wait:
         pass
     else:
-        print(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
+        sprint(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
         jobs.unlock()
         sys.exit(0)
 
@@ -118,10 +133,11 @@ def main(args=None):
         jobs.unlock()
         childPid = os.fork()
         if childPid > 0:
+            LOG.info("forked child %d", childPid)
             if options.monitor:
                 monitor = ["tail", "-n+0", "-f", job.logfile]
-                print("Monitoring with 'tail -f', use Ctrl-C to stop "
-                      "monitoring\n\n")
+                sprint("Monitoring with 'tail -f', use Ctrl-C to stop "
+                       "monitoring\n\n")
                 sys.stdout.flush()
                 os.execvp(monitor[0], monitor)
             sys.exit(0)
@@ -141,15 +157,18 @@ def main(args=None):
             while deps:
                 job.setDependencies(jobs, deps)
                 dep = deps.pop(0)
+                LOG.debug("wait for dep %s", dep)
                 jobs.waitFor(dep, options.verbose)
                 mailDeps.append(dep)
         except KeyboardInterrupt:
-            print("\ninterrupted")
+            sprint("\ninterrupted")
             aborted = True
         finally:
+            LOG.debug("unlocked %s", job, exc_info=1)
             job.unblocked(jobs)
             job.setDependencies(jobs, None)
     if aborted:
+        LOG.debug("aborted %s", job)
         job.stop(jobs, STOP_ABORT)
         jobs.unlock()
         sys.exit(-1)
@@ -162,15 +181,16 @@ def main(args=None):
             os.write(fp, "Dependent job failed: %s\n" % j)
             os.write(fp, j.detail("vvv") + "\n")
             job.stop(jobs, STOP_DEPFAIL)
-            print("\nDependent job failed: %s" % j)
-            print("key: %s" % job.key)
-            print("return code: %d" % j.rc)
+            sprint("\nDependent job failed: %s" % j)
+            sprint("key: %s" % job.key)
+            sprint("return code: %d" % j.rc)
             jobs.unlock()
             sys.exit(j.rc)
 
     job.start(jobs)
+    LOG.debug("started job %s", job)
     if cmd is None and options.reminder is not None:
-        print("reminder: '%s'" % options.reminder)
+        sprint("reminder: '%s'" % options.reminder)
         jobs.unlock()
         sys.exit(0)
 
@@ -210,9 +230,9 @@ def waitForDep(depWait, options, jobs):
         jobs.waitInactive(k, options.verbose)
         j = jobs.inactive[k]
         if j.rc != 0:
-            print("\nDependent job failed: %s" % j)
-            print("key: %s" % j.key)
-            print("return code: %d" % j.rc)
+            sprint("\nDependent job failed: %s" % j)
+            sprint("key: %s" % j.key)
+            sprint("return code: %d" % j.rc)
             return j.rc
     return 0
 
@@ -228,10 +248,13 @@ def postCommand(cmd):
 
 
 def finish(job, rc):
+    LOG.debug("finish %s", job)
     doMsg("key:", job.key)
+    LOG.debug("first doMsg is OK %s", job)
     doMsg("return code:", rc)
     robotInfo("finish", {"key": job.key}, {"rc": rc})
     if rc != 0 and quiet():
+        LOG.debug("calling showMsgs for job %s", job)
         showMsgs()
 
 
@@ -364,7 +387,7 @@ def handleNonExecOptions(options, jobs):
             filterPane=options.tp,
             useCp=options.since_checkpoint)
         if options.dot:
-            print(dot)
+            sprint(dot)
         else:
             fName = '~%s/output/job.svg' % os.getenv('USER')
             ofile = os.path.expanduser(fName)
@@ -374,13 +397,13 @@ def handleNonExecOptions(options, jobs):
             if stdout.strip() or stderr.strip():
                 raise ExitCode(stdout + stderr)
             else:
-                print('Saved output to', fName)
+                sprint('Saved output to', fName)
         return True
     elif options.list_inactive:
         jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
         return True
     elif options.count:
-        print(jobs.countInactive())
+        sprint(jobs.countInactive())
         return True
     elif options.get_all_logs:
         logs = []
@@ -389,39 +412,39 @@ def handleNonExecOptions(options, jobs):
                                    filterPane=options.tp,
                                    useCp=options.since_checkpoint):
             logs.append(job.logfile)
-        print(" ".join(logs))
+        sprint(" ".join(logs))
         return True
     elif options.get_log:
         logs = []
         for key in options.get_log:
             logs.append(jobs.getLog(key, options.tw))
-        print(" ".join(logs))
+        sprint(" ".join(logs))
         return True
     elif options.show:
         for k in options.show:
             j = jobs.getJobMatch(k, options.tw)
-            print(j.detail(options.verbose))
+            sprint(j.detail(options.verbose))
         return True
     elif options.pid:
         for key in options.pid:
             try:
                 showPstreeForKey(key, jobs, options)
             except KeyError as error:
-                print("Error:", error.message)
+                sprint("Error:", error.message)
         return True
     elif options.last_key:
-        print(jobs.inactive.lastKey)
+        sprint(jobs.inactive.lastKey)
         return True
     elif options.index:
         logs = []
         for index in options.index:
             logs.append(jobs.getLogByIndex(index, options.tw))
-        print(" ".join(logs))
+        sprint(" ".join(logs))
         jobs.unlock()
         sys.exit(0)
     elif options.info:
-        print(jobs.active)
-        print(jobs.inactive)
+        sprint(jobs.active)
+        sprint(jobs.inactive)
         return True
     elif options.activity or options.activity_window:
         jobs.activityWindow(options)
@@ -439,7 +462,7 @@ def handleNonExecWriteOptions(options, jobs):
             try:
                 j = jobs.getJobMatch(k, options.tw)
                 if j.key in jobs.active:
-                    print("Stopping job:", j)
+                    sprint("Stopping job:", j)
                     j.stop(jobs, STOP_STOP)
                 else:
                     errors.append(j.key)
@@ -461,7 +484,7 @@ def handleNonExecWriteOptions(options, jobs):
         for k in options.done:
             j = jobs.getJobMatch(k, options.tw)
             if j.reminder:
-                print('Done with reminder: "%s"' % j.reminder)
+                sprint('Done with reminder: "%s"' % j.reminder)
             j.stop(jobs, STOP_DONE)
         return True
     elif options.prune:
@@ -473,7 +496,7 @@ def handleNonExecWriteOptions(options, jobs):
     elif options.delete:
         for k in options.delete:
             j = jobs.inactive[k]
-            print("Delete job '%s'" % j.key)
+            sprint("Delete job '%s'" % j.key)
             j.removeLog(verbose=True)
             del jobs.inactive[j.key]
         return True
@@ -482,14 +505,14 @@ def handleNonExecWriteOptions(options, jobs):
         jobs.inactive.checkpoint = options.set_checkpoint
         cpUtc = jobs.active.checkpoint
         local = cpUtc.astimezone(dateutil.tz.tzlocal())
-        print("Set checkpoint: ", local.strftime(DATETIME_FMT))
+        sprint("Set checkpoint: ", local.strftime(DATETIME_FMT))
         return True
     elif options.watch:
         try:
             jobs.watchActivity()
         except KeyboardInterrupt:
-            print("")
-            print("Exit on user interrupt")
+            sprint("")
+            sprint("Exit on user interrupt")
             raise ExitCode(1)
         return True
     else:
@@ -534,21 +557,21 @@ def getPstree(pid):
 
 def showPstreeForKey(key, jobs, options):
     j = jobs.getJobMatch(key, options.tw)
-    print("==============================================")
-    print(j)
+    sprint("==============================================")
+    sprint(j)
     if pidOk(j.pid):
         pstree = getPstree(j.pid)
         if not pstree.errors:
-            print(pstree.text)
+            sprint(pstree.text)
         elif pidOk(j.pid):
-            print("Errors getting PID info for", j.pid)
+            sprint("Errors getting PID info for", j.pid)
             for err in pstree.errors:
-                print(err)
+                sprint(err)
         else:
-            print("PID not found", j.pid)
+            sprint("PID not found", j.pid)
     else:
-        print("PID not found", j.pid)
-    print("==============================================")
+        sprint("PID not found", j.pid)
+    sprint("==============================================")
 
 
 def parseArgs(args=None):
@@ -654,7 +677,7 @@ def parseArgs(args=None):
                     help="Specify input file (default='%(default)s')",
                     default="/dev/null")
     op.add_argument("--debug", action="store_true",
-                    help="Launch debugger to examine database")
+                    help="enable debug output to /tmp/job.log")
     op.add_argument("--debugLocking", dest="debugLevel", action="append_const",
                     const="lock", help="Debug database locking")
     op.add_argument("--auto-job", action="store_true",
@@ -666,26 +689,6 @@ def parseArgs(args=None):
 
     options = op.parse_args(args)
     return options
-
-
-def maybeStartDebugger(options):
-    if options.debug:
-        doneDebug = False
-        try:
-            import pudb
-            pudb.set_trace()
-            doneDebug = True
-        except ImportError:
-            pass
-
-        try:
-            if not doneDebug:
-                import pdb
-                pdb.set_trace()  # pylint: disable=no-member
-                doneDebug = True
-        except ImportError:
-            pass
-        assert doneDebug, "no debugger was started"
 
 
 def maybeHandle(options, jobs, handler):
@@ -710,6 +713,7 @@ def maybeHandleNonExecWriteOptions(options, jobs):
 def runJob(cmd, options, jobs, job, fp, doIsolate):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-statements
+    LOG.info("execute: %s", job.cmdStr)
     doMsg("execute:", job.cmdStr)
     robotInfo("execute", {"key": job.key}, {"command": job.cmdStr})
     fpIn = open(options.input, "r")
@@ -724,29 +728,40 @@ def runJob(cmd, options, jobs, job, fp, doIsolate):
         netnsd = ['isolate', '-n', isolateName]
         netnsd += cmd
         if options.verbose:
-            print('Isolating command WAS:', cmd)
-            print('Isolating command IS :', netnsd)
+            sprint('Isolating command WAS:', cmd)
+            sprint('Isolating command IS :', netnsd)
         cmd = netnsd
     try:
         jobs.unlock()
+        LOG.debug("starting check_call()")
         rc = check_call(cmd, stdin=fpIn, stdout=fp, stderr=fp)
+        LOG.debug("check_call() => rc=%d", rc)
     except KeyboardInterrupt:
-        print("\ninterrupted")
+        LOG.debug("KeyboardInterrupt", exc_info=1)
+        sprint("\ninterrupted")
         rc = -1
     except OSError as err:
+        LOG.debug("OSError %s", err, exc_info=1)
         rc = -1 * err.errno
-        print(err, file=open(job.logfile, 'a'))
+        sprint(err, file=open(job.logfile, 'a'))
     except CalledProcessError as err:
+        LOG.debug("CalledProcessError %s", err, exc_info=1)
         rc = err.returncode
     except Exception:
+        LOG.debug("General exception", exc_info=1)
         rc = -1
         raise
     finally:
+        LOG.debug("stop job, it has finished %s", job, exc_info=1)
         jobs.lock()
+        LOG.debug("locked DB, writing 'stop' status rc=%d", rc)
         job.stop(jobs, rc)
         os.fsync(fp)
+        LOG.debug("locked DB, writing 'finish' status rc=%d", rc)
         finish(job, rc)
         jobs.unlock()
+        LOG.debug("unlocked, should now exit rc=%d", rc)
+    LOG.debug("exit rc=%d", rc)
     sys.exit(rc)
 
 

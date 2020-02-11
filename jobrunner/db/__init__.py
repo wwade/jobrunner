@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
+import logging
 import os
 import os.path
 import sys
@@ -23,6 +24,7 @@ from ..utils import (
     doMsg,
     pidDebug,
     safeSleep,
+    sprint,
     stackDetails,
     utcNow,
 )
@@ -31,6 +33,8 @@ NUM_RECENT = 100
 PRUNE_NUM = 5000
 
 # pylint: disable=deprecated-lambda
+LOG = logging.getLogger(__name__)
+LOGLOCK = logging.getLogger(__name__ + ".lock")
 
 
 class DatabaseMeta(object):
@@ -250,9 +254,11 @@ class JobsBase(object):
         raise NotImplementedError
 
     def lock(self):
+        LOGLOCK.debug("lock DB")
         self.debugPrint("< LOCK DB")
 
     def unlock(self):
+        LOGLOCK.debug("unlock DB")
         self.debugPrint("< UNLOCK DB")
 
     def prune(self, exceptNum=None):
@@ -268,7 +274,7 @@ class JobsBase(object):
         if len(allJobs) > limit:
             for job in allJobs[: -1 * limit]:
                 if self.config.verbose:
-                    print("Prune '%s'" % job.key)
+                    sprint("Prune '%s'" % job.key)
                 job.removeLog(self.config.verbose)
                 del self.inactive[job.key]
 
@@ -311,7 +317,7 @@ class JobsBase(object):
     @staticmethod
     def printDepJob(job, depth):
         fmt = "%%-%ds->" % (depth * 2)
-        print(fmt % "", job)
+        sprint(fmt % "", job)
         return True
 
     def printDepTree(self, db, depends):
@@ -345,23 +351,23 @@ class JobsBase(object):
                 hasDeps = self.walkDepTree(
                     lambda j, d: d == 1, db, job.depends, 1)
         if hasDeps:
-            print(utils.SPACER)
+            sprint(utils.SPACER)
         for job in jobList:
             if not includeReminders and job.reminder:
                 continue
             if self.config.verbose:
-                print(job.detail(self.config.verbose[1:]))
+                sprint(job.detail(self.config.verbose[1:]))
             else:
                 if db is self.active:
-                    print(job)
+                    sprint(job)
                     if job.depends:
                         self.printDepTree(db, job.depends)
                     if hasDeps:
-                        print(utils.SPACER)
+                        sprint(utils.SPACER)
                 else:
-                    print(job)
+                    sprint(job)
         if not jobList:
-            print("(None)")
+            sprint("(None)")
 
     @staticmethod
     def dotStrForKey(key, active, inactive, attrs=False):
@@ -533,7 +539,7 @@ class JobsBase(object):
         if func():
             return
         if verbose:
-            print("\nWaiting for %s" % desc)
+            sprint("\nWaiting for %s" % desc)
         while not func():
             safeSleep(1, self)
             if verbose:
@@ -578,7 +584,7 @@ class JobsBase(object):
             clearNum = clearLen - len(details)
             if clearNum < 0:
                 clearNum = 0
-            print("%s" % timestr + details + " " * clearNum)
+            sprint("%s" % timestr + details + " " * clearNum)
 
     def getResources(self):
         loads = ['%.0f' % v for v in os.getloadavg()]
@@ -668,7 +674,7 @@ class JobsBase(object):
             if not j.reminder:
                 continue
             if not j.startTime:
-                print('not started yet', str(j), j.workspace)
+                sprint('not started yet', str(j), j.workspace)
                 continue
             remind.setdefault(j.workspace, []).append(j)
         for k in self.inactive.keys():
@@ -717,13 +723,13 @@ class JobsBase(object):
                 return 1
             else:
                 return cmp(perWs[refA]['age'], perWs[refB]['age'])
-        print('-' * 75)
+        sprint('-' * 75)
         wsList = list(set(perWs.keys()).union(set(remind.keys())))
         for wkspace in sorted(wsList, cmp=_byAge):
             if wkspace:
-                print(os.path.basename(wkspace) + ':')
+                sprint(os.path.basename(wkspace) + ':')
             else:
-                print('Outside of any workspace:')
+                sprint('Outside of any workspace:')
             for res in ['pass', 'fail']:
                 if wkspace in perWs and res in perWs[wkspace]:
                     j = perWs[wkspace][res]
@@ -733,16 +739,16 @@ class JobsBase(object):
                     tmMin = sec / 60
                     sec -= tmMin * 60
                     diffTime = '%d:%02d:%02d' % (tmHour, tmMin, sec)
-                    print(
+                    sprint(
                         '  last %s, \033[97m%s\033[0m ago' %
                         (res, diffTime))
-                    print('    ' + str(j))
+                    sprint('    ' + str(j))
             if wkspace in remind:
-                print('  reminders:')
+                sprint('  reminders:')
                 for j in remind[wkspace]:
-                    print('    \033[92m%s\033[0m' % j.reminder)
-            print('')
-        print('-' * 75)
+                    sprint('    \033[92m%s\033[0m' % j.reminder)
+            sprint('')
+        sprint('-' * 75)
 
     def addDeps(self, fromWhere, thisWs, deps, depSuccess):
         if fromWhere:
