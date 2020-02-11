@@ -58,7 +58,7 @@ def testEnv():
         yield Env(tmpDir)
     finally:
         print('rmTree', tmpDir)
-        rmtree(tmpDir)
+        rmtree(tmpDir, ignore_errors=True)
         os.environ['JOBRUNNER_STATE_DIR'] = '/tmp/BADDIR'
 
 
