@@ -55,8 +55,9 @@ def main(args=None):
         '%(name)-20s %(filename)20s:%(lineno)-5d '
         '[%(asctime)s] %(message)s')
     if options.debug:
+        logFileName = os.path.join(config.logDir, 'jobrunner-debug.log')
         logging.basicConfig(
-            filename='/tmp/job.log',
+            filename=logFileName,
             level=logging.DEBUG,
             format=fmt)
     else:
@@ -676,8 +677,10 @@ def parseArgs(args=None):
     op.add_argument("--input", metavar="FILENAME", action="store",
                     help="Specify input file (default='%(default)s')",
                     default="/dev/null")
-    op.add_argument("--debug", action="store_true",
-                    help="enable debug output to /tmp/job.log")
+    op.add_argument(
+        "--debug",
+        action="store_true",
+        help="enable debug output to <state-dir>/log/jobrunner-debug.log")
     op.add_argument("--debugLocking", dest="debugLevel", action="append_const",
                     const="lock", help="Debug database locking")
     op.add_argument("--auto-job", action="store_true",
