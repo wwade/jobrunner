@@ -6,6 +6,7 @@ import datetime
 import errno
 import fcntl
 import inspect
+import logging
 import os
 import signal
 import subprocess
@@ -25,6 +26,8 @@ SPECIAL_STATUS = [STOP_STOP, STOP_ABORT, STOP_DONE, STOP_DEPFAIL]
 
 SPACER_EACH = "========================================"
 SPACER = SPACER_EACH + SPACER_EACH
+
+LOG = logging.getLogger(__name__)
 
 
 class ModState(object):
@@ -184,12 +187,16 @@ def robot():
 
 def doMsg(*args):
     msg = " ".join(map(str, args))
+    LOG.debug("doMsg(%s)", repr(args))
     if quiet():
+        LOG.debug("enqueue message")
         _DEBUGGER.msgQueue.append(msg)
     elif robot():
+        LOG.debug("robot - skip message")
         return
     else:
         print(msg)
+        LOG.debug("print message")
 
 
 def robotInfo(*info):
@@ -209,7 +216,9 @@ def robotInfo(*info):
 
 def showMsgs():
     print('\n'.join(_DEBUGGER.msgQueue) + '\n')
+    LOG.debug("showMsgs for %d messages", len(_DEBUGGER.msgQueue))
     _DEBUGGER.msgQueue = []
+    LOG.debug("showMsgs finished")
 
 
 def killWithSignal(pgrp, signum):

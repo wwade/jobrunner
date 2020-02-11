@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
+import logging
 import os
 import os.path
 import sys
@@ -31,6 +32,8 @@ NUM_RECENT = 100
 PRUNE_NUM = 5000
 
 # pylint: disable=deprecated-lambda
+LOG = logging.getLogger(__name__)
+LOGLOCK = logging.getLogger(__name__ + ".lock")
 
 
 class DatabaseMeta(object):
@@ -250,9 +253,11 @@ class JobsBase(object):
         raise NotImplementedError
 
     def lock(self):
+        LOGLOCK.debug("lock DB")
         self.debugPrint("< LOCK DB")
 
     def unlock(self):
+        LOGLOCK.debug("unlock DB")
         self.debugPrint("< UNLOCK DB")
 
     def prune(self, exceptNum=None):
