@@ -17,6 +17,7 @@ from .utils import (
     keyEscape,
     locked,
     robotInfo,
+    sprint,
     unlocked,
     utcNow,
     workspaceIdentity,
@@ -332,12 +333,12 @@ class JobInfo(object):
     @unlocked
     def killPgrp(self, jobs):
         if not self.pid:
-            print("Not running")
+            sprint("Not running")
             return
         try:
             pgrp = os.getpgid(self.pid)
         except OSError as error:
-            print("Unable to get process group for", self.pid, error)
+            sprint("Unable to get process group for", self.pid, error)
             if error.errno != errno.ESRCH:
                 raise
             pgrp = None
@@ -346,11 +347,11 @@ class JobInfo(object):
             try:
                 killed = utils.killProcGroup(pgrp, jobs)
             except OSError as error:
-                print("Unable to kill process group", pgrp, error)
-        if not killed:
+                sprint("Unable to kill process group", pgrp, error)
+        if pgrp and not killed:
             error = utils.sudoKillProcGroup(pgrp)
             if error:
-                print("Failed to kill with sudo as well:", error)
+                sprint("Failed to kill with sudo as well:", error)
 
     @locked
     def pidIs(self, parent, pid):
@@ -366,7 +367,7 @@ class JobInfo(object):
     def removeLog(self, verbose):
         if os.access(self.logfile, os.F_OK):
             if verbose:
-                print("Remove logfile '%s'" % self.logfile)
+                sprint("Remove logfile '%s'" % self.logfile)
             os.unlink(self.logfile)
 
     @staticmethod
