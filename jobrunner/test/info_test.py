@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+from logging import getLogger
 import os
 import unittest
 
@@ -10,6 +11,8 @@ from jobrunner import db, info, plugins, utils
 from jobrunner.service.registry import registerServices
 
 from .helpers import resetEnv
+
+LOG = getLogger(__name__)
 
 
 def setUpModule():
@@ -91,7 +94,7 @@ class TestJobProperties(unittest.TestCase):
     def testEnv(self):
         job = newJob(14, ['ls', '/tmp'])
         job.start(job.parent)
-        env = {'XY': '1', 'VAL_WITH_NEWLINE': 'first\nsecond'}
+        env = {'XY': u'1', 'VAL_WITH_NEWLINE': 'first\nsecond'}
         setJobEnv(job, env)
         out = job.getEnvironment()
         self.assertIn("XY=1\n", out)
@@ -127,3 +130,11 @@ class TestInfoHelpers(unittest.TestCase):
     def testCmdStringBang(self):
         cmd = ['ls', '-l', '!something']
         self.assertEqual(info.cmdString(cmd), "ls -l '!something'")
+
+    def testEscEnv(self):
+        value = '12\x00\x01\n'
+        exp = '12\\x00\\x01\\x0a'
+        out = info.JobInfo.escEnv(value)
+        LOG.debug('exp [%r] %s', exp, exp)
+        LOG.debug('out [%r] %s', out, out)
+        self.assertEqual(exp, out)

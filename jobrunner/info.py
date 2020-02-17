@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
-from curses.ascii import isprint
 import errno
+from logging import getLogger
 import os
 import pipes
+import string
 
 import dateutil.tz
 
@@ -22,6 +23,8 @@ from .utils import (
     utcNow,
     workspaceIdentity,
 )
+
+LOG = getLogger(__name__)
 
 
 def getUtcTime(val):
@@ -370,14 +373,22 @@ class JobInfo(object):
                 sprint("Remove logfile '%s'" % self.logfile)
             os.unlink(self.logfile)
 
+    printable = string.printable.translate(None, '\r\n\t\v\x0c')
+
     @staticmethod
     def escEnv(value):
         ret = ""
+        LOG.debug('value [%r]', value)
+        LOG.debug(
+            'printable [%r] (string.printable [%r])',
+            JobInfo.printable,
+            string.printable)
         for char in value:
-            if isprint(char):
+            if char in JobInfo.printable:
                 ret += char
             else:
                 ret += "\\x%02x" % ord(char)
+        LOG.debug('ret [%r]', ret)
         return ret
 
     def getEnvironment(self):
