@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+from logging import getLogger
 import os
 import re
 from subprocess import CalledProcessError
@@ -23,6 +24,8 @@ from .integration_lib import (
     testEnv,
     waitFor,
 )
+
+LOG = getLogger(__name__)
 
 
 def setUpModule():
@@ -301,6 +304,7 @@ class RunNonExecOptionsTest(TestCase):
     """
 
     def test(self):
+        # pylint: disable=too-many-locals
         with testEnv():
             # --last-key
             jobf('-v', 'echo', 'first')
@@ -338,6 +342,16 @@ class RunNonExecOptionsTest(TestCase):
             listInactiveVerbose = job('--list-inactive', '-v')
             progEchoRe = re.compile(r'^Program\s*echo$', re.M)
             self.assertRegexpMatches(listInactiveVerbose, progEchoRe)
+            # -vvv
+            subEnv = dict(os.environ)
+            subEnv.update({'INACTIVE_EXTRA_VERBOSE': '0123\x07123\n'})
+            jobf('echo', 'second', env=subEnv)
+            listInactiveExtraVerbose = job(
+                '-s', 'echo second', '-vvv', env=subEnv)
+            LOG.debug('listInactiveExtraVerbose %s', listInactiveExtraVerbose)
+            self.assertIn(
+                'INACTIVE_EXTRA_VERBOSE=0123\\x07123\\x0a',
+                listInactiveExtraVerbose)
 
             # --show
             self.assertRegexpMatches(job('--show', secondKey), progEchoRe)

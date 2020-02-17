@@ -62,26 +62,26 @@ def testEnv():
         os.environ['JOBRUNNER_STATE_DIR'] = '/tmp/BADDIR'
 
 
-def run(cmd, capture=False):
+def run(cmd, capture=False, env=None):
     print(' '.join(map(quote, cmd)))
     try:
         if capture:
-            return check_output(cmd, stderr=STDOUT)
+            return check_output(cmd, stderr=STDOUT, env=env)
         else:
-            return check_call(cmd)
+            return check_call(cmd, env=env)
     except CalledProcessError as error:
         print(error.output)
         raise
 
 
-def jobf(*cmd):
+def jobf(*cmd, **kwargs):
     jobCmd = ['job', '--foreground'] + list(cmd)
-    return run(jobCmd, capture=True)
+    return run(jobCmd, capture=True, **kwargs)
 
 
-def job(*cmd):
+def job(*cmd, **kwargs):
     jobCmd = ['job'] + list(cmd)
-    return run(jobCmd, capture=True)
+    return run(jobCmd, capture=True, **kwargs)
 
 
 def waitFor(func, timeout=60.0, failArg=True):
