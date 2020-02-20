@@ -9,6 +9,7 @@ import os
 from subprocess import PIPE, CalledProcessError, Popen, check_call, check_output
 import sys
 import tempfile
+import time
 
 import dateutil.parser
 import dateutil.tz
@@ -134,14 +135,12 @@ def main(args=None):
         jobs.unlock()
         childPid = os.fork()
         if childPid > 0:
-            LOG.info("forked child %d", childPid)
+            LOG.info("forked child %d, close %d", childPid, fp)
+            os.close(fp)
+            rc = 0
             if options.monitor:
-                monitor = ["tail", "-n+0", "-f", job.logfile]
-                sprint("Monitoring with 'tail -f', use Ctrl-C to stop "
-                       "monitoring\n\n")
-                sys.stdout.flush()
-                os.execvp(monitor[0], monitor)
-            sys.exit(0)
+                rc = monitorForkedJob(job, jobs)
+            sys.exit(rc)
         os.setsid()
         job.pid = os.getpid()
         jobs.lock()
@@ -236,6 +235,29 @@ def waitForDep(depWait, options, jobs):
             sprint("return code: %d" % j.rc)
             return j.rc
     return 0
+
+
+def monitorForkedJob(job, jobs):
+    monitorCmd = ["tail", "-n+0", "-f", job.logfile]
+    monitor = Popen(monitorCmd, stdout=sys.stdout, stderr=sys.stdout)
+    try:
+        active = True
+        rc = 0
+        while active:
+            LOG.debug("monitoring, sleep 0.5")
+            time.sleep(0.5)
+            jobs.lock()
+            active = job.key in jobs.active.db
+            rc = None
+            if not active:
+                rc = jobs.inactive[job.key].rc
+            jobs.unlock()
+            LOG.debug('active %s, rc %r', active, rc)
+        return rc
+    finally:
+        monitor.terminate()
+        monitor.kill()
+        monitor.wait()
 
 
 def safeWrite(fp, value):
