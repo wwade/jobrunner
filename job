@@ -28,6 +28,7 @@ from jobrunner.utils import (
     STOP_STOP,
     doMsg,
     keyEscape,
+    lockedSection,
     quiet,
     robotInfo,
     setQuiet,
@@ -246,15 +247,21 @@ def monitorForkedJob(job, jobs):
         while active:
             LOG.debug("monitoring, sleep 0.5")
             time.sleep(0.5)
-            jobs.lock()
-            active = job.key in jobs.active.db
-            rc = None
-            if not active:
-                rc = jobs.inactive[job.key].rc
-            jobs.unlock()
+            with lockedSection(jobs):
+                active = job.key in jobs.active.db
+                rc = None
+                if not active:
+                    rc = jobs.inactive[job.key].rc
             LOG.debug('active %s, rc %r', active, rc)
         return rc
+    except KeyboardInterrupt:
+        LOG.debug('KeyboardInterrupt')
+        sprint("\n(Stop monitoring): {}".format(job))
+    except BaseException:
+        LOG.info('exception', exc_info=1)
+        raise
     finally:
+        LOG.debug('terminate monitor subprocess')
         monitor.terminate()
         monitor.kill()
         monitor.wait()

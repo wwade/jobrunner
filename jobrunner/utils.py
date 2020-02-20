@@ -70,6 +70,18 @@ def locked(func):
 
 
 @contextmanager
+def lockedSection(jobs):
+    jobs.lock()
+    try:
+        yield
+    except BaseException:
+        LOG.debug("lockedSection exception", exc_info=1)
+        raise
+    finally:
+        jobs.unlock()
+
+
+@contextmanager
 def maybeUnlock(jobs):
     isLocked = jobs.isLocked()
     if isLocked:
