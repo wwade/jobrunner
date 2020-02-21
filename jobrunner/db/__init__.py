@@ -189,8 +189,8 @@ class DatabaseBase(DatabaseMeta):
         return key in self.db
 
     def __str__(self):
-        return "DB %d '%s' ver %s" % (
-            self.count, self.ident, self.db[self.SV])
+        return "%s DB %d '%s' ver %s" % (
+            self.__class__.__name__, self.count, self.ident, self.db[self.SV])
 
     def uidx(self):
         if self.IDX in self.db:
