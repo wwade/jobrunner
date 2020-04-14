@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function
 import argparse
 import errno
 import hashlib
-import logging
 import os
 from subprocess import PIPE, CalledProcessError, Popen, check_call, check_output
 import sys
@@ -14,6 +13,8 @@ import time
 import dateutil.parser
 import dateutil.tz
 
+import jobrunner.logging
+from jobrunner.argparse import addArgumentParserBaseFlags
 from jobrunner.config import RC_FILE_HELP, Config
 from jobrunner.plugins import Plugins
 from jobrunner.service import service
@@ -36,7 +37,8 @@ from jobrunner.utils import (
     sprint,
 )
 
-LOG = logging.getLogger(__name__)
+_debugLogFileName = "jobrunner-debug"
+LOG = jobrunner.logging.getLogger(__name__)
 
 
 def main(args=None):
@@ -52,18 +54,7 @@ def main(args=None):
     config = Config(options)
     jobs = service().db.jobs(config, plugins)
 
-    fmt = (
-        '+%(process)-6d %(levelname)-9s '
-        '%(name)-20s %(filename)20s:%(lineno)-5d '
-        '[%(asctime)s] %(message)s')
-    if options.debug:
-        logFileName = os.path.join(config.logDir, 'jobrunner-debug.log')
-        logging.basicConfig(
-            filename=logFileName,
-            level=logging.DEBUG,
-            format=fmt)
-    else:
-        logging.basicConfig(stream=sys.stderr, level=logging.ERROR, format=fmt)
+    jobrunner.logging.setup(config.logDir, _debugLogFileName, debug=options.debug)
     LOG.debug("starting with args %s", options)
     jobs.lock()
     maybeHandleNonExecOptions(options, jobs)
@@ -617,12 +608,9 @@ def parseArgs(args=None):
         description=DESC)
     op.add_argument("program", nargs='?')
     op.add_argument("args", nargs=argparse.REMAINDER)
-    op.add_argument(
-        "-v",
-        dest="verbose",
-        help="Increase verbosity (multiple times for more verbose)",
-        action="append_const",
-        const=1)
+
+    addArgumentParserBaseFlags(op, _debugLogFileName)
+
     out = op.add_mutually_exclusive_group()
     out.add_argument('--robot-format', dest='quiet', action='store_const',
                      const='robot', help='Output job execution formatted for robots')
@@ -668,16 +656,6 @@ def parseArgs(args=None):
                     default=os.getenv('USER'))
     op.add_argument("--cc", metavar="ADDRESS", action="append",
                     help="Specify 'CC' address for mail notification")
-    op.add_argument(
-        "-d",
-        "--state-dir",
-        dest='stateDir',
-        metavar="DIR",
-        help="Specify state directory (default='%(default)s')",
-        default=os.getenv('JOBRUNNER_STATE_DIR', "~/.local/share/jobDb"))
-    op.add_argument("--rc-file", dest="rcFile",
-                    help="Specify path to rc-file (default=\"%(default)s\")",
-                    default="~/.config/jobrc")
     op.add_argument("--tw", "--this-workspace", action="store_true",
                     help="Filter by jobs in this workspace")
     op.add_argument("--tp", "--this-pane", action="store_true",
@@ -706,12 +684,6 @@ def parseArgs(args=None):
     op.add_argument("--input", metavar="FILENAME", action="store",
                     help="Specify input file (default='%(default)s')",
                     default="/dev/null")
-    op.add_argument(
-        "--debug",
-        action="store_true",
-        help="enable debug output to <state-dir>/log/jobrunner-debug.log")
-    op.add_argument("--debugLocking", dest="debugLevel", action="append_const",
-                    const="lock", help="Debug database locking")
     op.add_argument("--auto-job", action="store_true",
                     help="Specify that this job is an automatic job (not user "
                     "initiated).  This will stop it from being picked up as "
