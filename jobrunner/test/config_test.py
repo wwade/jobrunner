@@ -16,6 +16,14 @@ HOME = '/home/me'
 EXAMPLE_RCFILE = """\
 [ui]
 watch reminder = full
+[chatmail]
+at all = all
+reuse threads = false
+[chatmail.google-chat-userhooks]
+user1 = https://chat.googleapis.com/v1/spaces/something1
+user2 = https://chat.googleapis.com/v1/spaces/something2
+[chatmail.google-chat-userids]
+user1 = 1234
 [mail]
 program=mail-program
 domain=ex.com
@@ -47,11 +55,26 @@ class TestRcParser(unittest.TestCase, TestMixin):
         cfgObj = self.config()
         self.assertEqual(os.path.join(HOME, 'x/db/'), cfgObj.dbDir)
 
+    # pylint: disable-msg=too-many-arguments
     def assertCfg(self, cfgObj, domain=HOSTNAME,
-                  program='mail', reminderSummary=True):
+                  program='mail', reminderSummary=True,
+                  chatmailAtAll='none', chatmailReuseThreads=True,
+                  gChatUserHookDict=None, gChatUserIdDict=None):
         self.assertEqual(domain, cfgObj.mailDomain)
         self.assertEqual(program, cfgObj.mailProgram)
         self.assertEqual(reminderSummary, cfgObj.uiWatchReminderSummary)
+        self.assertEqual(chatmailAtAll, cfgObj.chatmailAtAll)
+        self.assertEqual(chatmailReuseThreads, cfgObj.chatmailReuseThreads)
+
+        if gChatUserHookDict is None:
+            gChatUserHookDict = {}
+        for user, hook in gChatUserHookDict.iteritems():
+            self.assertEqual(hook, cfgObj.gChatUserHook(user))
+
+        if gChatUserIdDict is None:
+            gChatUserIdDict = {}
+        for user, uid in gChatUserIdDict.iteritems():
+            self.assertEqual(uid, cfgObj.gChatUserId(user))
 
     def testNoFile(self):
         cfgObj = self.config()
@@ -68,8 +91,16 @@ class TestRcParser(unittest.TestCase, TestMixin):
             tempFp.write(EXAMPLE_RCFILE)
             tempFp.flush()
             cfgObj = self.config(tempFp)
-            self.assertCfg(cfgObj, domain='ex.com', program='mail-program',
-                           reminderSummary=False)
+            self.assertCfg(
+                cfgObj, domain='ex.com', program='mail-program',
+                reminderSummary=False, chatmailAtAll='all',
+                chatmailReuseThreads=False,
+                gChatUserHookDict={
+                    'user1': 'https://chat.googleapis.com/v1/spaces/something1',
+                    'user2': 'https://chat.googleapis.com/v1/spaces/something2',
+                },
+                gChatUserIdDict={'user1': '1234'},
+            )
 
     def testConfigureSummary(self):
         with tempfile.NamedTemporaryFile(mode='w') as tempFp:

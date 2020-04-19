@@ -1,6 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
+from StringIO import StringIO
+from contextlib import contextmanager
 import os
+import sys
 
 HOSTNAME = 'host.example.com'
 HOME = '/home/me'
@@ -14,3 +17,21 @@ def resetEnv():
     os.environ['USER'] = USER
     if 'WP' in os.environ:
         del os.environ['WP']
+
+
+@contextmanager
+def capturedOutput():
+    ''' Used to capture stdout or stderr.
+    eg.
+    with capturedOutput() as (out, err):
+        print("foo")
+
+    self.assertEqual(out.getvalue(), "foo")
+    '''
+    newOut, newErr = StringIO(), StringIO()
+    oldOut, oldErr = sys.stdout, sys.stderr
+    try:
+        sys.stdout, sys.stderr = newOut, newErr
+        yield sys.stdout, sys.stderr
+    finally:
+        sys.stdout, sys.stderr = oldOut, oldErr

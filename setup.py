@@ -16,4 +16,9 @@ setup(
     scripts=[
         'job',
     ],
+    entry_points={
+        "console_scripts": [
+            "chatmail = jobrunner.mail.chat:main",
+        ],
+    }
 )
