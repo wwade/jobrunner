@@ -10,15 +10,58 @@ Sample rcfile:
     domain = example.com
     [ui]
     watch reminder = full|summary  # default=summary
+    [chatmail]
+    at all = all|none|no id # default=none
+    reuse threads = true|false # default true
+    [chatmail.google-chat-userhooks]
+    user1 = https://chat.googleapis.com/v1/spaces/...
+    [chatmail.google-chat-userids]
+    user1 = <long integer> # retrieve this using your browser inspector on an \
+existing mention of this user
 """
+
+
+class ConfigEnum(object):
+    def __init__(self, default, **enumVals):
+        assert default in enumVals
+        self.defaultName = default
+
+        for enumName in enumVals:
+            assert not hasattr(self, enumName)
+        self._enumVals = enumVals
+
+    def names(self):
+        return self._enumVals.iterkeys()
+
+    def values(self):
+        return self._enumVals.itervalues()
+
+    @property
+    def defaultVal(self):
+        return self._enumVals[self.defaultName]
+
+    def __getattr__(self, attr):
+        if attr in self._enumVals:
+            return self._enumVals[attr]
+        else:
+            return object.__getattribute__(self, attr)
+
 
 WATCH_REMINDER_FULL = "full"
 WATCH_REMINDER_SUMMARY = "summary"
-WATCH_REMINDER_OPTIONS = (
-    WATCH_REMINDER_FULL,
-    WATCH_REMINDER_SUMMARY,
+
+WATCH_REMINDER = ConfigEnum(
+    'SUMMARY',  # default
+    FULL=WATCH_REMINDER_FULL,
+    SUMMARY=WATCH_REMINDER_SUMMARY,
 )
-WATCH_REMINDER_DEFAULT = WATCH_REMINDER_SUMMARY
+
+CHATMAIL_AT_ALL = ConfigEnum(
+    'NONE',  # default
+    ALL='all',
+    NONE='none',
+    NO_ID='no id',
+)
 
 
 def _getConfig(cfgParser, section, option, defaultValue=None):
@@ -29,14 +72,62 @@ def _getConfig(cfgParser, section, option, defaultValue=None):
     return cfgParser.get(section, option)
 
 
+def _getEnumConfig(cfgParser, section, option, enum):
+    optionVal = _getConfig(
+        cfgParser, section, option, enum.defaultVal)
+    if optionVal not in enum.values():
+        raise ConfigError(
+            "RC file has invalid \"{section}.{option}\" setting {optionVal}.  Valid "
+            "options: {allowedVals}".format(
+                section=section,
+                option=option,
+                optionVal=optionVal,
+                allowedVals=", ".join(enum.values())))
+
+    return optionVal
+
+
+def _getDictConfig(cfgParser, section):
+    options = {}
+    if not cfgParser.has_section(section):
+        return options
+    for option in cfgParser.options(section):
+        roomUri = _getConfig(cfgParser, section, option, None)
+        options[option] = roomUri
+    return options
+
+
+def _getBoolConfig(cfgParser, section, option, default):
+    val = _getConfig(cfgParser, section, option, None)
+    if val is None:
+        return default
+    if val.lower() == 'true':
+        return True
+    elif val.lower() == 'false':
+        return False
+    else:
+        raise ConfigError(
+            "RC file has invalid \"{section}.{option}\" setting {optionVal}.  Valid "
+            "options: true, false".format(
+                section=section,
+                option=option,
+                optionVal=val))
+
+
 class ConfigError(Exception):
     pass
+
+
+_VAR_OPTIONS = object()
 
 
 class Config(object):
     # pylint: disable=too-many-instance-attributes
     validConfig = {
         'mail': {'domain', 'program'},
+        'chatmail': {'at all', 'reuse threads'},
+        'chatmail.google-chat-userhooks': _VAR_OPTIONS,
+        'chatmail.google-chat-userids': _VAR_OPTIONS,
         'ui': {'watch reminder'},
     }
 
@@ -49,18 +140,22 @@ class Config(object):
                     ", ".join(sorted(unknownSections))))
         for section in cfgSections:
             cfgValues = set(cfgParser.options(section))
-            unknownOptions = cfgValues - self.validConfig[section]
-            if unknownOptions:
-                raise ConfigError(
-                    "RC file has unknown configuration options in "
-                    "section \"{}\": {}".format(section,
-                                                ", ".join(sorted(unknownOptions))))
+            validSectionConfig = self.validConfig[section]
+            if validSectionConfig is not _VAR_OPTIONS:
+                assert isinstance(validSectionConfig, set)
+                unknownOptions = cfgValues - validSectionConfig
+                if unknownOptions:
+                    raise ConfigError(
+                        "RC file has unknown configuration options in "
+                        "section \"{}\": {}".format(
+                            section, ", ".join(sorted(unknownOptions))))
 
     def __init__(self, options):
         stateDir = options.stateDir
         self.options = options
         self._dbDir = os.path.expanduser(stateDir) + "/db/"
         self._logDir = os.path.expanduser(stateDir) + "/log/"
+        self._cacheDir = os.path.expanduser(stateDir) + "/cache/"
         self._lockFile = os.path.expanduser(stateDir) + "/db/.lockdb"
         self.debugLevel = options.debugLevel if options.debugLevel else []
 
@@ -70,13 +165,18 @@ class Config(object):
         self._mailDomain = _getConfig(
             cfgParser, "mail", "domain", os.getenv('HOSTNAME'))
         self._mailProgram = _getConfig(cfgParser, "mail", "program", "mail")
-        self._uiWatchReminder = _getConfig(
-            cfgParser, "ui", "watch reminder", WATCH_REMINDER_DEFAULT)
-        if self._uiWatchReminder not in WATCH_REMINDER_OPTIONS:
-            raise ConfigError(
-                "RC file has invalid \"ui.watch reminder\" setting {}.  Valid "
-                "options: {}".format(self._uiWatchReminder,
-                                     ", ".join(WATCH_REMINDER_OPTIONS)))
+
+        self._uiWatchReminder = _getEnumConfig(
+            cfgParser, 'ui', 'watch reminder', WATCH_REMINDER)
+
+        self._chatmailAtAll = _getEnumConfig(
+            cfgParser, 'chatmail', 'at all', CHATMAIL_AT_ALL)
+        self._chatmailReuseThreads = _getBoolConfig(
+            cfgParser, 'chatmail', 'reuse threads', True)
+        self._gChatUserHooks = _getDictConfig(
+            cfgParser, 'chatmail.google-chat-userhooks')
+        self._gchatUserIds = _getDictConfig(
+            cfgParser, 'chatmail.google-chat-userids')
 
         self._validateConfigParser(cfgParser)
 
@@ -99,6 +199,10 @@ class Config(object):
         return self.checkDir(self._logDir)
 
     @property
+    def cacheDir(self):
+        return self.checkDir(self._cacheDir)
+
+    @property
     def lockFile(self):
         self.checkDir(os.path.dirname(self._lockFile))
         return self._lockFile
@@ -114,3 +218,17 @@ class Config(object):
     @property
     def uiWatchReminderSummary(self):
         return self._uiWatchReminder == WATCH_REMINDER_SUMMARY
+
+    @property
+    def chatmailAtAll(self):
+        return self._chatmailAtAll
+
+    @property
+    def chatmailReuseThreads(self):
+        return self._chatmailReuseThreads
+
+    def gChatUserHook(self, user):
+        return self._gChatUserHooks.get(user)
+
+    def gChatUserId(self, user):
+        return self._gchatUserIds.get(user)

@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
 
 
 def addArgumentParserBaseFlags(parser, logfileName):
@@ -33,7 +32,7 @@ def addArgumentParserBaseFlags(parser, logfileName):
         action="store_true",
         help="enable debug output to <state-dir>/log/%s.log" % logfileName)
     parser.add_argument("--debugLocking", dest="debugLevel", action="append_const",
-                    const="lock", help="Debug database locking")
+                        const="lock", help="Debug database locking")
 
 
 def baseParsedArgsToArgList(argv, args):

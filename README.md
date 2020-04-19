@@ -73,8 +73,24 @@ The default configuration file location is `~/.config/jobrc`, but can be
 overwritten using the --rc-file option.
 
 ### Sample rcfile:
-```
+```aconf
 [mail]
 program = mail
+# For notifications over chat applications (like Google Chat), use chatmail as
+# your mail program instead. "chatmail" must be specified rather than a differently
+# named link to the script, else some options provided to job (such as --rc-file)
+# will not be passed through to it.
+# program = chatmail 
 domain = example.com
+[ui]
+watch reminder = full|summary  # default=summary
+[chatmail]
+at all = all|none|no id # default=none
+reuse threads = true|false # default true
+[chatmail.google-chat-userhooks]
+user1 = https://chat.googleapis.com/v1/spaces/...
+[chatmail.google-chat-userids]
+# Retrieve this using your browser inspector on an existing mention of this user.
+# It should show up as "user/some_long_integer" somewhere in the span's metadata.
+user1 = <long integer>
 ```

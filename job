@@ -13,9 +13,10 @@ import time
 import dateutil.parser
 import dateutil.tz
 
+from jobrunner.argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
+from jobrunner.binutils import binDescriptionWithStandardFooter
+from jobrunner.config import Config
 import jobrunner.logging
-from jobrunner.argparse import addArgumentParserBaseFlags
-from jobrunner.config import RC_FILE_HELP, Config
 from jobrunner.plugins import Plugins
 from jobrunner.service import service
 from jobrunner.service.registry import registerServices
@@ -37,7 +38,7 @@ from jobrunner.utils import (
     sprint,
 )
 
-_debugLogFileName = "jobrunner-debug"
+_DEBUG_LOG_FILE_NAME = "jobrunner-debug"
 LOG = jobrunner.logging.getLogger(__name__)
 
 
@@ -54,7 +55,10 @@ def main(args=None):
     config = Config(options)
     jobs = service().db.jobs(config, plugins)
 
-    jobrunner.logging.setup(config.logDir, _debugLogFileName, debug=options.debug)
+    jobrunner.logging.setup(
+        config.logDir,
+        _DEBUG_LOG_FILE_NAME,
+        debug=options.debug)
     LOG.debug("starting with args %s", options)
     jobs.lock()
     maybeHandleNonExecOptions(options, jobs)
@@ -84,6 +88,10 @@ def main(args=None):
                 if '@' not in ccAddr:
                     ccAddr += '@' + config.mailDomain
                 cmd += ['-c', ccAddr]
+        if config.mailProgram == 'chatmail':
+            # Special case for built-in chatmail, which should inherit any of the
+            # base args given to job, such as which rc file to use, etc.
+            cmd.extend(baseParsedArgsToArgList(args or sys.argv, options))
         cmd.append(options.to)
     elif options.command:
         bashCmd = postCommand(options.command)
@@ -279,7 +287,7 @@ def finish(job, rc):
         showMsgs()
 
 
-DESC = """\
+DESC = binDescriptionWithStandardFooter("""
 job - Job runner with logging
 
 Note: `.` is a common alias for any `key` argument and refers to the most recently
@@ -301,14 +309,7 @@ Examples:
 
     # Retry a job
     $ job --retry ls
-
-
-Configuration:
-    The default configuration file location is `~/.config/jobrc`, but can be
-    overwritten using the --rc-file option.
-
-{rcfile}
-""".format(rcfile=RC_FILE_HELP)
+""")
 
 
 class ExitCode(Exception):
@@ -609,7 +610,7 @@ def parseArgs(args=None):
     op.add_argument("program", nargs='?')
     op.add_argument("args", nargs=argparse.REMAINDER)
 
-    addArgumentParserBaseFlags(op, _debugLogFileName)
+    addArgumentParserBaseFlags(op, _DEBUG_LOG_FILE_NAME)
 
     out = op.add_mutually_exclusive_group()
     out.add_argument('--robot-format', dest='quiet', action='store_const',
