@@ -33,8 +33,12 @@ def getUtcTime(val):
     return val
 
 
+_TRANSLATION = {val: '<{:02X}>'.format(val) for val in range(0x80, 0x100)}
+
+
 def cmdString(cmd):
-    return " ".join(map(pipes.quote, cmd))
+    unicodeString = " ".join(map(pipes.quote, cmd))
+    return "".join(_TRANSLATION.get(ord(c), c) for c in unicodeString)
 
 
 class JobInfo(object):
