@@ -234,7 +234,7 @@ class JobInfo(object):
         self._key = (utcNow().strftime("%s") +
                      str(self._uidx) + "_" +
                      keyEscape(keySource))
-        doMsg("set key", self._key)
+        doMsg(" - set key", self._key)
         robotInfo("new", {"key": self._key})
         return self._key
 

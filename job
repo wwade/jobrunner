@@ -65,13 +65,6 @@ def main(args=None):
     maybeHandleNonExecWriteOptions(options, jobs)
 
     setQuiet(options.quiet)
-    deps = []
-    depSuccess = []
-    depWait = []
-    jobs.addDeps(options.blocked_by, options.tw, deps, None)
-    jobs.addDeps(options.wait, options.tw, deps, depWait)
-    jobs.addDeps(options.blocked_by_success, options.tw, deps, depSuccess)
-    jobs.addDeps(options.mail, options.tw, deps, None)
 
     doIsolate = options.isolate
     cmd = []
@@ -119,6 +112,14 @@ def main(args=None):
         sprint(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
         jobs.unlock()
         sys.exit(0)
+
+    deps = []
+    depSuccess = []
+    depWait = []
+    jobs.addDeps(options.blocked_by, options.tw, deps, None)
+    jobs.addDeps(options.wait, options.tw, deps, depWait)
+    jobs.addDeps(options.blocked_by_success, options.tw, deps, depSuccess)
+    jobs.addDeps(options.mail, options.tw, deps, None)
 
     if depWait:
         rc = waitForDep(depWait, options, jobs)
