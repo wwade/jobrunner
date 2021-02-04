@@ -246,12 +246,12 @@ def monitorForkedJob(job, jobs):
         rc = 0
         while active:
             LOG.debug("monitoring, sleep 0.5")
-            time.sleep(0.5)
             with lockedSection(jobs):
                 active = job.key in jobs.active.db
                 rc = None
                 if not active:
                     rc = jobs.inactive[job.key].rc
+            time.sleep(0.5)
             LOG.debug('active %s, rc %r', active, rc)
         return rc
     except KeyboardInterrupt:
