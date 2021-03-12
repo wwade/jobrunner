@@ -15,6 +15,7 @@ import tempfile
 import time
 
 import dateutil.tz
+from six import text_type
 
 PRUNE_NUM = 5000
 DATETIME_FMT = "%a %b %e, %Y %X %Z"
@@ -30,12 +31,23 @@ SPACER = SPACER_EACH + SPACER_EACH
 LOG = logging.getLogger(__name__)
 
 
+def strForEach(value):
+    try:
+        return text_type(value)
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        LOG.debug("%r", value, exc_info=1)
+        return '{!r}'.format(value)
+
+
 def sprint(*args, **kwargs):
     """sprint: "safe" print - ignore IOError"""
     try:
-        print(*args, **kwargs)
+        print(*map(strForEach, args), **kwargs)
     except IOError:
         LOG.debug("sprint ignore IOError", exc_info=1)
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        print('codec error', repr(args))
+        LOG.debug("%r", args, exc_info=1)
     except BaseException:
         LOG.debug("sprint caught error", exc_info=1)
         raise
