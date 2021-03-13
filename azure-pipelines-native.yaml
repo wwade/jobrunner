@@ -1,0 +1,29 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+jobs:
+  - job: 'ubuntu_20_04'
+    pool:
+      vmImage: ubuntu-20.04
+    strategy:
+      matrix:
+        Python27:
+          python.version: '2.7'
+        # Python37:
+        #   python.version: '3.7'
+    steps:
+      - template: ci/steps.yaml
+
+  - job: 'macOS_10_15'
+    pool:
+      vmImage: 'macOS-10.15'
+    strategy:
+      matrix:
+        Python27:
+          python.version: '2.7'
+        # Python37:
+        #   python.version: '3.7'
+    steps:
+      - template: ci/steps.yaml
