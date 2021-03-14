@@ -24,7 +24,7 @@ class _Module(object):
     def __init__(self):
         try:
             out = check_output(['sudo', 'true'])
-        except CalledProcessError as error:
+        except (CalledProcessError, FileNotFoundError) as error:
             print("Ignore sudo check error", error)
             return
         for line in out.splitlines():

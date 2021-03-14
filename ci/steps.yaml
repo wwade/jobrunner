@@ -20,7 +20,7 @@ steps:
     pipenv run pylint -d fixme "${FILES[@]}"
   displayName: Run linters
 
-- script: pipenv install .
+- script: pipenv run pip install .
   displayName: 'Install jobrunner'
 
 - script: pipenv run pytest -v -l --junitxml=junit/test-results.xml --durations=10 jobrunner/
