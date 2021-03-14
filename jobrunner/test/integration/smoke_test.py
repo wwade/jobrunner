@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 from __future__ import absolute_import, division, print_function
 
 from logging import getLogger
@@ -44,7 +41,7 @@ def testUnicodeSmoke(capsys):
     with testEnv():
         with capsys.disabled():
             # unicode smoke test
-            lineChar = text_type(u'─')
+            lineChar = '\xe2\x94\x80'
             check_call(['job', '-f', 'sh', '-c', 'echo ' + lineChar])
             check_call(['job', '-L'])
 
