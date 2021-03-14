@@ -10,6 +10,7 @@ from unittest import TestCase
 
 from pexpect import EOF
 import simplejson as json
+import six
 
 from .integration_lib import (
     activeJobs,
@@ -223,7 +224,7 @@ class RunExecOptionsTest(TestCase):
             """
             reg = re.compile(matchOut.format(sep=sep),
                              re.MULTILINE | re.VERBOSE)
-            self.assertRegexpMatches(out, reg)
+            six.assertRegex(self, out, reg)
 
     def testMonitor(self):
         # --monitor
@@ -360,7 +361,7 @@ class RunNonExecOptionsTest(TestCase):
             self.assertIn("echo second", listInactive)
             listInactiveVerbose = job('--list-inactive', '-v')
             progEchoRe = re.compile(r'^Command \s*echo second$', re.M)
-            self.assertRegexpMatches(listInactiveVerbose, progEchoRe)
+            six.assertRegex(self, listInactiveVerbose, progEchoRe)
             # -vvv
             subEnv = dict(os.environ)
             subEnv.update({'INACTIVE_EXTRA_VERBOSE': '0123\x07123\n'})
@@ -373,7 +374,7 @@ class RunNonExecOptionsTest(TestCase):
                 listInactiveExtraVerbose)
 
             # --show
-            self.assertRegexpMatches(job('--show', secondKey), progEchoRe)
+            six.assertRegex(self, job('--show', secondKey), progEchoRe)
             # --info
             self.assertIn("activeJobs", job('--info'))
 

@@ -9,6 +9,7 @@ import os
 import sys
 
 import requests
+import six
 
 from jobrunner.argparse import addArgumentParserBaseFlags
 from jobrunner.binutils import binDescriptionWithStandardFooter
@@ -173,7 +174,7 @@ def main(args=None):
             return ERROR
         hooksToUsers[hook].append(user)
 
-    for hook, users in hooksToUsers.iteritems():
+    for hook, users in six.iteritems(hooksToUsers):
         userAts = _getUserAtTokens(users, config)
 
         subjectAndAts = " ".join(userAts + [subject])

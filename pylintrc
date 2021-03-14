@@ -73,7 +73,6 @@ disable=print-statement,
         apply-builtin,
         basestring-builtin,
         buffer-builtin,
-        cmp-builtin,
         coerce-builtin,
         execfile-builtin,
         file-builtin,
@@ -99,7 +98,6 @@ disable=print-statement,
         oct-method,
         hex-method,
         nonzero-method,
-        cmp-method,
         input-builtin,
         round-builtin,
         intern-builtin,
@@ -136,6 +134,10 @@ disable=print-statement,
         no-else-return,
         too-few-public-methods,
         no-self-use,
+
+        useless-object-inheritance,
+        super-with-arguments,
+
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

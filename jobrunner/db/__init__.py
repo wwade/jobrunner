@@ -12,7 +12,9 @@ from uuid import uuid4
 from dateutil import parser
 from dateutil.tz import tzlocal, tzutc
 import simplejson as json
+import six
 from six import text_type
+from six.moves import filter
 
 import jobrunner.utils as utils
 
@@ -20,6 +22,7 @@ from ..info import JobInfo, decodeJobInfo, encodeJobInfo
 from ..service import service
 from ..utils import (
     FileLock,
+    cmp_,
     dateTimeFromJson,
     dateTimeToJson,
     doMsg,
@@ -33,7 +36,6 @@ from ..utils import (
 NUM_RECENT = 100
 PRUNE_NUM = 5000
 
-# pylint: disable=deprecated-lambda
 LOG = logging.getLogger(__name__)
 LOGLOCK = logging.getLogger(__name__ + ".lock")
 
@@ -77,7 +79,7 @@ class DatabaseBase(DatabaseMeta):
         return k not in self.special
 
     def iteritems(self):
-        return self.db.iteritems()
+        return six.iteritems(self.db)
 
     def getCount(self):
         return int(self.db[self.ITEMCOUNT])
@@ -133,7 +135,7 @@ class DatabaseBase(DatabaseMeta):
     lastJob = property(lastJobGet, lastJobSet)
 
     def keys(self):
-        return filter(self.filterJobs, self.db.keys())
+        return list(filter(self.filterJobs, list(self.db.keys())))
 
     def recentGet(self):
         if self.RECENT in self.db:
@@ -463,14 +465,13 @@ class JobsBase(object):
                 return self.getJobMatch(lastJob, thisWs)
 
         if key is None:
-            jobList = filter(
-                lambda x: self.filterJobsWith(x, skipReminders=skipReminders),
-                self.getDbSorted(self.active, None, filterWs=thisWs))
+            jobList = [
+               x for x in self.getDbSorted(self.active, None, filterWs=thisWs)
+               if self.filterJobsWith(x, skipReminders=skipReminders)]
             if not jobList:
-                jobList = filter(
-                    lambda x: self.filterJobsWith(
-                        x, skipReminders=skipReminders),
-                    self.getDbSorted(self.inactive, None, filterWs=thisWs))
+                jobList = [
+                   x for x in self.getDbSorted(self.inactive, None, filterWs=thisWs)
+                   if self.filterJobsWith(x, skipReminders=skipReminders)]
             if not jobList:
                 jobList = self.getDbSorted(
                     self.inactive, None, filterWs=thisWs)
@@ -608,9 +609,8 @@ class JobsBase(object):
         blinkState = True
         while True:
             activeJobList = self.getDbSorted(self.active, None, False)
-            nonReminder = filter(lambda j: j.reminder is None, activeJobList)
-            activeReminder = filter(lambda j: j.reminder and j.startTime,
-                                    activeJobList)
+            nonReminder = [j for j in activeJobList if j.reminder is None]
+            activeReminder = [j for j in activeJobList if j.reminder and j.startTime]
             newJobs = [j.key for j in nonReminder]
             finishedJobs = set(curJobs) - set(newJobs)
             curJobs = newJobs
@@ -660,7 +660,7 @@ class JobsBase(object):
             safeSleep(1, self)
 
     def activityWindow(self, options):
-        # pylint: disable=too-many-locals,too-many-branches
+        # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         if options.activity:
             activityLevel = len(options.activity)
         else:
@@ -717,13 +717,13 @@ class JobsBase(object):
 
         def _byAge(refA, refB):
             if refA not in perWs and refB not in perWs:
-                return cmp(refA, refB)
+                return cmp_(refA, refB)
             elif refB not in perWs:
                 return -1
             elif refA not in perWs:
                 return 1
             else:
-                return cmp(perWs[refA]['age'], perWs[refB]['age'])
+                return cmp_(perWs[refA]['age'], perWs[refB]['age'])
         sprint('-' * 75)
         wsList = list(set(perWs.keys()).union(set(remind.keys())))
         for wkspace in sorted(wsList, cmp=_byAge):

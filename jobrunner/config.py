@@ -1,7 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
-import ConfigParser
 import os
+
+import six.moves.configparser
+import six
 
 RC_FILE_HELP = """\
 Sample rcfile:
@@ -31,10 +33,10 @@ class ConfigEnum(object):
         self._enumVals = enumVals
 
     def names(self):
-        return self._enumVals.iterkeys()
+        return six.iterkeys(self._enumVals)
 
     def values(self):
-        return self._enumVals.itervalues()
+        return six.itervalues(self._enumVals)
 
     @property
     def defaultVal(self):
@@ -75,14 +77,14 @@ def _getConfig(cfgParser, section, option, defaultValue=None):
 def _getEnumConfig(cfgParser, section, option, enum):
     optionVal = _getConfig(
         cfgParser, section, option, enum.defaultVal)
-    if optionVal not in enum.values():
+    if optionVal not in list(enum.values()):
         raise ConfigError(
             "RC file has invalid \"{section}.{option}\" setting {optionVal}.  Valid "
             "options: {allowedVals}".format(
                 section=section,
                 option=option,
                 optionVal=optionVal,
-                allowedVals=", ".join(enum.values())))
+                allowedVals=", ".join(list(enum.values()))))
 
     return optionVal
 
@@ -160,7 +162,7 @@ class Config(object):
         self.debugLevel = options.debugLevel if options.debugLevel else []
 
         rcFile = os.path.expanduser(options.rcFile)
-        cfgParser = ConfigParser.ConfigParser()
+        cfgParser = six.moves.configparser.ConfigParser()
         cfgParser.read(rcFile)
         self._mailDomain = _getConfig(
             cfgParser, "mail", "domain", os.getenv('HOSTNAME'))

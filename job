@@ -12,6 +12,7 @@ import time
 
 import dateutil.parser
 import dateutil.tz
+import six
 
 from jobrunner.argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
 from jobrunner.binutils import binDescriptionWithStandardFooter
@@ -49,7 +50,7 @@ def main(args=None):
     plugins = Plugins()
     MOD_STATE.plugins = plugins
 
-    registerServices(sqlite=bool("USE_DBM" not in os.environ))
+    registerServices()
 
     options = parseArgs(args)
     config = Config(options)
@@ -265,10 +266,11 @@ def monitorForkedJob(job, jobs):
         monitor.terminate()
         monitor.kill()
         monitor.wait()
+    return 0
 
 
 def safeWrite(fp, value):
-    if isinstance(value, unicode):
+    if isinstance(value, six.text_type):
         value = str(value)
     fp.write(value.translate(None, "\x1B\x0d"))
 
@@ -419,8 +421,7 @@ def handleNonExecOptions(options, jobs):
             stdout, stderr = proc.communicate(input=dot)
             if stdout.strip() or stderr.strip():
                 raise ExitCode(stdout + stderr)
-            else:
-                sprint('Saved output to', fName)
+            sprint('Saved output to', fName)
         return True
     elif options.list_inactive:
         jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
@@ -453,7 +454,7 @@ def handleNonExecOptions(options, jobs):
             try:
                 showPstreeForKey(key, jobs, options)
             except KeyError as error:
-                sprint("Error:", error.message)
+                sprint("Error:", error)
         return True
     elif options.last_key:
         sprint(jobs.inactive.lastKey)
@@ -536,6 +537,7 @@ def handleNonExecWriteOptions(options, jobs):
         except KeyboardInterrupt:
             sprint("")
             sprint("Exit on user interrupt")
+            # pylint: disable=raise-missing-from
             raise ExitCode(1)
         return True
     else:

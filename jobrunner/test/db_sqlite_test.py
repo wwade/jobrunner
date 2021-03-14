@@ -4,6 +4,8 @@ import os
 from tempfile import NamedTemporaryFile
 import unittest
 
+from six import assertCountEqual
+
 from jobrunner.db.sqlite_db import Sqlite3KeyValueStore, connectDb
 
 
@@ -25,7 +27,6 @@ class KeyValueStoreTest(unittest.TestCase):
             self._store.conn.commit()
             self._store.unlock()
             self._store = None
-        return None
 
     def setUp(self):
         self._store = None
@@ -37,9 +38,9 @@ class KeyValueStoreTest(unittest.TestCase):
 
     def testKeys(self):
         store = self.store()
-        self.assertItemsEqual(store.initvals, store.keys())
+        assertCountEqual(self, store.initvals, list(store.keys()))
         store['foo'] = 'value'
-        self.assertItemsEqual(list(store.initvals) + ['foo'], store.keys())
+        assertCountEqual(self, list(store.initvals) + ['foo'], list(store.keys()))
 
     def testLen(self):
         store = self.store()
@@ -66,15 +67,18 @@ class KeyValueStoreTest(unittest.TestCase):
         store = self.store(fname)
         store['foo'] = 'bar'
         store['hello'] = 'goodbye'
-        store = self.removeStore()
+        self.removeStore()
+
         store = self.store(fname)
         self.assertEqual('bar', store['foo'])
         self.assertEqual('goodbye', store['hello'])
         del store['hello']
-        store = self.removeStore()
+        self.removeStore()
+
         store = self.store(fname)
         self.assertNotIn("hello", store)
-        store = self.removeStore()
+        self.removeStore()
+
         store = self.store(fname, "1")
         self.assertNotIn("foo", store)
         os.unlink(fname)

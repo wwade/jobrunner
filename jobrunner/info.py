@@ -7,11 +7,14 @@ import pipes
 import string
 
 import dateutil.tz
+import six
+from six.moves import map, range
 
 import jobrunner.utils as utils
 
 from .service import service
 from .utils import (
+    cmp_,
     dateTimeFromJson,
     dateTimeToJson,
     doMsg,
@@ -57,6 +60,7 @@ class JobInfo(object):
         self._alldeps = set()
         self._host = os.getenv('HOSTNAME')
         self._user = os.getenv('USER')
+        # pylint: disable=unnecessary-comprehension
         self._env = {key: value for key, value in os.environ.items()}
         self._workspace = workspaceIdentity()
         self._proj = os.getenv('WP')
@@ -165,14 +169,14 @@ class JobInfo(object):
             if rc != 0:
                 return rc
 
-        rc = cmp(self.persistKeyGenerated, other.persistKeyGenerated)
+        rc = cmp_(self.persistKeyGenerated, other.persistKeyGenerated)
         if rc != 0:
             return rc
-        return cmp(self.cmd, other.cmd)
+        return cmp_(self.cmd, other.cmd)
 
     def cmpCreate(self, other):
         try:
-            rc = cmp(self.createTime, other.createTime)
+            rc = cmp_(self.createTime, other.createTime)
         except AttributeError:
             rc = 0
         return rc
@@ -184,10 +188,10 @@ class JobInfo(object):
             myStart = utcNow()
         if otherStart is None:
             otherStart = utcNow()
-        return cmp(myStart, otherStart)
+        return cmp_(myStart, otherStart)
 
     def cmpStop(self, other):
-        return cmp(self.stopTime, other.stopTime)
+        return cmp_(self.stopTime, other.stopTime)
 
     def cmpActive(self, other):
         return self.cmpCommon(
@@ -397,7 +401,7 @@ class JobInfo(object):
 
     def getEnvironment(self):
         ret = "\n"
-        for k, v in sorted(self._env.iteritems()):
+        for k, v in sorted(six.iteritems(self._env)):
             ret += "\t%s=%s\n" % (self.escEnv(k), self.escEnv(v))
         return ret
 

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from jobrunner.config import RC_FILE_HELP
 
 

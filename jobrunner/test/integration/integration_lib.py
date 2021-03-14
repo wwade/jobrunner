@@ -10,6 +10,7 @@ from tempfile import mkdtemp
 import time
 
 import pexpect
+from six.moves import map
 
 from ..helpers import resetEnv
 
