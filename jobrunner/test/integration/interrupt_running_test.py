@@ -23,7 +23,7 @@ class _Module(object):
 
     def __init__(self):
         try:
-            out = check_output(['sudo', '-l'])
+            out = check_output(['sudo', 'true'])
         except CalledProcessError as error:
             print("Ignore sudo check error", error)
             return

@@ -338,7 +338,7 @@ class RunNonExecOptionsTest(TestCase):
             self.assertIn("echo first", listInactive)
             self.assertIn("echo second", listInactive)
             listInactiveVerbose = job('--list-inactive', '-v')
-            progEchoRe = re.compile(r'^Program\s*echo$', re.M)
+            progEchoRe = re.compile(r'^Command \s*echo second$', re.M)
             self.assertRegexpMatches(listInactiveVerbose, progEchoRe)
             # -vvv
             subEnv = dict(os.environ)

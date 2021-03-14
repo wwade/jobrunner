@@ -441,11 +441,9 @@ class JobInfo(object):
 
     def getValue(self, what):
         items = {
-            'Program': lambda: self.prog,
             'Directory': lambda: self.pwd,
             'Project': lambda: self._proj,
             'Log': lambda: self.logfile,
-            'Args': lambda: cmdString(self.args) if self.args else None,
             'Command': lambda: cmdString(self.cmd),
             'Start': lambda: self.timeStr(self.startTime),
             'Stop': lambda: self.timeStr(self._stop),
@@ -509,9 +507,7 @@ class JobInfo(object):
 
         order = [
             'Key',
-            'Persistent Key',
-            'Program',
-            'Args',
+            'Command',
             'State',
             'Exit Status',
             'Directory',
@@ -522,7 +518,6 @@ class JobInfo(object):
             'Stop',
             'Duration',
             'Isolated',
-            'Command',
             'PID',
         ]
         verb1 = [
