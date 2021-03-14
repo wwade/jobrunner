@@ -1,0 +1,33 @@
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(python.version)'
+
+- script: ln -svf Pipfile-'$(python.version)'.lock Pipfile.lock
+  displayName: 'Set up Pipfile-$(python.version)'
+
+- script: python -m pip install --upgrade pip setuptools wheel pipenv
+  displayName: 'Install tools'
+
+- script: pipenv --python '$(python.version)' install --dev
+  displayName: 'pipenv install --dev'
+
+- script: |
+    set -xe
+    FILES=(job setup.py jobrunner)
+    pipenv run isort -c --diff -rc "${FILES[@]}"
+    pipenv run autopep8 --exit-code -ra --diff "${FILES[@]}"
+    pipenv run pylint -d fixme "${FILES[@]}"
+  displayName: Run linters
+
+- script: pipenv run pip install .
+  displayName: 'Install jobrunner'
+
+- script: pipenv run pytest -v -l --junitxml=junit/test-results.xml --durations=10 jobrunner/
+  displayName: Run tests
+
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: Publish test results for $(Agent.JobName)
