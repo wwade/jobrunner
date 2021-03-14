@@ -12,7 +12,7 @@ steps:
 - script: |
     pipenv --python '$(python.version)' install --dev
     pipenv graph
-  displayName: 'Install from Pipfile'
+  displayName: 'pipenv install --dev'
 
 - script: |
     set -xe
