@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from mock import MagicMock, patch
+import six
 
 from jobrunner import config
 
@@ -68,12 +69,12 @@ class TestRcParser(unittest.TestCase, TestMixin):
 
         if gChatUserHookDict is None:
             gChatUserHookDict = {}
-        for user, hook in gChatUserHookDict.iteritems():
+        for user, hook in six.iteritems(gChatUserHookDict):
             self.assertEqual(hook, cfgObj.gChatUserHook(user))
 
         if gChatUserIdDict is None:
             gChatUserIdDict = {}
-        for user, uid in gChatUserIdDict.iteritems():
+        for user, uid in six.iteritems(gChatUserIdDict):
             self.assertEqual(uid, cfgObj.gChatUserId(user))
 
     def testNoFile(self):
@@ -116,7 +117,7 @@ class TestMalformedRcFile(unittest.TestCase, TestMixin):
             tempFp.write(EXAMPLE_RCFILE + BAD_SECTION)
             tempFp.flush()
             pattern = r'unknown configuration sections: unknown'
-            with self.assertRaisesRegexp(config.ConfigError, pattern):
+            with six.assertRaisesRegex(self, config.ConfigError, pattern):
                 self.config(tempFp)
 
     def testBadOption(self):
@@ -124,7 +125,7 @@ class TestMalformedRcFile(unittest.TestCase, TestMixin):
             tempFp.write(EXAMPLE_RCFILE + "\n" + "xyz = foo\n")
             tempFp.flush()
             pattern = r'unknown configuration options in section "mail": xyz'
-            with self.assertRaisesRegexp(config.ConfigError, pattern):
+            with six.assertRaisesRegex(self, config.ConfigError, pattern):
                 self.config(tempFp)
 
     def testReminderBadOption(self):
@@ -135,5 +136,5 @@ class TestMalformedRcFile(unittest.TestCase, TestMixin):
                 r'RC file has invalid "ui.watch reminder" setting foo.\s*' +
                 r'Valid options: (full, summary|summary, full)'
             )
-            with self.assertRaisesRegexp(config.ConfigError, pattern):
+            with six.assertRaisesRegex(self, config.ConfigError, pattern):
                 self.config(tempFp)

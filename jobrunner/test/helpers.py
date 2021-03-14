@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
-from StringIO import StringIO
 from contextlib import contextmanager
 import os
 import sys
+
+from six.moves import StringIO
 
 HOSTNAME = 'host.example.com'
 HOME = '/home/me'

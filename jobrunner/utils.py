@@ -16,6 +16,7 @@ import time
 
 import dateutil.tz
 from six import text_type
+from six.moves import map, range
 
 PRUNE_NUM = 5000
 DATETIME_FMT = "%a %b %e, %Y %X %Z"
@@ -42,7 +43,7 @@ def strForEach(value):
 def sprint(*args, **kwargs):
     """sprint: "safe" print - ignore IOError"""
     try:
-        print(*map(strForEach, args), **kwargs)
+        print(*list(map(strForEach, args)), **kwargs)
     except IOError:
         LOG.debug("sprint ignore IOError", exc_info=1)
     except (UnicodeEncodeError, UnicodeDecodeError):
@@ -181,9 +182,9 @@ def workspaceIdentity():
 
 
 def getAllowed():
-    allowed = (range(ord('a'), ord('z') + 1) +
-               range(ord('A'), ord('Z') + 1) +
-               range(ord('0'), ord('9') + 1) +
+    allowed = (list(range(ord('a'), ord('z') + 1)) +
+               list(range(ord('A'), ord('Z') + 1)) +
+               list(range(ord('0'), ord('9') + 1)) +
                [ord(char) for char in ['_', '#']])
     ret = [chr(char) for char in allowed]
     return ret
@@ -218,6 +219,10 @@ def quiet():
 
 def robot():
     return _DEBUGGER.quiet == "robot"
+
+
+def cmp_(first, second):  # pylint: disable=invalid-name
+    return (first > second) - (first < second)
 
 
 def doMsg(*args):

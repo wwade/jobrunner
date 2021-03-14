@@ -12,6 +12,7 @@ import time
 
 import dateutil.parser
 import dateutil.tz
+import six
 
 from jobrunner.argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
 from jobrunner.binutils import binDescriptionWithStandardFooter
@@ -60,6 +61,7 @@ def main(args=None):
         _DEBUG_LOG_FILE_NAME,
         debug=options.debug)
     LOG.debug("starting with args %s", options)
+    LOG.debug("python: %s", sys.version)
     jobs.lock()
     maybeHandleNonExecOptions(options, jobs)
     maybeHandleNonExecWriteOptions(options, jobs)
@@ -126,7 +128,7 @@ def main(args=None):
         jobs.unlock()
         sys.exit(rc)
 
-    job, fp = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
+    job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
                        key=options.key, reminder=options.reminder)
     job.genPersistKey()
     jobs.active[job.key] = job
@@ -136,8 +138,8 @@ def main(args=None):
         jobs.unlock()
         childPid = os.fork()
         if childPid > 0:
-            LOG.info("forked child %d, close %d", childPid, fp)
-            os.close(fp)
+            LOG.info("forked child %d, close %d", childPid, fd)
+            os.close(fd)
             rc = 0
             if options.monitor:
                 rc = monitorForkedJob(job, jobs)
@@ -179,8 +181,10 @@ def main(args=None):
         jobs.waitInactive(k, options.verbose)
         j = jobs.inactive[k]
         if j.rc != 0:
-            os.write(fp, "Dependent job failed: %s\n" % j)
-            os.write(fp, j.detail("vvv") + "\n")
+            out = "Dependent job failed: {}\n".format(j)
+            out += "{}\n".format(j.detail("vvv"))
+            LOG.debug("out %s", out)
+            os.write(fd, out.encode('utf-8'))
             job.stop(jobs, STOP_DEPFAIL)
             sprint("\nDependent job failed: %s" % j)
             sprint("key: %s" % job.key)
@@ -207,7 +211,8 @@ def main(args=None):
             depJob = jobs.inactive[j.permKey]
             safeWrite(tmp, depJob.detail(options.verbose))
             safeWrite(tmp, "\n" + SPACER_EACH + "\n")
-            safeWrite(tmp, check_output(['tail', '-n20', depJob.logfile]))
+            lines = check_output(['tail', '-n20', depJob.logfile]).decode('utf-8')
+            safeWrite(tmp, lines)
             safeWrite(tmp, SPACER_EACH + "\n")
             safeWrite(tmp, "\n")
             try:
@@ -220,7 +225,7 @@ def main(args=None):
         tmp.flush()
         cmd.append(lastArg)
 
-    runJob(cmd, options, jobs, job, fp, doIsolate)
+    runJob(cmd, options, jobs, job, fd, doIsolate)
 
 
 def waitForDep(depWait, options, jobs):
@@ -265,12 +270,16 @@ def monitorForkedJob(job, jobs):
         monitor.terminate()
         monitor.kill()
         monitor.wait()
+    return 0
 
 
-def safeWrite(fp, value):
-    if isinstance(value, unicode):
-        value = str(value)
-    fp.write(value.translate(None, "\x1B\x0d"))
+removeChars = frozenset("\x1B\x0d")
+
+
+def safeWrite(fd, value):
+    value = six.text_type(value)
+    value = ''.join(c for c in value if c not in removeChars)
+    fd.write(value.encode('utf-8'))
 
 
 def postCommand(cmd):
@@ -409,6 +418,7 @@ def handleNonExecOptions(options, jobs):
             filterWs=options.tw,
             filterPane=options.tp,
             useCp=options.since_checkpoint)
+        LOG.debug("dot: %s", dot)
         if options.dot:
             sprint(dot)
         else:
@@ -416,11 +426,10 @@ def handleNonExecOptions(options, jobs):
             ofile = os.path.expanduser(fName)
             cmd = ['dot', '-Tsvg', '-o', ofile]
             proc = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-            stdout, stderr = proc.communicate(input=dot)
+            stdout, stderr = proc.communicate(input=dot.encode('utf-8'))
             if stdout.strip() or stderr.strip():
                 raise ExitCode(stdout + stderr)
-            else:
-                sprint('Saved output to', fName)
+            sprint('Saved output to', fName)
         return True
     elif options.list_inactive:
         jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
@@ -453,7 +462,7 @@ def handleNonExecOptions(options, jobs):
             try:
                 showPstreeForKey(key, jobs, options)
             except KeyError as error:
-                sprint("Error:", error.message)
+                sprint("Error:", error)
         return True
     elif options.last_key:
         sprint(jobs.inactive.lastKey)
@@ -536,7 +545,7 @@ def handleNonExecWriteOptions(options, jobs):
         except KeyboardInterrupt:
             sprint("")
             sprint("Exit on user interrupt")
-            raise ExitCode(1)
+            raise ExitCode(1)  # pylint: disable=bad-option-value, raise-missing-from
         return True
     else:
         return False
@@ -716,7 +725,7 @@ def maybeHandleNonExecWriteOptions(options, jobs):
     maybeHandle(options, jobs, handleNonExecWriteOptions)
 
 
-def runJob(cmd, options, jobs, job, fp, doIsolate):
+def runJob(cmd, options, jobs, job, fd, doIsolate):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-statements
     LOG.info("execute: %s", job.cmdStr)
@@ -740,7 +749,7 @@ def runJob(cmd, options, jobs, job, fp, doIsolate):
     try:
         jobs.unlock()
         LOG.debug("starting check_call()")
-        rc = check_call(cmd, stdin=fpIn, stdout=fp, stderr=fp)
+        rc = check_call(cmd, stdin=fpIn, stdout=fd, stderr=fd)
         LOG.debug("check_call() => rc=%d", rc)
     except KeyboardInterrupt:
         LOG.debug("KeyboardInterrupt", exc_info=1)
@@ -762,7 +771,7 @@ def runJob(cmd, options, jobs, job, fp, doIsolate):
         jobs.lock()
         LOG.debug("locked DB, writing 'stop' status rc=%d", rc)
         job.stop(jobs, rc)
-        os.fsync(fp)
+        os.fsync(fd)
         LOG.debug("locked DB, writing 'finish' status rc=%d", rc)
         finish(job, rc)
         jobs.unlock()

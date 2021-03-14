@@ -1,8 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+from logging import getLogger
 import sqlite3
 
 from . import DatabaseBase, DatabaseMeta, JobsBase, resolveDbFile
+
+LOG = getLogger(__name__)
 
 
 class Sqlite3KeyValueStore(DatabaseMeta):
@@ -30,13 +33,16 @@ class Sqlite3KeyValueStore(DatabaseMeta):
     def _setDirty(self, _key):
         assert self._locked
         self._dirty += 1
+        LOG.debug("dirty -> %d", self._dirty)
 
     def lock(self):
         assert not self._locked
+        LOG.debug("set locked")
         self._locked = True
 
     def unlock(self):
         assert self._locked
+        LOG.debug("set unlocked")
         self._locked = False
 
     def __setitem__(self, key, value):
@@ -155,7 +161,6 @@ class Sqlite3Jobs(JobsBase):
     def __init__(self, config, plugins):
         super(Sqlite3Jobs, self).__init__(config, plugins)
         self._filename = resolveDbFile(config, 'jobsDb.sqlite')
-        self._dbc = None
         self._lock.lock()
         conn = connectDb(self._filename)
         self.active = Sqlite3Database(self, config, self._instanceId, 'active')
@@ -164,12 +169,6 @@ class Sqlite3Jobs(JobsBase):
             self, config, self._instanceId, 'inactive')
         self.inactive.setup(conn)
         self._lock.unlock()
-
-    def __del__(self):
-        if self.active.dirty or self.inactive.dirty:
-            self._dbc.commit()
-        self._dbc.close()
-        self._dbc = None
 
     def isLocked(self):
         return self._lock.isLocked()
