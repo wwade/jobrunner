@@ -9,7 +9,7 @@ steps:
 - script: python -m pip install --upgrade pip setuptools wheel pipenv
   displayName: 'Install tools'
 
-- script: | pipenv --python '$(python.version)' install --dev
+- script: pipenv --python '$(python.version)' install --dev
   displayName: 'pipenv install --dev'
 
 - script: |
