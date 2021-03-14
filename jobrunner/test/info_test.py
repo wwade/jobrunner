@@ -119,17 +119,27 @@ class TestJobProperties(unittest.TestCase):
 
 
 class TestInfoHelpers(unittest.TestCase):
+    def _assertCmd(self, actual, expected):
+        actual.encode('ascii')
+        self.assertEqual(actual, expected)
+
     def testCmdString(self):
         cmd = ['ls', '-l', 'some file']
-        self.assertEqual(info.cmdString(cmd), "ls -l 'some file'")
+        self._assertCmd(info.cmdString(cmd), "ls -l 'some file'")
         cmd = ['ls', '-l', 'some\tfile']
-        self.assertEqual(info.cmdString(cmd), "ls -l 'some\tfile'")
+        self._assertCmd(info.cmdString(cmd), "ls -l 'some\tfile'")
+        cmd = [u'ls', u'-l', u'some\tfile']
+        self._assertCmd(info.cmdString(cmd), "ls -l 'some\tfile'")
         cmd = ['ls', '-l', 'some;file']
-        self.assertEqual(info.cmdString(cmd), "ls -l 'some;file'")
+        self._assertCmd(info.cmdString(cmd), "ls -l 'some;file'")
 
     def testCmdStringBang(self):
-        cmd = ['ls', '-l', '!something']
-        self.assertEqual(info.cmdString(cmd), "ls -l '!something'")
+        cmd = [u'ls', u'-l', u'!something']
+        self._assertCmd(info.cmdString(cmd), "ls -l '!something'")
+
+    def testCmdStringEncodingError(self):
+        cmd = [u'foo', u'bar\xa0', u'zoo']
+        self._assertCmd(info.cmdString(cmd), "foo 'bar<A0>' zoo")
 
     def testEscEnv(self):
         value = '12\x00\x01\n'
