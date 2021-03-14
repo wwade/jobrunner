@@ -209,7 +209,6 @@ class RunExecOptionsTest(TestCase):
         with testEnv():
             child = spawn(['job', '--monitor', '-c', 'echo MARKOUTPUT'])
             child.expect(r'\sMARKOUTPUT\s')
-            child.expect(r'return code: 0')
             child.sendintr()
 
 
