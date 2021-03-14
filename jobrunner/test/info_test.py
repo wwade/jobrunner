@@ -143,10 +143,16 @@ class TestInfoHelpers(unittest.TestCase):
         cmd = [u'foo', u'bar\xa0', u'zoo']
         self._assertCmd(info.cmdString(cmd), "foo 'bar<A0>' zoo")
 
+    def testEscEncUnicode(self):
+        value = u'abc'
+        exp = 'abc'
+        out = info.JobInfo.escEnv(value)
+        assert exp == out
+
     def testEscEnv(self):
         value = '12\x00\x01\n'
         exp = '12\\x00\\x01\\x0a'
         out = info.JobInfo.escEnv(value)
         LOG.debug('exp [%r] %s', exp, exp)
         LOG.debug('out [%r] %s', out, out)
-        self.assertEqual(exp, out)
+        assert exp == out

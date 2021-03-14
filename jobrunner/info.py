@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
-from curses.ascii import isprint
 import errno
 from functools import total_ordering
 from logging import getLogger
 import os
 import pipes
+import string
 
 import dateutil.tz
 import six
@@ -389,12 +389,14 @@ class JobInfo(object):
                 sprint("Remove logfile '%s'" % self.logfile)
             os.unlink(self.logfile)
 
+    isprint = set(string.printable) - set(string.whitespace) | { " " }
+
     @staticmethod
     def escEnv(value):
         ret = ""
         LOG.debug('value [%r]', value)
         for char in value:
-            if isprint(char):
+            if char in JobInfo.isprint:
                 ret += char
             else:
                 ret += "\\x%02x" % ord(char)

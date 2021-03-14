@@ -128,7 +128,7 @@ def main(args=None):
         jobs.unlock()
         sys.exit(rc)
 
-    job, fp = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
+    job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
                        key=options.key, reminder=options.reminder)
     job.genPersistKey()
     jobs.active[job.key] = job
@@ -138,8 +138,8 @@ def main(args=None):
         jobs.unlock()
         childPid = os.fork()
         if childPid > 0:
-            LOG.info("forked child %d, close %d", childPid, fp)
-            os.close(fp)
+            LOG.info("forked child %d, close %d", childPid, fd)
+            os.close(fd)
             rc = 0
             if options.monitor:
                 rc = monitorForkedJob(job, jobs)
@@ -181,8 +181,10 @@ def main(args=None):
         jobs.waitInactive(k, options.verbose)
         j = jobs.inactive[k]
         if j.rc != 0:
-            print("Dependent job failed:", file=fp)
-            print(j.detail("vvv"), file=fp)
+            out = "Dependent job failed: {}\n".format(j)
+            out += "{}\n".format(j.detail("vvv"))
+            LOG.debug("out %s", out)
+            os.write(fd, out.encode('utf-8'))
             job.stop(jobs, STOP_DEPFAIL)
             sprint("\nDependent job failed: %s" % j)
             sprint("key: %s" % job.key)
@@ -223,7 +225,7 @@ def main(args=None):
         tmp.flush()
         cmd.append(lastArg)
 
-    runJob(cmd, options, jobs, job, fp, doIsolate)
+    runJob(cmd, options, jobs, job, fd, doIsolate)
 
 
 def waitForDep(depWait, options, jobs):
@@ -274,10 +276,10 @@ def monitorForkedJob(job, jobs):
 removeChars = frozenset("\x1B\x0d")
 
 
-def safeWrite(fp, value):
+def safeWrite(fd, value):
     value = six.text_type(value)
     value = ''.join(c for c in value if c not in removeChars)
-    fp.write(value.encode('utf-8'))
+    fd.write(value.encode('utf-8'))
 
 
 def postCommand(cmd):
@@ -724,7 +726,7 @@ def maybeHandleNonExecWriteOptions(options, jobs):
     maybeHandle(options, jobs, handleNonExecWriteOptions)
 
 
-def runJob(cmd, options, jobs, job, fp, doIsolate):
+def runJob(cmd, options, jobs, job, fd, doIsolate):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-statements
     LOG.info("execute: %s", job.cmdStr)
@@ -748,7 +750,7 @@ def runJob(cmd, options, jobs, job, fp, doIsolate):
     try:
         jobs.unlock()
         LOG.debug("starting check_call()")
-        rc = check_call(cmd, stdin=fpIn, stdout=fp, stderr=fp)
+        rc = check_call(cmd, stdin=fpIn, stdout=fd, stderr=fd)
         LOG.debug("check_call() => rc=%d", rc)
     except KeyboardInterrupt:
         LOG.debug("KeyboardInterrupt", exc_info=1)
@@ -770,7 +772,7 @@ def runJob(cmd, options, jobs, job, fp, doIsolate):
         jobs.lock()
         LOG.debug("locked DB, writing 'stop' status rc=%d", rc)
         job.stop(jobs, rc)
-        os.fsync(fp)
+        os.fsync(fd)
         LOG.debug("locked DB, writing 'finish' status rc=%d", rc)
         finish(job, rc)
         jobs.unlock()
