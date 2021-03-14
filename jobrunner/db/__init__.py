@@ -366,7 +366,7 @@ class JobsBase(object):
                     if hasDeps:
                         sprint(utils.SPACER)
                 else:
-                    sprint(job)
+                    sprint(text_type(job))
         if not jobList:
             sprint("(None)")
 

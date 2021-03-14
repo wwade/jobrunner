@@ -35,7 +35,7 @@ def getUtcTime(val):
 
 
 def cmdString(cmd):
-    return " ".join(map(pipes.quote, cmd))
+    return u" ".join(map(pipes.quote, cmd)).encode('utf-8')
 
 
 class JobInfo(object):
@@ -551,7 +551,7 @@ class JobInfo(object):
                 cmdStr = "Reminder: " + self.reminder
         except AttributeError:
             pass
-        return "%s %s[%s] %s" % (self.getDuration(), rc, self.key, cmdStr)
+        return  u"%s %s[%s] %s" % (self.getDuration(), rc, self.key, cmdStr.decode('utf-8'))
 
 
 DATETIME_KEYS = ('_create', '_start', '_stop')

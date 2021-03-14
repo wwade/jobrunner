@@ -41,6 +41,7 @@ def strForEach(value):
 
 def sprint(*args, **kwargs):
     """sprint: "safe" print - ignore IOError"""
+    args = [text_type(x).encode('utf-8') for x in args]
     try:
         print(*map(strForEach, args), **kwargs)
     except IOError:
@@ -221,8 +222,7 @@ def robot():
 
 
 def doMsg(*args):
-    msg = " ".join(map(text_type, args))
-    LOG.debug("doMsg(%s)", repr(args))
+    LOG.debug("doMsg(%r)", args)
     if quiet():
         LOG.debug("enqueue message")
         _DEBUGGER.msgQueue.append(msg)
@@ -231,7 +231,7 @@ def doMsg(*args):
         return
     else:
         LOG.debug("print message")
-        sprint(msg)
+        sprint(*args)
 
 
 def robotInfo(*info):

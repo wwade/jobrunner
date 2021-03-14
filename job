@@ -126,7 +126,10 @@ def main(args=None):
         jobs.unlock()
         sys.exit(rc)
 
-    cmd = [x.decode('utf-8') for x in cmd] if cmd else None
+    if cmd:
+       from six import text_type
+       cmd = [x.decode('utf-8') for x in cmd]
+       cmd = map(text_type, cmd)
     job, fp = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
                        key=options.key, reminder=options.reminder)
     job.genPersistKey()

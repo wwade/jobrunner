@@ -43,7 +43,19 @@ def testUnicodeSmoke(capsys):
             # unicode smoke test
             lineChar = '\xe2\x94\x80'
             check_call(['job', '-f', 'sh', '-c', 'echo ' + lineChar])
+            check_call(['job', '--remind', 'foo ' + lineChar])
             check_call(['job', '-L'])
+            check_call(['job', '--done', 'foo'])
+
+def testUnicodeSmoke2(capsys):
+    with testEnv():
+        # unicode smoke test
+        lineChar = '\xe2\x94\x80'
+        lineChar = '\xe2\x94\x80'
+        check_call(['job', '-f', 'sh', '-c', 'echo ' + lineChar])
+        check_call(['job', '--remind', 'foo ' + lineChar])
+        check_call(['job', '-L'])
+        check_call(['job', '--done', 'foo'])
 
 
 def unicodeCase():
