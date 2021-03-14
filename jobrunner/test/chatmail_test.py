@@ -5,6 +5,7 @@ from unittest import TestCase
 
 from mock import ANY, MagicMock, call, patch
 import requests
+import six
 
 from jobrunner.config import CHATMAIL_AT_ALL
 from jobrunner.mail import chat
@@ -83,7 +84,7 @@ class ChatTest(TestCase):
             self._doBaseSetup()
 
     def assertMultilineRegexpMatches(self, text, regexp):
-        self.assertRegexpMatches(text, re.compile(regexp, flags=re.S))
+        six.assertRegex(self, text, re.compile(regexp, flags=re.S))
 
     def assertPostTextMatchesRegexp(self, regexp, callIdx=0):
         # pylint: disable-msg=no-member
@@ -216,7 +217,7 @@ class ChatTest(TestCase):
             mocks.configCls().gChatUserId = lambda user: userIdDict[user]
             mocks.configCls().chatmailAtAll = atAllConfig
 
-            users = userIdDict.keys()
+            users = list(sorted(userIdDict))
 
             ret = chat.main(['-s', 'My subject'] + users)
 

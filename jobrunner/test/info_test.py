@@ -6,6 +6,7 @@ import unittest
 
 import mock
 import simplejson as json
+import six
 
 from jobrunner import db, info, plugins, utils
 from jobrunner.service.registry import registerServices
@@ -48,7 +49,8 @@ class TestJobInfoJson(unittest.TestCase):
     def cmpObj(self, objA, objB):
         print(objA.detail(3 * ['v']))
         print(objB.detail(3 * ['v']))
-        self.assertItemsEqual(objA.__dict__.keys(), objA.__dict__.keys())
+        six.assertCountEqual(self, list(objA.__dict__.keys()),
+                             list(objA.__dict__.keys()))
         for key in objA.__dict__:
             if key == '_parent':
                 continue
@@ -80,13 +82,13 @@ class TestReminder(unittest.TestCase):
         out1 = job.detail([])
         print(out1)
         self.assertEqual(outDetail1, out1)
-        self.assertRegexpMatches(out1, r"\nReminder\s+This is a reminder\n")
+        six.assertRegex(self, out1, r"\nReminder\s+This is a reminder\n")
         self.assertNotIn("\nState ", out1)
         job.stop(job.parent, utils.STOP_DONE)
         out2 = job.detail("vvv")
-        self.assertRegexpMatches(out2, r"\nReminder\s+This is a reminder\n")
-        self.assertRegexpMatches(
-            out2, r"\nState\s+Finished \(Completed Reminder\)\n")
+        six.assertRegex(self, out2, r"\nReminder\s+This is a reminder\n")
+        six.assertRegex(self,
+                        out2, r"\nState\s+Finished \(Completed Reminder\)\n")
         print(out2)
 
 
@@ -141,10 +143,16 @@ class TestInfoHelpers(unittest.TestCase):
         cmd = [u'foo', u'bar\xa0', u'zoo']
         self._assertCmd(info.cmdString(cmd), "foo 'bar<A0>' zoo")
 
+    def testEscEncUnicode(self):
+        value = u'abc'
+        exp = 'abc'
+        out = info.JobInfo.escEnv(value)
+        assert exp == out
+
     def testEscEnv(self):
         value = '12\x00\x01\n'
         exp = '12\\x00\\x01\\x0a'
         out = info.JobInfo.escEnv(value)
         LOG.debug('exp [%r] %s', exp, exp)
         LOG.debug('out [%r] %s', out, out)
-        self.assertEqual(exp, out)
+        assert exp == out

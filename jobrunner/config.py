@@ -1,7 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
-import ConfigParser
 import os
+import sys
+
+import six
 
 RC_FILE_HELP = """\
 Sample rcfile:
@@ -22,25 +24,30 @@ existing mention of this user
 
 
 class ConfigEnum(object):
+    __slots__ = (
+        'defaultName',
+        '_enumVals',
+    )
+
     def __init__(self, default, **enumVals):
+        self._enumVals = enumVals
         assert default in enumVals
         self.defaultName = default
-
         for enumName in enumVals:
-            assert not hasattr(self, enumName)
-        self._enumVals = enumVals
+            assert enumName not in self.__slots__
 
     def names(self):
-        return self._enumVals.iterkeys()
+        return six.iterkeys(self._enumVals)
 
     def values(self):
-        return self._enumVals.itervalues()
+        return six.itervalues(self._enumVals)
 
     @property
     def defaultVal(self):
         return self._enumVals[self.defaultName]
 
     def __getattr__(self, attr):
+        assert attr != '_enumVals'
         if attr in self._enumVals:
             return self._enumVals[attr]
         else:
@@ -75,14 +82,14 @@ def _getConfig(cfgParser, section, option, defaultValue=None):
 def _getEnumConfig(cfgParser, section, option, enum):
     optionVal = _getConfig(
         cfgParser, section, option, enum.defaultVal)
-    if optionVal not in enum.values():
+    if optionVal not in list(enum.values()):
         raise ConfigError(
             "RC file has invalid \"{section}.{option}\" setting {optionVal}.  Valid "
             "options: {allowedVals}".format(
                 section=section,
                 option=option,
                 optionVal=optionVal,
-                allowedVals=", ".join(enum.values())))
+                allowedVals=", ".join(list(enum.values()))))
 
     return optionVal
 
@@ -160,7 +167,10 @@ class Config(object):
         self.debugLevel = options.debugLevel if options.debugLevel else []
 
         rcFile = os.path.expanduser(options.rcFile)
-        cfgParser = ConfigParser.ConfigParser()
+        if sys.version_info.major >= 3:
+            cfgParser = six.moves.configparser.RawConfigParser()
+        else:
+            cfgParser = six.moves.configparser.ConfigParser()
         cfgParser.read(rcFile)
         self._mailDomain = _getConfig(
             cfgParser, "mail", "domain", os.getenv('HOSTNAME'))

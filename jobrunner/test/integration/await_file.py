@@ -5,6 +5,8 @@ import os.path
 import sys
 import time
 
+from six.moves import range
+
 
 def main():
     fileName = sys.argv[1]

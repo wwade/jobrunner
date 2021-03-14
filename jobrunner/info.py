@@ -1,17 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
 import errno
+from functools import total_ordering
 from logging import getLogger
 import os
 import pipes
 import string
 
 import dateutil.tz
+import six
+from six.moves import map, range
 
 import jobrunner.utils as utils
 
 from .service import service
 from .utils import (
+    cmp_,
     dateTimeFromJson,
     dateTimeToJson,
     doMsg,
@@ -41,6 +45,7 @@ def cmdString(cmd):
     return "".join(_TRANSLATION.get(ord(c), c) for c in unicodeString)
 
 
+@total_ordering
 class JobInfo(object):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     def __init__(self, uidx, key=None):
@@ -57,7 +62,7 @@ class JobInfo(object):
         self._alldeps = set()
         self._host = os.getenv('HOSTNAME')
         self._user = os.getenv('USER')
-        self._env = {key: value for key, value in os.environ.items()}
+        self._env = dict(os.environ)
         self._workspace = workspaceIdentity()
         self._proj = os.getenv('WP')
         self._rc = None
@@ -165,14 +170,14 @@ class JobInfo(object):
             if rc != 0:
                 return rc
 
-        rc = cmp(self.persistKeyGenerated, other.persistKeyGenerated)
+        rc = cmp_(self.persistKeyGenerated, other.persistKeyGenerated)
         if rc != 0:
             return rc
-        return cmp(self.cmd, other.cmd)
+        return cmp_(self.cmd, other.cmd)
 
     def cmpCreate(self, other):
         try:
-            rc = cmp(self.createTime, other.createTime)
+            rc = cmp_(self.createTime, other.createTime)
         except AttributeError:
             rc = 0
         return rc
@@ -184,10 +189,10 @@ class JobInfo(object):
             myStart = utcNow()
         if otherStart is None:
             otherStart = utcNow()
-        return cmp(myStart, otherStart)
+        return cmp_(myStart, otherStart)
 
     def cmpStop(self, other):
-        return cmp(self.stopTime, other.stopTime)
+        return cmp_(self.stopTime, other.stopTime)
 
     def cmpActive(self, other):
         return self.cmpCommon(
@@ -197,7 +202,13 @@ class JobInfo(object):
         return self.cmpCommon(
             other, [self.cmpStop, self.cmpStart, self.cmpCreate])
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+
+    def __lt__(self, other):
+        return self.__cmp__(other) < 0
+
+    def __cmp__(self, other):  # pylint: disable=cmp-method
         if not isinstance(other, type(self)):
             return -1
         if self._stop is None:
@@ -377,18 +388,14 @@ class JobInfo(object):
                 sprint("Remove logfile '%s'" % self.logfile)
             os.unlink(self.logfile)
 
-    printable = string.printable.translate(None, '\r\n\t\v\x0c')
+    isprint = set(string.printable) - set(string.whitespace) | {" "}
 
     @staticmethod
     def escEnv(value):
         ret = ""
         LOG.debug('value [%r]', value)
-        LOG.debug(
-            'printable [%r] (string.printable [%r])',
-            JobInfo.printable,
-            string.printable)
         for char in value:
-            if char in JobInfo.printable:
+            if char in JobInfo.isprint:
                 ret += char
             else:
                 ret += "\\x%02x" % ord(char)
@@ -397,7 +404,7 @@ class JobInfo(object):
 
     def getEnvironment(self):
         ret = "\n"
-        for k, v in sorted(self._env.iteritems()):
+        for k, v in sorted(six.iteritems(self._env)):
             ret += "\t%s=%s\n" % (self.escEnv(k), self.escEnv(v))
         return ret
 
