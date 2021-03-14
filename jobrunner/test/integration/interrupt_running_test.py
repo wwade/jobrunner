@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from subprocess import CalledProcessError, check_output
+import sys
 from unittest import TestCase
 
 from pytest import mark
@@ -17,6 +18,11 @@ from .integration_lib import (
     waitFor,
 )
 
+if sys.version_info.major < 3:
+    noSudo = (CalledProcessError,)
+else:
+    noSudo = (CalledProcessError, FileNotFoundError)
+
 
 class _Module(object):
     sudoOk = 0
@@ -24,7 +30,7 @@ class _Module(object):
     def __init__(self):
         try:
             out = check_output(['sudo', 'true'])
-        except (CalledProcessError, FileNotFoundError) as error:
+        except noSudo as error:
             print("Ignore sudo check error", error)
             return
         for line in out.splitlines():
