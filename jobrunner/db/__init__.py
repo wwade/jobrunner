@@ -467,12 +467,12 @@ class JobsBase(object):
 
         if key is None:
             jobList = [
-               x for x in self.getDbSorted(self.active, None, filterWs=thisWs)
-               if self.filterJobsWith(x, skipReminders=skipReminders)]
+                x for x in self.getDbSorted(self.active, None, filterWs=thisWs)
+                if self.filterJobsWith(x, skipReminders=skipReminders)]
             if not jobList:
                 jobList = [
-                   x for x in self.getDbSorted(self.inactive, None, filterWs=thisWs)
-                   if self.filterJobsWith(x, skipReminders=skipReminders)]
+                    x for x in self.getDbSorted(self.inactive, None, filterWs=thisWs)
+                    if self.filterJobsWith(x, skipReminders=skipReminders)]
             if not jobList:
                 jobList = self.getDbSorted(
                     self.inactive, None, filterWs=thisWs)

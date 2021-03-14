@@ -62,8 +62,7 @@ class JobInfo(object):
         self._alldeps = set()
         self._host = os.getenv('HOSTNAME')
         self._user = os.getenv('USER')
-        # pylint: disable=unnecessary-comprehension
-        self._env = {key: value for key, value in os.environ.items()}
+        self._env = dict(os.environ)
         self._workspace = workspaceIdentity()
         self._proj = os.getenv('WP')
         self._rc = None
@@ -389,7 +388,7 @@ class JobInfo(object):
                 sprint("Remove logfile '%s'" % self.logfile)
             os.unlink(self.logfile)
 
-    isprint = set(string.printable) - set(string.whitespace) | { " " }
+    isprint = set(string.printable) - set(string.whitespace) | {" "}
 
     @staticmethod
     def escEnv(value):
