@@ -755,7 +755,7 @@ class JobsBase(object):
             for k in fromWhere:
                 depJob = self.getJobMatch(k, thisWs)
                 if depJob.key in self.active:
-                    doMsg("adding dependency:", depJob)
+                    doMsg(" - adding dependency:", depJob)
                 deps.append(depJob)
                 if depSuccess is not None:
                     depSuccess.append(depJob)
