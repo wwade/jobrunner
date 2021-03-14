@@ -16,7 +16,7 @@ steps:
     set -xe
     FILES=(job setup.py jobrunner)
     pipenv run isort -c --diff -rc "${FILES[@]}"
-    pipenv run autopep8 --indent-size=4 --exit-code -ra --diff "${FILES[@]}"
+    pipenv run autopep8 --exit-code -ra --diff "${FILES[@]}"
     pipenv run pylint -d fixme "${FILES[@]}"
   displayName: Run linters
 
