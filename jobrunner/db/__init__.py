@@ -12,7 +12,7 @@ from uuid import uuid4
 from dateutil import parser
 from dateutil.tz import tzlocal, tzutc
 import simplejson as json
-from six import text_type
+from six import string_types, text_type
 
 import jobrunner.utils as utils
 
@@ -87,7 +87,7 @@ class DatabaseBase(DatabaseMeta):
         curCount += inc
         if curCount < 0:
             curCount = 0
-        self.db[self.ITEMCOUNT] = str(curCount)
+        self.db[self.ITEMCOUNT] = text_type(curCount)
     count = property(getCount, setCount)
 
     def getCheckpoint(self):
@@ -98,7 +98,7 @@ class DatabaseBase(DatabaseMeta):
             return epoch.replace(tzinfo=tzutc())
 
     def setCheckpoint(self, val):
-        if isinstance(val, str):
+        if isinstance(val, string_types):
             if val.strip() == ".":
                 checkpoint = utcNow()
             else:
@@ -507,7 +507,7 @@ class JobsBase(object):
                 if k not in self.inactive:
                     continue
                 j = self.inactive[k]
-                if isinstance(j, str):
+                if isinstance(j, text_type):
                     continue
                 if j.mailJob:
                     continue
@@ -578,7 +578,7 @@ class JobsBase(object):
             except KeyError:
                 self.displayPending.add(jobKey)
                 continue
-            jobStr = str(jCur)
+            jobStr = text_type(jCur)
             if jCur.rc != 0:
                 jobStr = "\033[41m" + jobStr + "\033[0m"
             details = " [%4s] %s %s" % (tag, workspace, jobStr)
@@ -675,7 +675,7 @@ class JobsBase(object):
             if not j.reminder:
                 continue
             if not j.startTime:
-                sprint('not started yet', str(j), j.workspace)
+                sprint('not started yet', text_type(j), j.workspace)
                 continue
             remind.setdefault(j.workspace, []).append(j)
         for k in self.inactive.keys():

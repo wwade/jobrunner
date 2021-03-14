@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from __future__ import absolute_import, division, print_function
 
 from logging import getLogger
@@ -10,6 +13,7 @@ from unittest import TestCase
 
 from pexpect import EOF
 import simplejson as json
+from six import text_type
 
 from .integration_lib import (
     activeJobs,
@@ -33,7 +37,16 @@ def setUpModule():
 
 
 def awaitFile(fileName, exitCode):
-    return ['./await_file.py', fileName, str(exitCode)]
+    return ['./await_file.py', fileName, text_type(exitCode)]
+
+
+def testUnicodeSmoke(capsys):
+    with testEnv():
+        with capsys.disabled():
+            # unicode smoke test
+            lineChar = text_type(u'─')
+            check_call(['job', '-f', 'sh', '-c', 'echo ' + lineChar])
+            check_call(['job', '-L'])
 
 
 def unicodeCase():

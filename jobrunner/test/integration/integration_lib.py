@@ -76,12 +76,18 @@ def run(cmd, capture=False, env=None):
 
 def jobf(*cmd, **kwargs):
     jobCmd = ['job', '--foreground'] + list(cmd)
-    return run(jobCmd, capture=True, **kwargs)
+    out = run(jobCmd, capture=True, **kwargs)
+    print('output:')
+    print(out)
+    return out
 
 
 def job(*cmd, **kwargs):
     jobCmd = ['job'] + list(cmd)
-    return run(jobCmd, capture=True, **kwargs)
+    out = run(jobCmd, capture=True, **kwargs)
+    print('output:')
+    print(out)
+    return out
 
 
 def waitFor(func, timeout=60.0, failArg=True):

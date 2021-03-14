@@ -165,7 +165,7 @@ def dateTimeFromJson(dtJson):
 
 
 def pidDebug(*args):
-    sprint("+%05d+ %s" % (os.getpid(), " ".join(map(str, args))))
+    sprint("+%05d+ %s" % (os.getpid(), " ".join(map(text_type, args))))
 
 
 FnDetails = collections.namedtuple('FnDetails', 'filename, lineno, funcname')
@@ -221,7 +221,7 @@ def robot():
 
 
 def doMsg(*args):
-    msg = " ".join(map(str, args))
+    msg = " ".join(map(text_type, args))
     LOG.debug("doMsg(%s)", repr(args))
     if quiet():
         LOG.debug("enqueue message")
@@ -243,7 +243,7 @@ def robotInfo(*info):
             for key, val in item.items():
                 msg.append('{}={}'.format(key, val))
         else:
-            msg.append(str(item))
+            msg.append(text_type(item))
     if robot():
         sprint('\x00'.join(msg))
         sys.stdout.flush()
@@ -329,7 +329,7 @@ jobrunner.utils.killProcGroup(pgrp, None)
         tmpf.flush()
         try:
             subprocess.check_call(
-                ["sudo", "python", tmpf.name, myPath, str(pgrp)])
+                ["sudo", "python", tmpf.name, myPath, text_type(pgrp)])
         except subprocess.CalledProcessError as error:
             return error.output
     return None

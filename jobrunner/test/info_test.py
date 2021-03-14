@@ -120,7 +120,6 @@ class TestJobProperties(unittest.TestCase):
 
 class TestInfoHelpers(unittest.TestCase):
     def _assertCmd(self, actual, expected):
-        actual.encode('ascii')
         self.assertEqual(actual, expected)
 
     def testCmdString(self):
@@ -139,7 +138,14 @@ class TestInfoHelpers(unittest.TestCase):
 
     def testCmdStringEncodingError(self):
         cmd = [u'foo', u'bar\xa0', u'zoo']
-        self._assertCmd(info.cmdString(cmd), "foo 'bar<A0>' zoo")
+        print(info.cmdString(cmd))
+        self._assertCmd(info.cmdString(cmd), u"foo 'bar\xa0' zoo")
+
+    def testCmdStringUnicode(self):
+        line = '\xe2\x94\x80\xe2\x94\x80'.decode('utf-8')
+        cmd = [u'bash', u'-c', u'echo ' + line]
+        print(info.cmdString(cmd))
+        assert u"bash -c 'echo " + line + "'" == info.cmdString(cmd)
 
     def testEscEnv(self):
         value = '12\x00\x01\n'

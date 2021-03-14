@@ -59,6 +59,16 @@ class KeyValueStoreTest(unittest.TestCase):
         del store['foo']
         self.assertNotIn('foo', store)
 
+    def testUnicode(self):
+        store = self.store()
+        key = 'foo'
+        val = '\xe2\x94\x80\xe2\x94\x80'.decode('utf-8')
+        store[key] = val
+        self.assertEqual(val, store[key])
+        self.assertIn(key, store)
+        del store[key]
+        self.assertNotIn(key, store)
+
     def testWrongVersion(self):
         with NamedTemporaryFile(delete=False) as tempf:
             tempf.close()

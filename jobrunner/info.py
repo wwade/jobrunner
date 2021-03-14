@@ -7,6 +7,7 @@ import pipes
 import string
 
 import dateutil.tz
+from six import text_type
 
 import jobrunner.utils as utils
 
@@ -33,12 +34,8 @@ def getUtcTime(val):
     return val
 
 
-_TRANSLATION = {val: '<{:02X}>'.format(val) for val in range(0x80, 0x100)}
-
-
 def cmdString(cmd):
-    unicodeString = " ".join(map(pipes.quote, cmd))
-    return "".join(_TRANSLATION.get(ord(c), c) for c in unicodeString)
+    return " ".join(map(pipes.quote, cmd))
 
 
 class JobInfo(object):
@@ -232,7 +229,7 @@ class JobInfo(object):
         self._hasTime = True
         keySource = self.prog if self.prog else self.reminder
         self._key = (utcNow().strftime("%s") +
-                     str(self._uidx) + "_" +
+                     text_type(self._uidx) + "_" +
                      keyEscape(keySource))
         doMsg(" - set key", self._key)
         robotInfo("new", {"key": self._key})
@@ -369,7 +366,7 @@ class JobInfo(object):
         if self.startTime is None:
             return "Blocked"
         stop = self.stopTime or utcNow()
-        return str(stop - self.startTime).split('.')[0]
+        return text_type(stop - self.startTime).split('.')[0]
 
     def removeLog(self, verbose):
         if os.access(self.logfile, os.F_OK):

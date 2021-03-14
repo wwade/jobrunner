@@ -126,6 +126,7 @@ def main(args=None):
         jobs.unlock()
         sys.exit(rc)
 
+    cmd = [x.decode('utf-8') for x in cmd] if cmd else None
     job, fp = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
                        key=options.key, reminder=options.reminder)
     job.genPersistKey()
@@ -633,6 +634,7 @@ def parseArgs(args=None):
         "--reminder",
         metavar="REMINDER",
         action="store",
+        type=lambda x: x.decode('utf-8'),
         help="Specify a reminder job (must be stopped manually with "
         "--done).")
     op.add_argument(
