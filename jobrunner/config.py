@@ -24,13 +24,17 @@ existing mention of this user
 
 
 class ConfigEnum(object):
+    __slots__ = (
+        'defaultName',
+        '_enumVals',
+    )
     def __init__(self, default, **enumVals):
+        print("ConfigEnum.init", default, repr(enumVals))
+        self._enumVals = enumVals
         assert default in enumVals
         self.defaultName = default
-
         for enumName in enumVals:
-            assert not hasattr(self, enumName)
-        self._enumVals = enumVals
+            assert enumName not in self.__slots__
 
     def names(self):
         return six.iterkeys(self._enumVals)
@@ -43,6 +47,7 @@ class ConfigEnum(object):
         return self._enumVals[self.defaultName]
 
     def __getattr__(self, attr):
+        assert attr != '_enumVals'
         if attr in self._enumVals:
             return self._enumVals[attr]
         else:

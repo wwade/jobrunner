@@ -3,8 +3,8 @@ from __future__ import absolute_import, division, print_function
 import errno
 from logging import getLogger
 import os
+from curses.ascii import isprint
 import pipes
-import string
 
 import dateutil.tz
 import six
@@ -381,18 +381,12 @@ class JobInfo(object):
                 sprint("Remove logfile '%s'" % self.logfile)
             os.unlink(self.logfile)
 
-    printable = string.printable.translate(None, '\r\n\t\v\x0c')
-
     @staticmethod
     def escEnv(value):
         ret = ""
         LOG.debug('value [%r]', value)
-        LOG.debug(
-            'printable [%r] (string.printable [%r])',
-            JobInfo.printable,
-            string.printable)
         for char in value:
-            if char in JobInfo.printable:
+            if isprint(char):
                 ret += char
             else:
                 ret += "\\x%02x" % ord(char)
