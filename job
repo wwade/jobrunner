@@ -208,7 +208,8 @@ def main(args=None):
             depJob = jobs.inactive[j.permKey]
             safeWrite(tmp, depJob.detail(options.verbose))
             safeWrite(tmp, "\n" + SPACER_EACH + "\n")
-            safeWrite(tmp, check_output(['tail', '-n20', depJob.logfile]))
+            lines = check_output(['tail', '-n20', depJob.logfile]).decode('utf-8')
+            safeWrite(tmp, lines)
             safeWrite(tmp, SPACER_EACH + "\n")
             safeWrite(tmp, "\n")
             try:
@@ -269,10 +270,12 @@ def monitorForkedJob(job, jobs):
     return 0
 
 
+transTable = six.text_type.maketrans("", "", "\x1B\x0d")
+
+
 def safeWrite(fp, value):
-    if isinstance(value, six.text_type):
-        value = str(value)
-    fp.write(value.translate(None, "\x1B\x0d"))
+    value = six.text_type(value)
+    fp.write(value.translate(transTable).encode('utf-8'))
 
 
 def postCommand(cmd):

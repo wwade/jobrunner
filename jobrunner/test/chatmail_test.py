@@ -217,7 +217,7 @@ class ChatTest(TestCase):
             mocks.configCls().gChatUserId = lambda user: userIdDict[user]
             mocks.configCls().chatmailAtAll = atAllConfig
 
-            users = list(userIdDict.keys())
+            users = list(sorted(userIdDict))
 
             ret = chat.main(['-s', 'My subject'] + users)
 

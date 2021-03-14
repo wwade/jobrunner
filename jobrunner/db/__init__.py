@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
+from functools import cmp_to_key
 import logging
 import os
 import os.path
@@ -726,7 +727,7 @@ class JobsBase(object):
                 return cmp_(perWs[refA]['age'], perWs[refB]['age'])
         sprint('-' * 75)
         wsList = list(set(perWs.keys()).union(set(remind.keys())))
-        for wkspace in sorted(wsList, cmp=_byAge):
+        for wkspace in sorted(wsList, key=cmp_to_key(_byAge)):
             if wkspace:
                 sprint(os.path.basename(wkspace) + ':')
             else:

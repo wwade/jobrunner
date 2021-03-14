@@ -89,7 +89,7 @@ def _postToGChat(text, uri, threadId=None):
 def _getUserAtTokens(users, config):
     usersAreMissingIds = False
     userTokensOrNames = []
-    for user in users:
+    for user in sorted(users):
         userId = config.gChatUserId(user)
         if userId is None:
             userTokensOrNames.append("@" + user)

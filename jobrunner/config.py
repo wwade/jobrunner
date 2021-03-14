@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 import os
+import sys
 
-import six.moves.configparser
 import six
+import six.moves.configparser
 
 RC_FILE_HELP = """\
 Sample rcfile:
@@ -28,8 +29,8 @@ class ConfigEnum(object):
         'defaultName',
         '_enumVals',
     )
+
     def __init__(self, default, **enumVals):
-        print("ConfigEnum.init", default, repr(enumVals))
         self._enumVals = enumVals
         assert default in enumVals
         self.defaultName = default
@@ -167,7 +168,10 @@ class Config(object):
         self.debugLevel = options.debugLevel if options.debugLevel else []
 
         rcFile = os.path.expanduser(options.rcFile)
-        cfgParser = six.moves.configparser.ConfigParser()
+        if sys.version_info.major >= 3:
+            cfgParser = six.moves.configparser.RawConfigParser()
+        else:
+            cfgParser = six.moves.configparser.ConfigParser()
         cfgParser.read(rcFile)
         self._mailDomain = _getConfig(
             cfgParser, "mail", "domain", os.getenv('HOSTNAME'))

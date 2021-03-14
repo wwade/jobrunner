@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
+from curses.ascii import isprint
 import errno
+from functools import total_ordering
 from logging import getLogger
 import os
-from curses.ascii import isprint
 import pipes
 
 import dateutil.tz
@@ -44,6 +45,7 @@ def cmdString(cmd):
     return "".join(_TRANSLATION.get(ord(c), c) for c in unicodeString)
 
 
+@total_ordering
 class JobInfo(object):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     def __init__(self, uidx, key=None):
@@ -201,7 +203,13 @@ class JobInfo(object):
         return self.cmpCommon(
             other, [self.cmpStop, self.cmpStart, self.cmpCreate])
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+
+    def __lt__(self, other):
+        return self.__cmp__(other) < 0
+
+    def __cmp__(self, other):  # pylint: disable=cmp-method
         if not isinstance(other, type(self)):
             return -1
         if self._stop is None:

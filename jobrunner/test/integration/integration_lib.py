@@ -67,7 +67,7 @@ def run(cmd, capture=False, env=None):
     print(' '.join(map(quote, cmd)))
     try:
         if capture:
-            return check_output(cmd, stderr=STDOUT, env=env)
+            return check_output(cmd, stderr=STDOUT, env=env).decode('utf-8')
         else:
             return check_call(cmd, env=env)
     except CalledProcessError as error:
