@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 from logging import getLogger
 import os
 import re
-from subprocess import CalledProcessError
+from subprocess import CalledProcessError, check_call
 from tempfile import NamedTemporaryFile
 import time
 from unittest import TestCase
@@ -34,6 +34,27 @@ def setUpModule():
 
 def awaitFile(fileName, exitCode):
     return ['./await_file.py', fileName, str(exitCode)]
+
+
+def unicodeCase():
+    # unicode smoke test
+    lineChar = '\xe2\x94\x80'
+    check_call(['job', '-f', 'sh', '-c', 'echo ' + lineChar])
+    check_call(['job', '--remind', 'foo ' + lineChar])
+    check_call(['job', '-L'])
+    check_call(['job', 'a'])
+    check_call(['job', '--done', 'foo'])
+
+
+def testUnicodeSmoke(capsys):
+    with testEnv():
+        with capsys.disabled():
+            unicodeCase()
+
+
+def testUnicodeSmoke2():
+    with testEnv():
+        unicodeCase()
 
 
 class SmokeTest(TestCase):

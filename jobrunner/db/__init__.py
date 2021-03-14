@@ -12,6 +12,7 @@ from uuid import uuid4
 from dateutil import parser
 from dateutil.tz import tzlocal, tzutc
 import simplejson as json
+from six import text_type
 
 import jobrunner.utils as utils
 
@@ -742,7 +743,7 @@ class JobsBase(object):
                     sprint(
                         '  last %s, \033[97m%s\033[0m ago' %
                         (res, diffTime))
-                    sprint('    ' + str(j))
+                    sprint('    ' + text_type(j))
             if wkspace in remind:
                 sprint('  reminders:')
                 for j in remind[wkspace]:
