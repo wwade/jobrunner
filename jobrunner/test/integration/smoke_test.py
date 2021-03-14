@@ -167,12 +167,13 @@ class RunExecOptionsTest(TestCase):
             # --stop
             with self.assertRaises(CalledProcessError) as error:
                 jobf('--stop', 'explicitTrue')
-            self.assertIn('Jobs not active:', error.exception.output)
+            self.assertIn('Jobs not active:', error.exception.output.decode('utf-8'))
 
             jobf('--delete', 'explicitTrue')
             with self.assertRaises(CalledProcessError) as error:
                 jobf('--show', 'explicitTrue')
-                self.assertIn('No job for key', error.exception.output)
+                self.assertIn('No job for key',
+                              error.exception.output.decode('utf-8'))
 
             # --auto-job
             # --debugLocking
@@ -181,13 +182,13 @@ class RunExecOptionsTest(TestCase):
 
             inFile = NamedTemporaryFile()
             data = 'this is the input\n'
-            inFile.write('this is the input\n')
+            inFile.write(data.encode('utf-8'))
             inFile.flush()
             # --input
             jobf('--input', inFile.name, '--', 'cat')
             catOutFile = jobf('-g', 'cat').strip()
             outData = open(catOutFile).read()
-            self.assertEqual(outData, data)
+            assert data == outData
 
     def testWatchWait(self):
         with testEnv():
@@ -259,7 +260,7 @@ class RunMailTest(TestCase):
     def test(self):
         with testEnv():
             rcFile = NamedTemporaryFile()
-            rcFile.write(MAIL_CONFIG)
+            rcFile.write(MAIL_CONFIG.encode('utf-8'))
             rcFile.flush()
             # --mail
             # --rc-file
