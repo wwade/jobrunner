@@ -1,10 +1,7 @@
 #!/bin/bash
 cd "$(dirname $0)"
 set -xeuo pipefail
-git clone /src /work
-cd /work
 PY=$(python -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))")
-ln -svf Pipfile-"${PY}".lock Pipfile.lock
 python -m pip install --upgrade pip setuptools wheel pipenv
 pipenv --python "$PY" install --dev
 

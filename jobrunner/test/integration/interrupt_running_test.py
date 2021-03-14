@@ -19,9 +19,8 @@ from .integration_lib import (
 )
 
 if sys.version_info.major < 3:
-    noSudo = (CalledProcessError,)
-else:
-    noSudo = (CalledProcessError, FileNotFoundError)
+    class FileNotFoundError(Exception):  # pylint: disable=redefined-builtin
+        pass
 
 
 class _Module(object):
@@ -30,7 +29,7 @@ class _Module(object):
     def __init__(self):
         try:
             out = check_output(['sudo', 'true'])
-        except noSudo as error:
+        except (CalledProcessError, FileNotFoundError, OSError) as error:
             print("Ignore sudo check error", error)
             return
         for line in out.splitlines():
