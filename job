@@ -61,6 +61,7 @@ def main(args=None):
         _DEBUG_LOG_FILE_NAME,
         debug=options.debug)
     LOG.debug("starting with args %s", options)
+    LOG.debug("python: %s", sys.version)
     jobs.lock()
     maybeHandleNonExecOptions(options, jobs)
     maybeHandleNonExecWriteOptions(options, jobs)
@@ -180,8 +181,8 @@ def main(args=None):
         jobs.waitInactive(k, options.verbose)
         j = jobs.inactive[k]
         if j.rc != 0:
-            os.write(fp, "Dependent job failed: %s\n" % j)
-            os.write(fp, j.detail("vvv") + "\n")
+            print("Dependent job failed:", file=fp)
+            print(j.detail("vvv"), file=fp)
             job.stop(jobs, STOP_DEPFAIL)
             sprint("\nDependent job failed: %s" % j)
             sprint("key: %s" % job.key)
@@ -270,12 +271,13 @@ def monitorForkedJob(job, jobs):
     return 0
 
 
-transTable = six.text_type.maketrans("", "", "\x1B\x0d")
+removeChars = frozenset("\x1B\x0d")
 
 
 def safeWrite(fp, value):
     value = six.text_type(value)
-    fp.write(value.translate(transTable).encode('utf-8'))
+    value = ''.join(c for c in value if c not in removeChars)
+    fp.write(value.encode('utf-8'))
 
 
 def postCommand(cmd):
@@ -414,6 +416,7 @@ def handleNonExecOptions(options, jobs):
             filterWs=options.tw,
             filterPane=options.tp,
             useCp=options.since_checkpoint)
+        LOG.debug("dot: %s", dot)
         if options.dot:
             sprint(dot)
         else:
@@ -421,7 +424,7 @@ def handleNonExecOptions(options, jobs):
             ofile = os.path.expanduser(fName)
             cmd = ['dot', '-Tsvg', '-o', ofile]
             proc = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-            stdout, stderr = proc.communicate(input=dot)
+            stdout, stderr = proc.communicate(input=dot.encode('utf-8'))
             if stdout.strip() or stderr.strip():
                 raise ExitCode(stdout + stderr)
             sprint('Saved output to', fName)

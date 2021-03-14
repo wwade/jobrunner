@@ -4,7 +4,6 @@ import os
 import sys
 
 import six
-import six.moves.configparser
 
 RC_FILE_HELP = """\
 Sample rcfile:

@@ -406,7 +406,7 @@ class JobsBase(object):
         dot += ' rankdir=BT;\n'
         printedSingles = set()
         needsPrinting = set()
-        for job in jobList:
+        for job in sorted(jobList):
             depSet = set(job.depends) if job.depends else set()
             depSet |= job.alldeps
             if depSet:
