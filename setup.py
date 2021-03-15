@@ -15,11 +15,9 @@ setup(
         'requests<=2.23.0',
         'simplejson<=3.3.0',
     ],
-    scripts=[
-        'job',
-    ],
     entry_points={
         "console_scripts": [
+            "job = jobrunner.main:main",
             "chatmail = jobrunner.mail.chat:main",
         ],
     }

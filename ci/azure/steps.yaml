@@ -14,7 +14,7 @@ steps:
 
 - script: |
     set -xe
-    FILES=(job setup.py jobrunner)
+    FILES=(setup.py jobrunner)
     pipenv run isort -c --diff -rc "${FILES[@]}"
     pipenv run autopep8 --exit-code -ra --diff "${FILES[@]}"
     pipenv run pylint -d fixme "${FILES[@]}"
