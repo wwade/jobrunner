@@ -5,7 +5,7 @@ PY=$(python -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.ver
 python -m pip install --upgrade pip setuptools wheel pipenv
 pipenv --python "$PY" install --dev
 
-FILES=(job setup.py jobrunner)
+FILES=(setup.py jobrunner)
 pipenv run isort -c --diff -rc "${FILES[@]}"
 pipenv run autopep8 --exit-code -ra --diff "${FILES[@]}"
 pipenv run pylint -d fixme "${FILES[@]}"
