@@ -14,5 +14,5 @@ pytest = "*"
 [packages]
 six = "*"
 dateutils = "*"
-requests = "<=2.23.0"
+requests = "<2.26.0"
 simplejson = "<=3.3.0"
