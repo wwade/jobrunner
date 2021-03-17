@@ -16,3 +16,6 @@ six = "*"
 dateutils = "*"
 requests = "<2.26.0"
 simplejson = "<3.18.0"
+
+[requires]
+python_version = "3.7"
