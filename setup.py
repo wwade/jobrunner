@@ -11,7 +11,9 @@ setup(
         'jobrunner.test.*',
     ]),
     install_requires=[
+        'six',
         'dateutils',
+        'importlib-metadata',
         'requests<=2.23.0',
         'simplejson<=3.3.0',
     ],

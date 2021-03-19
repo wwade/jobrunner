@@ -21,7 +21,7 @@ class Plugins(object):
         }
         if deprecatedPlugins:
             warnings.warn("Found old-style plugins in jobrunner.plugin: %r. "
-                          "Convert to entry_point 'wwade.jobrunner'" % sorted(
+                          "Convert to entry_point 'wwade.jobrunner'" % list(
                               deprecatedPlugins),
                           DeprecationWarning)
         self.plugins |= deprecatedPlugins
