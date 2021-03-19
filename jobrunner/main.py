@@ -232,8 +232,13 @@ def waitForDep(depWait, options, jobs):
     while depWait:
         dep = depWait.pop(0)
         k = dep.permKey
-        jobs.waitFor(dep, options.verbose)
-        jobs.waitInactive(k, options.verbose)
+        try:
+            jobs.waitFor(dep, options.verbose)
+            jobs.waitInactive(k, options.verbose)
+        except KeyboardInterrupt:
+            LOG.info("return 1 after interrupt", exc_info=True)
+            return 1
+
         j = jobs.inactive[k]
         if j.rc != 0:
             sprint("\nDependent job failed: %s" % j)
