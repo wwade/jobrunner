@@ -1,6 +1,6 @@
 #!/bin/sh
 set -xe
-FILESPEC=(job setup.py jobrunner)
-isort -y -ac -rc "${FILESPEC[@]}"
+FILESPEC=(setup.py jobrunner)
+isort --atomic "${FILESPEC[@]}"
 autopep8 -j32 -rai "${FILESPEC[@]}"
 pylint "${FILESPEC[@]}"
