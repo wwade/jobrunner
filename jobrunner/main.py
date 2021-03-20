@@ -14,14 +14,15 @@ import dateutil.parser
 import dateutil.tz
 import six
 
-from jobrunner.argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
-from jobrunner.binutils import binDescriptionWithStandardFooter
-from jobrunner.config import Config
 import jobrunner.logging
-from jobrunner.plugins import Plugins
-from jobrunner.service import service
-from jobrunner.service.registry import registerServices
-from jobrunner.utils import (
+
+from .argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
+from .binutils import binDescriptionWithStandardFooter
+from .config import Config
+from .plugins import Plugins
+from .service import service
+from .service.registry import registerServices
+from .utils import (
     DATETIME_FMT,
     MOD_STATE,
     SPACER_EACH,
@@ -29,6 +30,7 @@ from jobrunner.utils import (
     STOP_DEPFAIL,
     STOP_DONE,
     STOP_STOP,
+    autoDecode,
     doMsg,
     keyEscape,
     lockedSection,
@@ -211,7 +213,7 @@ def main(args=None):
             depJob = jobs.inactive[j.permKey]
             safeWrite(tmp, depJob.detail(options.verbose))
             safeWrite(tmp, "\n" + SPACER_EACH + "\n")
-            lines = check_output(['tail', '-n20', depJob.logfile]).decode('utf-8')
+            lines = autoDecode(check_output(['tail', '-n20', depJob.logfile]))
             safeWrite(tmp, lines)
             safeWrite(tmp, SPACER_EACH + "\n")
             safeWrite(tmp, "\n")
@@ -575,7 +577,7 @@ def pidOk(pid):
 
 class Pstree(object):
     def __init__(self, text):
-        self.text = text.strip() if text else None
+        self.text = autoDecode(text).strip() if text else None
         self.errors = []
 
 

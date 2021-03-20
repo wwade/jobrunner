@@ -10,7 +10,6 @@ from pytest import mark
 from jobrunner.utils import autoDecode
 
 from .integration_lib import (
-    IntegrationTestTimeout,
     job,
     jobf,
     noJobs,
@@ -49,7 +48,6 @@ def setUpModule():
 
 
 class TestInterrupt(TestCase):
-    @mark.xfail(raises=IntegrationTestTimeout)
     def testAsUser(self):
         with testEnv():
             # --pid
@@ -61,6 +59,7 @@ class TestInterrupt(TestCase):
             waitFor(_findJob)
             out = jobf('--pid', 'sleep')
             print("pid", out)
+            self.assertNotIn("b'job", out)
             self.assertIn('sleep', out)
             job('--int', 'sleep')
             try:
@@ -69,7 +68,6 @@ class TestInterrupt(TestCase):
                 pass
             waitFor(noJobs)
 
-    @mark.xfail(raises=IntegrationTestTimeout)
     @mark.skipif(_MODULE.sudoOk != 1, reason="no sudo rights")
     def testWithSudo(self):
         with testEnv():

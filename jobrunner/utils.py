@@ -287,9 +287,10 @@ def safeSleep(howLong, jobs):
 
 def killProcGroup(pgrp, jobs):
     if not pgrp:
+        sprint("Unable to kill (no process group)")
         return False
-    for signum in [signal.SIGINT, signal.SIGTERM,
-                   signal.SIGKILL, signal.SIGKILL]:
+    sigQueue = 5 * [signal.SIGINT] + [signal.SIGTERM, signal.SIGKILL]
+    for signum in sigQueue:
         try:
             os.killpg(pgrp, signum)
             try:
@@ -297,14 +298,17 @@ def killProcGroup(pgrp, jobs):
             except OSError as checkForEsrch:
                 if checkForEsrch.errno == errno.ESRCH:
                     # no such process -> it's done!
+                    sprint("Killed", pgrp, "with signal", signum)
                     return True
                 raise
         except OSError as err:
             if err.errno == errno.ESRCH:
                 # no such process -> it's done!
+                sprint("Killed", pgrp, "with signal", signum)
                 return True
             elif err.errno == errno.EPERM:
                 # Operation not permitted
+                sprint("Unable to kill", pgrp, "(operation not permitted)")
                 return False
             else:
                 sprint("killpg", pgrp, signum, "->", err)
@@ -313,6 +317,7 @@ def killProcGroup(pgrp, jobs):
             time.sleep(1.5)
         else:
             safeSleep(1.5, jobs)
+    sprint("Unable to kill", pgrp)
     return False
 
 
@@ -330,13 +335,15 @@ pgrp = int(sys.argv[2])
 jobrunner.utils.killProcGroup(pgrp, None)
 """
     myPath = ":-:".join(sys.path)
+    LOG.debug("argv: %r, exec: %s", sys.argv, sys.executable)
     with tempfile.NamedTemporaryFile(mode="w") as tmpf:
         tmpf.write(script)
         tmpf.flush()
+        cmd = ["sudo", sys.executable, tmpf.name, myPath, str(pgrp)]
         try:
-            subprocess.check_call(
-                ["sudo", "python", tmpf.name, myPath, str(pgrp)])
+            subprocess.check_call(cmd)
         except subprocess.CalledProcessError as error:
+            LOG("cmd %r => error=%s", cmd, error, exc_info=True)
             return error.output
     return None
 
