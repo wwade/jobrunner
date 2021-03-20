@@ -14,6 +14,7 @@ import sys
 import tempfile
 import time
 
+import chardet
 import dateutil.tz
 from six import text_type
 from six.moves import map, range
@@ -338,3 +339,11 @@ jobrunner.utils.killProcGroup(pgrp, None)
         except subprocess.CalledProcessError as error:
             return error.output
     return None
+
+
+def autoDecode(byteArray):
+    detected = chardet.detect(byteArray)
+    encoding = detected['encoding']
+    if detected['confidence'] < 0.5:  # very arbitrary
+        encoding = 'utf-8'
+    return byteArray.decode(encoding)

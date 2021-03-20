@@ -11,11 +11,12 @@ setup(
         'jobrunner.test.*',
     ]),
     install_requires=[
-        'six',
+        'chardet',
         'dateutils',
         'importlib-metadata',
-        'requests<=2.23.0',
-        'simplejson<=3.3.0',
+        'requests<2.26.0',
+        'simplejson<3.18.0',
+        'six',
     ],
     entry_points={
         "console_scripts": [

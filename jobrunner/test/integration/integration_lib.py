@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from contextlib import contextmanager
+import logging
 import os
 from pipes import quote
 import re
@@ -11,6 +12,8 @@ import time
 
 import pexpect
 from six.moves import map
+
+from jobrunner.utils import autoDecode
 
 from ..helpers import resetEnv
 
@@ -23,11 +26,11 @@ program=mail-program
 domain=ex.com
 """
 
+LOG = logging.getLogger(__name__)
+
 
 class IntegrationTestTimeout(Exception):
-    def __init__(self, message):
-        super(IntegrationTestTimeout, self).__init__(message)
-        self.message = message
+    pass
 
 
 def setUpModuleHelper():
@@ -67,11 +70,14 @@ def run(cmd, capture=False, env=None):
     print(' '.join(map(quote, cmd)))
     try:
         if capture:
-            return check_output(cmd, stderr=STDOUT, env=env).decode('utf-8')
+            out = autoDecode(check_output(cmd, stderr=STDOUT, env=env))
+            LOG.debug("cmd %r => %s", cmd, out)
+            return out
         else:
             return check_call(cmd, env=env)
     except CalledProcessError as error:
         print(error.output)
+        LOG.debug("cmd %r => ERROR %s", cmd, autoDecode(error.output))
         raise
 
 
@@ -113,6 +119,7 @@ def activeJobs():
 
 def runningJob(name, fail=False):
     out = run(['job', '-s', name], capture=True)
+    LOG.debug("runningJob(%r) => %s", name, out)
     reg1 = re.compile(r'\nState\s+Running\n')
     reg2 = re.compile(r'\nDuration\s+Blocked\n')
     pid = re.compile(r'\nPID\s+(\d+)\n')
