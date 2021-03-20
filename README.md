@@ -54,7 +54,7 @@ $ view `job`   # Opens the output from ls using "view"
 ```
 $ job echo 1
 $ job echo 2
-$ view `job -n0 -n1`  
+$ view `job -n0 -n1`
 ```
 * Query by job name
 ```
@@ -80,7 +80,7 @@ program = mail
 # your mail program instead. "chatmail" must be specified rather than a differently
 # named link to the script, else some options provided to job (such as --rc-file)
 # will not be passed through to it.
-# program = chatmail 
+# program = chatmail
 domain = example.com
 [ui]
 watch reminder = full|summary  # default=summary
@@ -94,3 +94,28 @@ user1 = https://chat.googleapis.com/v1/spaces/...
 # It should show up as "user/some_long_integer" somewhere in the span's metadata.
 user1 = <long integer>
 ```
+
+## Hacking
+
+### Primary workflow
+It's highly recommend to work inside a virtualenv using `pipenv`.
+
+Create new virtualenv and install an editable version of `jobrunner`:
+
+    pipenv --three install --dev
+    pipenv run install -e .
+
+Autoformat the code and check linters:
+
+    pipenv run ./format.sh
+
+Run tests:
+
+    pipenv run pytest
+
+### Run CI checks locally
+This allows you to run something similar to the azure pipelines locally using docker.
+It will use `PIP_INDEX_URL` and / or `~/.config/pip/pip.conf` to configure a pypi mirror.
+This will also update `Pipfile-2.7.lock` and `Pipfile.lock`.
+
+    ./test-docker.sh
