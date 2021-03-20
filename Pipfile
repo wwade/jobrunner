@@ -12,11 +12,12 @@ pylint = "*"
 pytest = "*"
 
 [packages]
-six = "*"
+chardet = "*"
 dateutils = "*"
 importlib-metadata = "*"
 requests = "<2.26.0"
 simplejson = "<3.18.0"
+six = "*"
 
 [requires]
 python_version = "3.7"

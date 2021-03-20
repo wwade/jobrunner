@@ -1,10 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 from subprocess import CalledProcessError, check_output
 import sys
 from unittest import TestCase
 
 from pytest import mark
+
+from jobrunner.utils import autoDecode
 
 from .integration_lib import (
     IntegrationTestTimeout,
@@ -18,6 +21,8 @@ from .integration_lib import (
     waitFor,
 )
 
+LOG = logging.getLogger(__name__)
+
 if sys.version_info.major < 3:
     class FileNotFoundError(Exception):  # pylint: disable=redefined-builtin
         pass
@@ -28,14 +33,12 @@ class _Module(object):
 
     def __init__(self):
         try:
-            out = check_output(['sudo', 'true'])
-        except (CalledProcessError, FileNotFoundError, OSError) as error:
-            print("Ignore sudo check error", error)
+            out = autoDecode(check_output(['sudo', 'python', '-V']))
+        except (CalledProcessError, FileNotFoundError, OSError):
+            LOG.warning("sudo check error", exc_info=True)
             return
-        for line in out.splitlines():
-            if line.endswith(' ALL') and ' NOPASSWD:' in line:
-                self.sudoOk = 1
-                break
+        LOG.debug("sudo check output: %s", out)
+        self.sudoOk = not out.strip()
 
 
 _MODULE = _Module()

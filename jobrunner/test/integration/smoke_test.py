@@ -12,6 +12,8 @@ from pexpect import EOF
 import simplejson as json
 import six
 
+from jobrunner.utils import autoDecode
+
 from .integration_lib import (
     activeJobs,
     inactiveCount,
@@ -167,13 +169,12 @@ class RunExecOptionsTest(TestCase):
             # --stop
             with self.assertRaises(CalledProcessError) as error:
                 jobf('--stop', 'explicitTrue')
-            self.assertIn('Jobs not active:', error.exception.output.decode('utf-8'))
+            self.assertIn('Jobs not active:', autoDecode(error.exception.output))
 
             jobf('--delete', 'explicitTrue')
             with self.assertRaises(CalledProcessError) as error:
                 jobf('--show', 'explicitTrue')
-                self.assertIn('No job for key',
-                              error.exception.output.decode('utf-8'))
+                self.assertIn('No job for key', autoDecode(error.exception.output))
 
             # --auto-job
             # --debugLocking
