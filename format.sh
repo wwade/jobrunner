@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -xe
 FILESPEC=(setup.py jobrunner)
 isort --atomic "${FILESPEC[@]}"

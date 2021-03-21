@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import re
 from subprocess import CalledProcessError, check_output
 import sys
 from unittest import TestCase
@@ -32,12 +33,12 @@ class _Module(object):
 
     def __init__(self):
         try:
-            out = autoDecode(check_output(['sudo', 'python', '-V']))
+            out = autoDecode(check_output(['sudo', 'python', '-V'])).strip()
         except (CalledProcessError, FileNotFoundError, OSError):
             LOG.warning("sudo check error", exc_info=True)
             return
-        LOG.debug("sudo check output: %s", out)
-        self.sudoOk = not out.strip()
+        self.sudoOk = bool(re.match(r"python \d{1,5}\.\d.*", out, re.IGNORECASE))
+        LOG.debug("sudo check output: %s, sudoOk: %s", out, self.sudoOk)
 
 
 _MODULE = _Module()

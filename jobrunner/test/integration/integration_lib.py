@@ -71,13 +71,13 @@ def run(cmd, capture=False, env=None):
     try:
         if capture:
             out = autoDecode(check_output(cmd, stderr=STDOUT, env=env))
-            LOG.debug("cmd %r => %s", cmd, out)
+            LOG.debug("cmd %r => %s", cmd, out.strip())
             return out
         else:
             return check_call(cmd, env=env)
     except CalledProcessError as error:
         print(error.output)
-        LOG.debug("cmd %r => ERROR %s", cmd, autoDecode(error.output))
+        LOG.debug("cmd %r => ERROR %s", cmd, autoDecode(error.output).strip())
         raise
 
 
@@ -119,7 +119,7 @@ def activeJobs():
 
 def runningJob(name, fail=False):
     out = run(['job', '-s', name], capture=True)
-    LOG.debug("runningJob(%r) => %s", name, out)
+    LOG.debug("runningJob(%r) => %s", name, out.strip())
     reg1 = re.compile(r'\nState\s+Running\n')
     reg2 = re.compile(r'\nDuration\s+Blocked\n')
     pid = re.compile(r'\nPID\s+(\d+)\n')
