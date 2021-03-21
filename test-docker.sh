@@ -1,8 +1,10 @@
 #!/bin/bash
 set -euo pipefail
+py38=(3.8 "Pipfile-3.8.lock")
 py27=(2.7 "Pipfile-2.7.lock")
 py37=(3.7 "Pipfile.lock")
 VERSIONS=(
+    'py38[@]'
     'py27[@]'
     'py37[@]'
 )
@@ -49,8 +51,10 @@ for pyInfo in "${VERSIONS[@]}"; do
     if [[ "$pipLock" != "Pipfile.lock" ]]; then
         cp -v "$pipLock" Pipfile.lock
     fi
-    sed -i 's/\(python_version\s*=.*\)[[:digit:]]\.[[:digit:]]/\1'"${python}/" Pipfile
-    docker run --rm -i \
+    if [[ "$python" != "3.7" ]]; then
+        sed -i 's/python_version\s*=\s*\S*/python_version = "'"${python}"'"/' Pipfile
+    fi
+    docker run --rm \
            -v "$PWD":/src \
            -v "${base}/home:/home" \
            -v "${pipConf}:/etc/pip.conf" \
@@ -60,17 +64,7 @@ for pyInfo in "${VERSIONS[@]}"; do
            -e _NEW_GID=$(id -g) \
            -e PIP_INDEX_URL="${PIP_INDEX_URL:-}" \
            python:"$python" \
-           sh -uex << 'EOF'
-cat /etc/pip.conf
-useradd --no-create-home --uid $_NEW_UID me
-su -c "bash" me << '__2EOF'
-   set -uxeo pipefail
-   PATH="${PATH}:${HOME}/.local/bin"
-   export PATH
-   export PIP_INDEX_URL="$PIP_INDEX_URL"
-   /src/test.sh
-__2EOF
-EOF
+           /src/test-docker-helper.sh
 
     if [[ "$pipLock" != "Pipfile.lock" ]]; then
         cp -v Pipfile.lock "$pipLock"
@@ -78,3 +72,4 @@ EOF
         git checkout Pipfile.lock
     fi
 done
+echo "All tests passed [exit=$?]"
