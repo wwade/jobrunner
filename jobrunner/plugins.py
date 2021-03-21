@@ -4,15 +4,15 @@ import importlib
 import pkgutil
 import warnings
 
-from importlib_metadata import entry_points
-
 import jobrunner.plugin
+
+from .compat import metadata
 
 
 class Plugins(object):
     def __init__(self):
         self.plugins = {
-            plug.load() for plug in entry_points().get(
+            plug.load() for plug in metadata.entry_points().get(
                 'wwade.jobrunner', [])}
         deprecatedPlugins = {
             importlib.import_module('jobrunner.plugin.{}'.format(name))
