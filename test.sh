@@ -5,15 +5,15 @@ PY=$(python -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.ver
 python -m pip install --upgrade pip setuptools wheel pipenv
 set +x
 mirrorUrl=$(pip config list | grep index-url | cut -d= -f2 | cut -d\' -f2)
-mirror=""
+mirror=()
 if [[ -n "$mirrorUrl" ]]; then
     mirrorUrl=${mirrorUrl/[[:space:]]/}
     echo "mirrorUrl: $mirrorUrl"
-    mirror="--pypi-mirror=$mirrorUrl"
+    mirror+="--pypi-mirror=$mirrorUrl"
 fi
-echo "mirror: $mirror"
+echo "mirror: ${mirror[@]}"
 set -x
-pipenv --python "$PY" install "${mirror}" --dev
+pipenv --python "$PY" install "${mirror[@]}" --dev
 
 FILES=(setup.py jobrunner)
 pipenv run isort -c --diff -rc "${FILES[@]}"
