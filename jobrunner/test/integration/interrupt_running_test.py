@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import os
 import re
 from subprocess import CalledProcessError, check_output
 import sys
@@ -29,16 +30,25 @@ if sys.version_info.major < 3:
 
 
 class _Module(object):
-    sudoOk = 0
+    sudoOk = None
 
     def __init__(self):
-        try:
-            out = autoDecode(check_output(['sudo', 'python', '-V'])).strip()
-        except (CalledProcessError, FileNotFoundError, OSError):
-            LOG.warning("sudo check error", exc_info=True)
-            return
-        self.sudoOk = bool(re.match(r"python \d{1,5}\.\d.*", out, re.IGNORECASE))
-        LOG.debug("sudo check output: %s, sudoOk: %s", out, self.sudoOk)
+        self.sudoOk = False
+
+        if os.geteuid() == 0:
+            LOG.warning("sudo check: already running as root")
+        else:
+            try:
+                out = autoDecode(check_output(['sudo', 'python', '-V'])).strip()
+                self.sudoOk = bool(
+                    re.match(
+                        r"python \d{1,5}\.\d.*",
+                        out,
+                        re.IGNORECASE))
+                LOG.info("sudo check output: %s", out)
+            except (CalledProcessError, FileNotFoundError, OSError):
+                LOG.warning("sudo check error", exc_info=True)
+        LOG.info("sudo check: sudoOk %s", self.sudoOk)
 
 
 _MODULE = _Module()
@@ -69,7 +79,7 @@ class TestInterrupt(TestCase):
                 pass
             waitFor(noJobs)
 
-    @mark.skipif(_MODULE.sudoOk != 1, reason="no sudo rights")
+    @mark.skipif(not _MODULE.sudoOk, reason="sudo check not possible")
     def testWithSudo(self):
         with testEnv():
             run(['job', 'sudo', 'sleep', '60'])
