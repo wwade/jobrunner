@@ -3,9 +3,9 @@ from __future__ import absolute_import, division, print_function
 from setuptools import find_packages, setup
 
 setup(
-    name='jobrunner',
-    version='2.2.0',
-    description='Job runner with logging',
+    name='shell-jobrunner',
+    version='2.2.1',
+    description='Shell-based job runner with logging',
     packages=find_packages(exclude=[
         'jobrunner.test',
         'jobrunner.test.*',
