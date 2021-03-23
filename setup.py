@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 from setuptools import find_packages, setup
 
 setup(
-    name='jobrunner',
+    name='async-jobrunner',
     version='2.2.0',
     description='Job runner with logging',
     packages=find_packages(exclude=[
