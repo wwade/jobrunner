@@ -732,6 +732,19 @@ def maybeHandleNonExecWriteOptions(options, jobs):
     maybeHandle(options, jobs, handleNonExecWriteOptions)
 
 
+def handleIsolate(cmd):
+    isolateName = keyEscape(" ".join(cmd))
+    if len(isolateName) > 45:
+        hashVal = hashlib.new('md5')
+        for char in cmd:
+            hashVal.update(char.encode("raw_unicode_escape"))
+        isolateName = hashVal.hexdigest()[:16]
+    netnsd = ['isolate', '-n', isolateName]
+    netnsd += cmd
+    LOG.info('Isolating command %r -> %r', cmd, netnsd)
+    return netnsd
+
+
 def runJob(cmd, options, jobs, job, fd, doIsolate):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-statements
@@ -741,18 +754,8 @@ def runJob(cmd, options, jobs, job, fd, doIsolate):
     fpIn = open(options.input, "r")
     rc = -1
     if doIsolate:
-        isolateName = keyEscape(" ".join(cmd))
-        if len(isolateName) > 45:
-            hashVal = hashlib.new('md5')
-            for char in cmd:
-                hashVal.update(char)
-            isolateName = hashVal.hexdigest()
-        netnsd = ['isolate', '-n', isolateName]
-        netnsd += cmd
-        if options.verbose:
-            sprint('Isolating command WAS:', cmd)
-            sprint('Isolating command IS :', netnsd)
-        cmd = netnsd
+        cmd = handleIsolate(cmd)
+
     try:
         jobs.unlock()
         LOG.debug("starting check_call()")
