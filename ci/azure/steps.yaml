@@ -3,13 +3,19 @@ steps:
   inputs:
     versionSpec: '$(python.version)'
 
-- script: ln -svf Pipfile-'$(python.version)'.lock Pipfile.lock
-  displayName: 'Set up Pipfile-$(python.version)'
-
 - script: python -m pip install --upgrade pip setuptools wheel pipenv
   displayName: 'Install tools'
 
-- script: pipenv --python '$(python.version)' install --dev
+- script: |
+    set -x
+    verLock="Pipfile-$(python.version).lock"
+    if [[ -f "$verLock" ]]
+    then
+      ln -svf "$verLock" Pipfile.lock
+    fi
+  displayName: 'Set up Pipfile-$(python.version)'
+
+- script: pipenv --python '$(python.version)' sync --dev --keep-outdated
   displayName: 'pipenv install --dev'
 
 - script: |
