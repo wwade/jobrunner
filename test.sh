@@ -13,9 +13,13 @@ if [[ -n "$mirrorUrl" ]]; then
 fi
 echo "mirror: ${mirror[@]}"
 set -x
-pipenv --python "$PY" install "${mirror[@]}" --dev
+pipenv --python "$PY" sync "${mirror[@]}" --dev --keep-outdated
 
 FILES=(setup.py jobrunner)
+if [[ "$PY" =~ 3\. ]]
+then
+    FILES+=("test-docker.py")
+fi
 pipenv run isort -c --diff -rc "${FILES[@]}"
 pipenv run autopep8 --exit-code -ra --diff "${FILES[@]}"
 pipenv run pylint -d fixme "${FILES[@]}"
