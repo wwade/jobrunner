@@ -88,8 +88,7 @@ class DatabaseBase(DatabaseMeta):
     def setCount(self, inc):
         curCount = self.count
         curCount += inc
-        if curCount < 0:
-            curCount = 0
+        curCount = max(curCount, 0)
         self.db[self.ITEMCOUNT] = str(curCount)
     count = property(getCount, setCount)
 
@@ -585,8 +584,7 @@ class JobsBase(object):
                 jobStr = "\033[41m" + jobStr + "\033[0m"
             details = " [%4s] %s %s" % (tag, workspace, jobStr)
             clearNum = clearLen - len(details)
-            if clearNum < 0:
-                clearNum = 0
+            clearNum = max(clearNum, 0)
             sprint("%s" % timestr + details + " " * clearNum)
 
     def getResources(self):
@@ -655,8 +653,7 @@ class JobsBase(object):
                     blinkState = True
                 sys.stdout.write(" " * clearLen + "\r" + outStr + '\r')
                 clearLen = len(outStr) + 2
-                if clearLen < 30:
-                    clearLen = 30
+                clearLen = max(clearLen, 30)
                 sys.stdout.flush()
             safeSleep(1, self)
 

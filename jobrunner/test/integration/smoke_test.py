@@ -181,12 +181,12 @@ class RunExecOptionsTest(TestCase):
             out = jobf('--auto-job', '--debugLocking', 'true')
             print(out)
 
-            inFile = NamedTemporaryFile()
-            data = 'this is the input\n'
-            inFile.write(data.encode('utf-8'))
-            inFile.flush()
-            # --input
-            jobf('--input', inFile.name, '--', 'cat')
+            with NamedTemporaryFile() as inFile:
+                data = 'this is the input\n'
+                inFile.write(data.encode('utf-8'))
+                inFile.flush()
+                # --input
+                jobf('--input', inFile.name, '--', 'cat')
             catOutFile = jobf('-g', 'cat').strip()
             outData = open(catOutFile).read()
             assert data == outData
@@ -260,21 +260,21 @@ class RunMailTest(TestCase):
 
     def test(self):
         with testEnv():
-            rcFile = NamedTemporaryFile()
-            rcFile.write(MAIL_CONFIG.encode('utf-8'))
-            rcFile.flush()
-            # --mail
-            # --rc-file
-            jobf('true')
-            jobf('--rc-file', rcFile.name, '--mail', '.')
-            args1 = self.getMailArgs(lastKey())
-            self.assertIn('-s', args1)
-            self.assertIn('-a', args1)
-            self.assertIn('me', args1)
-            # --to
-            # --cc
-            jobf('--rc-file', rcFile.name, '--mail', 'true', '--to', 'someone',
-                 '--cc', 'another')
+            with NamedTemporaryFile() as rcFile:
+                rcFile.write(MAIL_CONFIG.encode('utf-8'))
+                rcFile.flush()
+                # --mail
+                # --rc-file
+                jobf('true')
+                jobf('--rc-file', rcFile.name, '--mail', '.')
+                args1 = self.getMailArgs(lastKey())
+                self.assertIn('-s', args1)
+                self.assertIn('-a', args1)
+                self.assertIn('me', args1)
+                # --to
+                # --cc
+                jobf('--rc-file', rcFile.name, '--mail', 'true', '--to', 'someone',
+                     '--cc', 'another')
             args2 = self.getMailArgs(lastKey())
             print(repr(args2))
             self.assertIn('-s', args2)
