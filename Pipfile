@@ -15,8 +15,8 @@ pytest = "*"
 chardet = "*"
 dateutils = "*"
 importlib-metadata = "*"
-requests = "<2.26.0"
-simplejson = "<3.18.0"
+requests = "*"
+simplejson = "*"
 six = "*"
 
 [requires]
