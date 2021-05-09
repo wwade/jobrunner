@@ -8,5 +8,6 @@ su -c bash me << 'EOF'
    PATH="${PATH}:${HOME}/.local/bin"
    export PATH
    export PIP_INDEX_URL="$PIP_INDEX_URL"
+   export PIPENV_CMD="$PIPENV_CMD"
    /src/test.sh
 EOF
