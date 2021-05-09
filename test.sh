@@ -13,7 +13,7 @@ if [[ -n "$mirrorUrl" ]]; then
 fi
 echo "mirror: ${mirror[@]}"
 set -x
-pipenv --python "$PY" sync "${mirror[@]}" --dev --keep-outdated
+pipenv --python "$PY" "${PIPENV_CMD:-sync}" "${mirror[@]}" --dev --keep-outdated
 
 FILES=(setup.py jobrunner)
 if [[ "$PY" =~ 3\. ]]

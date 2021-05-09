@@ -70,7 +70,7 @@ def runDocker(version: VerInfo, cmd: List[str]):
         ) from er
 
 
-def execVersion(version: VerInfo, pipConf: str):
+def execVersion(version: VerInfo, pipConf: str, upgrade: bool):
     baseDir = os.path.join(os.getcwd(), f"docker-{version.version}")
     homeDir = os.path.join(baseDir, "home/me")
     cacheDir = os.path.join(homeDir, ".cache")
@@ -102,6 +102,7 @@ def execVersion(version: VerInfo, pipConf: str):
         ("_NEW_GID", str(os.getgid())),
         ("PIP_INDEX_URL", os.getenv("PIP_INDEX_URL", "")),
     ]
+    envs += [("PIPENV_CMD", "update" if upgrade else "sync")]
 
     dockerCmd = ["docker", "run", "--rm"]
     for mount in mounts:
@@ -117,8 +118,6 @@ def execVersion(version: VerInfo, pipConf: str):
 def pipfileForVersion(version: VerInfo):
     if not version.default:
         shutil.copyfile(version.lock, "Pipfile.lock")
-        print("Pipfile.lock md5:",
-              subprocess.check_output(["md5sum", "Pipfile.lock"]))
     try:
         yield
     finally:
@@ -138,6 +137,7 @@ def main() -> None:
         help="specify version(s) to test, select from %(choices)s. "
         "Default is all.",
     )
+    ap.add_argument("-U", "--upgrade", action="store_true")
     ap.add_argument("-i", "--ignore-unclean", action="store_true")
     args = ap.parse_args()
     versions: Iterable[VerInfo]
@@ -155,7 +155,7 @@ def main() -> None:
 
     for version in versions:
         with pipfileForVersion(version):
-            execVersion(version, pipConf)
+            execVersion(version, pipConf, args.upgrade)
 
 
 if __name__ == "__main__":
