@@ -19,6 +19,7 @@ import jobrunner.logging
 from .argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
 from .binutils import binDescriptionWithStandardFooter
 from .config import Config
+from .db import NoMatchingJobError
 from .plugins import Plugins
 from .service import service
 from .service.registry import registerServices
@@ -45,7 +46,7 @@ _DEBUG_LOG_FILE_NAME = "jobrunner-debug"
 LOG = jobrunner.logging.getLogger(__name__)
 
 
-def main(args=None):
+def impl_main(args=None):
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
@@ -228,6 +229,14 @@ def main(args=None):
         cmd.append(lastArg)
 
     runJob(cmd, options, jobs, job, fd, doIsolate)
+
+
+def main(args=None):
+    try:
+        impl_main(args=args)
+    except NoMatchingJobError as error:
+        print(error)
+        sys.exit(1)
 
 
 def waitForDep(depWait, options, jobs):
@@ -719,6 +728,10 @@ def maybeHandle(options, jobs, handler):
         if handled:
             jobs.unlock()
             sys.exit(0)
+    except NoMatchingJobError as error:
+        jobs.unlock()
+        print("Error:", error)
+        sys.exit(1)
     except ExitCode as exitCode:
         jobs.unlock()
         sys.exit(exitCode.rc)
