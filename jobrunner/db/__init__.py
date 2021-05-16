@@ -41,6 +41,10 @@ LOG = logging.getLogger(__name__)
 LOGLOCK = logging.getLogger(__name__ + ".lock")
 
 
+class NoMatchingJobError(Exception):
+    pass
+
+
 class DatabaseMeta(object):
     # pylint: disable=too-many-instance-attributes
     SV = '_schemaVersion_'
@@ -527,7 +531,7 @@ class JobsBase(object):
             if candidates:
                 return candidates[0]
 
-            raise KeyError("No job for key '%s'" % key)
+            raise NoMatchingJobError("No job for key '%s'" % key)
 
     def getLog(self, key, thisWs, skipReminders=False):
         return self.getJobMatch(key, thisWs, skipReminders).logfile

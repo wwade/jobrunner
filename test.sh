@@ -4,7 +4,7 @@ set -xeuo pipefail
 PY=$(python -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))")
 python -m pip install --upgrade pip setuptools wheel pipenv
 set +x
-mirrorUrl=$(pip config list | grep index-url | cut -d= -f2 | cut -d\' -f2)
+mirrorUrl=$(pip config list | grep index-url | cut -d= -f2 | cut -d\' -f2 || true)
 mirror=()
 if [[ -n "$mirrorUrl" ]]; then
     mirrorUrl=${mirrorUrl/[[:space:]]/}
