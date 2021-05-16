@@ -23,6 +23,7 @@ fi
 pipenv run isort -c --diff -rc "${FILES[@]}"
 pipenv run autopep8 --exit-code -ra --diff "${FILES[@]}"
 pipenv run pylint -d fixme "${FILES[@]}"
+find jobrunner -type f -name "*.py" -not -name "compat.py" | xargs pipenv run flake8 setup.py
 
 pipenv run pip install .
 
