@@ -17,8 +17,9 @@ chardet = "*"
 dateutils = "*"
 importlib-metadata = "*"
 requests = "*"
+setuptools-scm = ">=3.4"
 simplejson = "*"
 six = "*"
 
 [requires]
-python_version = "3"
+python_version = "3.7"
