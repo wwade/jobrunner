@@ -4,6 +4,7 @@ job
 Job runner with logging
 
 |Build Status|
+|PyPI Release|
 
 Installation
 ------------
@@ -101,7 +102,7 @@ Configuration
 -------------
 
 | The default configuration file location is ``~/.config/jobrc``, but can be
-| overwritten using the --rc-file option.
+| overridden using the --rc-file option.
 
 Sample rcfile:
 ~~~~~~~~~~~~~~
@@ -160,11 +161,14 @@ Run CI checks locally
 
 | This allows you to run something similar to the azure pipelines locally using docker.
 | It will use ``PIP_INDEX_URL`` and / or ``~/.config/pip/pip.conf`` to configure a pypi mirror.
-| This will also update ``Pipfile-2.7.lock`` and ``Pipfile.lock``.
+| This will also update ``Pipfile*.lock``.
 
 .. code:: console
 
-    ./test-docker.sh
+    ./test-docker.py [--versions 2.7 3.7 3.8] [--upgrade] [--ignore-unclean]
 
 .. |Build Status| image:: https://dev.azure.com/wadecarpenter/jobrunner/_apis/build/status/wwade.jobrunner%20(azure%20native)?branchName=master
    :target: https://dev.azure.com/wadecarpenter/jobrunner/_build/latest?definitionId=2&branchName=master
+
+.. |PyPI Release| image:: https://badge.fury.io/py/shell-jobrunner.svg
+   :target: https://badge.fury.io/py/shell-jobrunner
