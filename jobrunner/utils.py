@@ -351,6 +351,8 @@ jobrunner.utils.killProcGroup(pgrp, None)
 def autoDecode(byteArray):
     detected = chardet.detect(byteArray)
     encoding = detected['encoding']
-    if detected['confidence'] < 0.5:  # very arbitrary
+    if detected['confidence'] < 0.8:  # very arbitrary
+        LOG.debug("char encoding below confidence level 0.8 (%r). "
+                  "Fall back to UTF-8.", detected)
         encoding = 'utf-8'
     return byteArray.decode(encoding)
