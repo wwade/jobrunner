@@ -479,7 +479,10 @@ class JobsBase(object):
             if not jobList:
                 jobList = self.getDbSorted(
                     self.inactive, None, filterWs=thisWs)
-            return jobList[-1]
+            try:
+                return jobList[-1]
+            except IndexError:
+                raise NoMatchingJobError("Job database is empty")
         elif key in self.active.db:
             # Exact match, try active first
             return self.active[key]
