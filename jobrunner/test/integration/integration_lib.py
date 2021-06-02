@@ -77,7 +77,8 @@ def run(cmd, capture=False, env=None):
             return check_call(cmd, env=env)
     except CalledProcessError as error:
         print(error.output)
-        LOG.debug("cmd %r => ERROR %s", cmd, autoDecode(error.output).strip())
+        errOut = autoDecode(error.output) if error.output else "n/a"
+        LOG.debug("cmd %r => ERROR %s", cmd, errOut.strip())
         raise
 
 

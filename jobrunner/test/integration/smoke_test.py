@@ -9,6 +9,7 @@ import time
 from unittest import TestCase
 
 from pexpect import EOF
+import pytest
 import simplejson as json
 import six
 
@@ -58,6 +59,20 @@ def testUnicodeSmoke(capsys):
 def testUnicodeSmoke2():
     with testEnv():
         unicodeCase()
+
+
+@pytest.mark.parametrize("cmd,expected", [
+    (['job'], r"^Error: Job database is empty$"),
+    (['job', '-g', '.'], r"^Error: No job for key .\..$"),
+    (['job', '-g', 'xxx'], r"^Error: No job for key .xxx.$"),
+])
+def testEmptyDb(cmd, expected):
+    with testEnv():
+        with pytest.raises(CalledProcessError) as error:
+            run(cmd, capture=True)
+        output = autoDecode(error.value.output)
+        print(output)
+        assert re.match(expected, output)
 
 
 class SmokeTest(TestCase):

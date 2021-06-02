@@ -114,7 +114,12 @@ def impl_main(args=None):
     elif options.wait:
         pass
     else:
-        sprint(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
+        try:
+            sprint(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
+        except NoMatchingJobError as error:
+            jobs.unlock()
+            sprint("Error:", error)
+            sys.exit(1)
         jobs.unlock()
         sys.exit(0)
 
@@ -235,7 +240,7 @@ def main(args=None):
     try:
         impl_main(args=args)
     except NoMatchingJobError as error:
-        print(error)
+        sprint("Error:", error)
         sys.exit(1)
 
 
@@ -730,7 +735,7 @@ def maybeHandle(options, jobs, handler):
             sys.exit(0)
     except NoMatchingJobError as error:
         jobs.unlock()
-        print("Error:", error)
+        sprint("Error:", error)
         sys.exit(1)
     except ExitCode as exitCode:
         jobs.unlock()

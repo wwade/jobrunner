@@ -146,9 +146,9 @@ class DatabaseBase(DatabaseMeta):
             try:
                 return json.loads(self.db[self.RECENT])
             except json.JSONDecodeError:
-                return None
+                return []
         else:
-            return None
+            return []
 
     def recentSet(self, key):
         recent = self.recent
@@ -462,7 +462,8 @@ class JobsBase(object):
         return True
 
     def getJobMatch(self, key, thisWs, skipReminders=False):
-        # pylint: disable=too-many-return-statements,too-many-branches
+        # pylint: disable=too-many-return-statements,too-many-branches,
+        # pylint: disable=too-many-statements
         if key == '.':
             lastJob = self.active.lastJob
             if lastJob:
