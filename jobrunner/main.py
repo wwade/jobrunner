@@ -561,7 +561,7 @@ def handleNonExecWriteOptions(options, jobs):
         except KeyboardInterrupt:
             sprint("")
             sprint("Exit on user interrupt")
-            raise ExitCode(1)  # pylint: disable=bad-option-value, raise-missing-from
+            raise ExitCode(1)
         return True
     else:
         return False
