@@ -240,7 +240,7 @@ def main(args=None):
     try:
         impl_main(args=args)
     except NoMatchingJobError as error:
-        sprint("Error:", error)
+        print("Error:", error, file=sys.stderr)
         sys.exit(1)
 
 
@@ -735,7 +735,7 @@ def maybeHandle(options, jobs, handler):
             sys.exit(0)
     except NoMatchingJobError as error:
         jobs.unlock()
-        sprint("Error:", error)
+        print("Error:", error, file=sys.stderr)
         sys.exit(1)
     except ExitCode as exitCode:
         jobs.unlock()
