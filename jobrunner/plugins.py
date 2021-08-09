@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import importlib
 import pkgutil
+import socket
 import warnings
 
 import jobrunner.plugin
@@ -44,4 +45,4 @@ class Plugins(object):
                 ret = plugin.workspaceIdentity()
                 if ret:
                     return ret
-        return ""
+        return socket.gethostname()
