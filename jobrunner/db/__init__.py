@@ -347,8 +347,8 @@ class JobsBase(object):
         return jobList
 
     def listDb(self, db, limit, filterWs=False, filterPane=False, useCp=False,
-               includeReminders=False):
-        # pylint: disable=too-many-arguments
+               includeReminders=False, keysOnly=False):
+        # pylint: disable=too-many-arguments, too-many-branches
         jobList = self.filterJobs(db, limit, filterWs, filterPane, useCp)
         hasDeps = False
         for job in jobList:
@@ -364,6 +364,8 @@ class JobsBase(object):
                 continue
             if self.config.verbose:
                 sprint(job.detail(self.config.verbose[1:]))
+            elif keysOnly:
+                sprint(job.key)
             else:
                 if db is self.active:
                     sprint(job)
@@ -433,14 +435,16 @@ class JobsBase(object):
     def countInactive(self):
         return len(self.inactive.db) - (len(self.inactive.special) - 1)
 
-    def listActive(self, thisWs, pane, useCp, includeReminders):
+    def listActive(self, thisWs, pane, useCp, includeReminders, keysOnly=False):
+        # pylint: disable=too-many-arguments
         self.listDb(
             self.active,
             None,
             filterWs=thisWs,
             filterPane=pane,
             useCp=useCp,
-            includeReminders=includeReminders)
+            includeReminders=includeReminders,
+            keysOnly=keysOnly)
 
     def listInactive(self, thisWs, pane, useCp, limit=5):
         self.listDb(

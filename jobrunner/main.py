@@ -358,6 +358,10 @@ def addNonExecOptions(op):
         action="append_const",
         const=True,
         help="List active jobs, -ll to include active reminders")
+    op.add_argument(
+        "--list-keys",
+        action="store_true",
+        help="List keys for active jobs, one per line.")
     op.add_argument("--dot", action='store_true',
                     help='Show dependency graph for active jobs')
     op.add_argument("--png", action='store_true',
@@ -431,6 +435,14 @@ def handleNonExecOptions(options, jobs):
         jobs.listActive(thisWs=options.tw, pane=options.tp,
                         useCp=options.since_checkpoint,
                         includeReminders=includeReminders)
+        return True
+    elif options.list_keys:
+        jobs.listActive(
+            thisWs=options.tw,
+            pane=options.tp,
+            useCp=options.since_checkpoint,
+            includeReminders=False,
+            keysOnly=True)
         return True
     elif options.dot or options.png or options.svg:
         dot = jobs.makeDot(
