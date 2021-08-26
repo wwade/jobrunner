@@ -57,11 +57,11 @@
         },
         "importlib-metadata": {
             "hashes": [
-                "sha256:7b30a78db2922d78a6f47fb30683156a14f3c6aa5cc23f77cc8967e9ab2d002f",
-                "sha256:ed5157fef23a4bc4594615a0dd8eba94b2bb36bf2a343fa3d8bb2fa0a62a99d5"
+                "sha256:1be82867064622fe56c7046bb5280063949f56c0abcdfc3cd33875efd4fc5498",
+                "sha256:a69df6d94f8ac09cd46fdf79a955c153164b312442f7594a3eeeec46f230fe2b"
             ],
             "index": "pypi",
-            "version": "==4.6.4"
+            "version": "==4.7.0"
         },
         "python-dateutil": {
             "hashes": [
@@ -207,11 +207,11 @@
         },
         "importlib-metadata": {
             "hashes": [
-                "sha256:7b30a78db2922d78a6f47fb30683156a14f3c6aa5cc23f77cc8967e9ab2d002f",
-                "sha256:ed5157fef23a4bc4594615a0dd8eba94b2bb36bf2a343fa3d8bb2fa0a62a99d5"
+                "sha256:1be82867064622fe56c7046bb5280063949f56c0abcdfc3cd33875efd4fc5498",
+                "sha256:a69df6d94f8ac09cd46fdf79a955c153164b312442f7594a3eeeec46f230fe2b"
             ],
             "index": "pypi",
-            "version": "==4.6.4"
+            "version": "==4.7.0"
         },
         "iniconfig": {
             "hashes": [
