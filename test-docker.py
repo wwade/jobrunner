@@ -17,6 +17,7 @@ VerInfo = namedtuple("VerInfo", ("version", "lock", "default"))
 VERSIONS = (
     VerInfo("2.7", "Pipfile-2.7.lock", False),
     VerInfo("3.8", "Pipfile-3.8.lock", False),
+    VerInfo("3.9", "Pipfile-3.9.lock", False),
     VerInfo("3.7", "Pipfile.lock", True),
 )
 
