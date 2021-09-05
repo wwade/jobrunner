@@ -35,19 +35,26 @@ to-addr and -c currently operate identically.
 _DEBUG_LOG_FILE_NAME = "chatmail-debug"
 
 
+def _open(filename, mode='r'):
+    try:
+        return open(filename, mode=mode, encoding='utf-8')
+    except TypeError:
+        return open(filename, mode=mode)  # pylint: disable=W
+
+
 class ThreadIdCache(object):
     def __init__(self, cacheDir):
         self._cacheFile = os.path.join(cacheDir, 'chatmail.json')
 
     def _read(self):
         try:
-            with open(self._cacheFile, 'r') as cacheFile:
+            with _open(self._cacheFile, 'r') as cacheFile:
                 return json.load(cacheFile)
         except IOError:
             return {}
 
     def _write(self, data):
-        with open(self._cacheFile, 'w') as cacheFile:
+        with _open(self._cacheFile, 'w') as cacheFile:
             return json.dump(data, cacheFile)
 
     def get(self, key):
@@ -113,7 +120,7 @@ def _getUserAtTokens(users, config):
 def _getMessageBody(opts):
     bodyText = ''
     if opts.inFile:
-        with open(opts.inFile) as inFile:
+        with _open(opts.inFile) as inFile:
             bodyText = inFile.read()
     elif not sys.stdin.isatty():
         bodyText = sys.stdin.read()

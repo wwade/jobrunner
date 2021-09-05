@@ -111,9 +111,11 @@ class ChatTest(TestCase):
 
         mocks.configCls().gChatUserHook.return_value = hook
 
-        with patch("jobrunner.mail.chat.open", create=True) as openMock:
+        with patch("jobrunner.mail.chat._open",
+                   create=True, autospec=True) as openMock:
             # Mock inFile from -f option
-            openMock().__enter__().read.return_value = "a bunch of\ntext."
+            openMock("mytext.txt").__enter__(
+            ).read.return_value = "a bunch of\ntext."
             openMock.reset_mock()
             ret = chat.main(['-s', 'My subject', '-c', 'user3', '-c', 'user4',
                              '-a', 'attachfile.txt',

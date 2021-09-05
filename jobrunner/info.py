@@ -11,7 +11,7 @@ import dateutil.tz
 import six
 from six.moves import map, range
 
-import jobrunner.utils as utils
+from jobrunner import utils
 
 from .service import service
 from .utils import (
@@ -380,7 +380,7 @@ class JobInfo(object):
         if self.startTime is None:
             return "Blocked"
         stop = self.stopTime or utcNow()
-        return str(stop - self.startTime).split('.')[0]
+        return str(stop - self.startTime).split('.', 1)[0]
 
     def removeLog(self, verbose):
         if os.access(self.logfile, os.F_OK):

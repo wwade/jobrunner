@@ -18,6 +18,7 @@ import jobrunner.logging
 
 from .argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
 from .binutils import binDescriptionWithStandardFooter
+from .compat import encoding_open
 from .config import Config
 from .db import NoMatchingJobError
 from .plugins import Plugins
@@ -781,7 +782,7 @@ def runJob(cmd, options, jobs, job, fd, doIsolate):
     LOG.info("execute: %s", job.cmdStr)
     doMsg("execute:", job.cmdStr)
     robotInfo("execute", {"key": job.key}, {"command": job.cmdStr})
-    fpIn = open(options.input, "r")
+    fpIn = encoding_open(options.input, "r")
     rc = -1
     if doIsolate:
         cmd = handleIsolate(cmd)
@@ -798,7 +799,7 @@ def runJob(cmd, options, jobs, job, fd, doIsolate):
     except OSError as err:
         LOG.debug("OSError %s", err, exc_info=1)
         rc = -1 * err.errno
-        sprint(err, file=open(job.logfile, 'a'))
+        sprint(err, file=encoding_open(job.logfile, 'a'))
     except CalledProcessError as err:
         LOG.debug("CalledProcessError %s", err, exc_info=1)
         rc = err.returncode

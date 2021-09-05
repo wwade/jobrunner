@@ -17,7 +17,7 @@ import six
 from six import text_type
 from six.moves import filter
 
-import jobrunner.utils as utils
+from jobrunner import utils
 
 from ..info import JobInfo, decodeJobInfo, encodeJobInfo
 from ..service import service

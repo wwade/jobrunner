@@ -19,6 +19,8 @@ import dateutil.tz
 from six import text_type
 from six.moves import map, range
 
+from .compat import encoding_open
+
 PRUNE_NUM = 5000
 DATETIME_FMT = "%a %b %e, %Y %X %Z"
 STOP_STOP = -1000
@@ -135,7 +137,7 @@ class FileLock(object):
 
     def lock(self):
         assert self._fp is None
-        self._fp = open(self._filename, 'a')
+        self._fp = encoding_open(self._filename, 'a')
         fcntl.flock(self._fp, fcntl.LOCK_EX)
 
     def unlock(self):

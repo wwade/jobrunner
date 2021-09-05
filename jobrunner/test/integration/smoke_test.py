@@ -15,6 +15,7 @@ import six
 
 from jobrunner.utils import autoDecode
 
+from ...compat import encoding_open
 from .integration_lib import (
     activeJobs,
     inactiveCount,
@@ -92,9 +93,9 @@ class SmokeTest(TestCase):
             waitFor(lambda: touchFound in activeJobs(), failArg=False)
             time.sleep(1)
             print("write wait file 1")
-            open(waitFile1, 'w').write('')
+            encoding_open(waitFile1, 'w').write('')
             print("write wait file 2")
-            open(waitFile2, 'w').write('')
+            encoding_open(waitFile2, 'w').write('')
             waitFor(noJobs)
             print(run(['job', '-L'], capture=True))
             self.assertEqual(6, inactiveCount())
@@ -203,7 +204,7 @@ class RunExecOptionsTest(TestCase):
                 # --input
                 jobf('--input', inFile.name, '--', 'cat')
             catOutFile = jobf('-g', 'cat').strip()
-            outData = open(catOutFile).read()
+            outData = encoding_open(catOutFile).read()
             assert data == outData
 
     def testWatchWait(self):
@@ -271,7 +272,7 @@ class RunMailTest(TestCase):
     @staticmethod
     def getMailArgs(mailKey):
         lastLog = job('-g', mailKey).splitlines()[0]
-        return json.load(open(lastLog))
+        return json.load(encoding_open(lastLog))
 
     def test(self):
         with testEnv():
@@ -366,7 +367,7 @@ class RunNonExecOptionsTest(TestCase):
             self.assertEqual(file1, firstLog)
             [file2] = job('--index', '0').splitlines()
             for (fileName, value) in ((file1, "first"), (file2, "second")):
-                self.assertIn(value, open(fileName, 'r').read())
+                self.assertIn(value, encoding_open(fileName, 'r').read())
             multiLogFiles = job('-g', firstKey, '-g', secondKey).split()
             self.assertEqual(len(multiLogFiles), 2)
             self.assertNotEqual(multiLogFiles[0], multiLogFiles[1])
