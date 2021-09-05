@@ -70,7 +70,7 @@ def runDocker(version: VerInfo, cmd: List[str]):
         ) from er
 
 
-def execVersion(version: VerInfo, pipConf: str, upgrade: bool):
+def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str]):
     baseDir = os.path.join(os.getcwd(), f"docker-{version.version}")
     homeDir = os.path.join(baseDir, "home/me")
     cacheDir = os.path.join(homeDir, ".cache")
@@ -79,7 +79,7 @@ def execVersion(version: VerInfo, pipConf: str, upgrade: bool):
         if not os.path.isdir(dirName):
             os.makedirs(dirName)
 
-    with open("Pipfile") as f:
+    with open("Pipfile", encoding='utf-8') as f:
         pipfile = f.read()
     pipfile = re.sub(
         r"^\s*python_version\s*=\s*\S+$",
@@ -87,7 +87,7 @@ def execVersion(version: VerInfo, pipConf: str, upgrade: bool):
         pipfile,
         flags=re.MULTILINE,
     )
-    with open("Pipfile", "w") as f:
+    with open("Pipfile", "w", encoding='utf-8') as f:
         f.write(pipfile)
 
     mounts = [
@@ -105,23 +105,25 @@ def execVersion(version: VerInfo, pipConf: str, upgrade: bool):
     envs += [("PIPENV_CMD", "update" if upgrade else "sync")]
 
     dockerCmd = ["docker", "run", "--rm"]
+    if cmd:
+        dockerCmd += ["-i", "-t"]
     for mount in mounts:
         dockerCmd += ["-v", ":".join(mount)]
     for env in envs:
         dockerCmd += ["-e", "{}={}".format(*env)]
     dockerCmd += [f"python:{version.version}"]
-    dockerCmd += ["/src/test-docker-helper.sh"]
+    dockerCmd += cmd if cmd else ["/src/test-docker-helper.sh"]
     runDocker(version, dockerCmd)
 
 
 @contextlib.contextmanager
-def pipfileForVersion(version: VerInfo):
+def pipfileForVersion(version: VerInfo, keepModifiedPipfile: bool):
     if not version.default:
         shutil.copyfile(version.lock, "Pipfile.lock")
     try:
         yield
     finally:
-        if not version.default:
+        if not version.default and not keepModifiedPipfile:
             shutil.copyfile("Pipfile.lock", version.lock)
             subprocess.check_output(["git", "checkout",
                                      "Pipfile", "Pipfile.lock"])
@@ -139,7 +141,11 @@ def main() -> None:
     )
     ap.add_argument("-U", "--upgrade", action="store_true")
     ap.add_argument("-i", "--ignore-unclean", action="store_true")
+    ap.add_argument("cmd", nargs=argparse.REMAINDER)
     args = ap.parse_args()
+    cmd = args.cmd
+    if cmd and cmd[0].strip() == '--':
+        cmd.pop(0)
     versions: Iterable[VerInfo]
 
     if args.versions:
@@ -154,8 +160,8 @@ def main() -> None:
     pipConf = resolvePipConf()
 
     for version in versions:
-        with pipfileForVersion(version):
-            execVersion(version, pipConf, args.upgrade)
+        with pipfileForVersion(version, bool(cmd)):
+            execVersion(version, pipConf, args.upgrade, cmd)
 
 
 if __name__ == "__main__":
