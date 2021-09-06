@@ -10,13 +10,14 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Iterable, List
+from typing import Iterable, List, Tuple
 
 VerInfo = namedtuple("VerInfo", ("version", "lock", "default"))
 
 VERSIONS = (
     VerInfo("2.7", "Pipfile-2.7.lock", False),
     VerInfo("3.8", "Pipfile-3.8.lock", False),
+    VerInfo("3.9", "Pipfile-3.9.lock", False),
     VerInfo("3.7", "Pipfile.lock", True),
 )
 
@@ -70,7 +71,7 @@ def runDocker(version: VerInfo, cmd: List[str]):
         ) from er
 
 
-def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str]):
+def mountsForContainer(version: VerInfo, pipConf: str) -> List[Tuple[str, str]]:
     baseDir = os.path.join(os.getcwd(), f"docker-{version.version}")
     homeDir = os.path.join(baseDir, "home/me")
     cacheDir = os.path.join(homeDir, ".cache")
@@ -78,6 +79,16 @@ def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str
     for dirName in (cacheDir, localDir):
         if not os.path.isdir(dirName):
             os.makedirs(dirName)
+    mounts = [
+        (os.getcwd(), "/src"),
+        (homeDir, "/home/me"),
+        (pipConf, "/etc/pip.conf"),
+        (cacheDir, "/home/me/.cache"),
+    ]
+    return mounts
+
+
+def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str]):
 
     with open("Pipfile", encoding='utf-8') as f:
         pipfile = f.read()
@@ -90,12 +101,7 @@ def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str
     with open("Pipfile", "w", encoding='utf-8') as f:
         f.write(pipfile)
 
-    mounts = [
-        (os.getcwd(), "/src"),
-        (homeDir, "/home/me"),
-        (pipConf, "/etc/pip.conf"),
-        (cacheDir, "/home/me/.cache"),
-    ]
+    mounts = mountsForContainer(version, pipConf)
     envs = [
         ("HOME", "/home/me"),
         ("_NEW_UID", str(os.getuid())),
