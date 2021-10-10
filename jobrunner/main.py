@@ -5,6 +5,7 @@ import argparse
 import errno
 import hashlib
 import os
+from os.path import expanduser
 from subprocess import PIPE, CalledProcessError, Popen, check_call, check_output
 import sys
 import tempfile
@@ -210,6 +211,7 @@ def impl_main(args=None):
 
     if options.mail:
         # Collect output files as attachments from dep jobs
+        # pylint: disable=consider-using-with
         tmp = tempfile.NamedTemporaryFile(prefix='jobInfo-')
         options.input = tmp.name
         mailSize = 0
@@ -267,30 +269,30 @@ def waitForDep(depWait, options, jobs):
 
 def monitorForkedJob(job, jobs):
     monitorCmd = ["tail", "-n+0", "-f", job.logfile]
-    monitor = Popen(monitorCmd, stdout=sys.stdout, stderr=sys.stdout)
-    try:
-        active = True
-        rc = 0
-        while active:
-            LOG.debug("monitoring, sleep 0.5")
-            with lockedSection(jobs):
-                active = job.key in jobs.active.db
-                rc = None
-                if not active:
-                    rc = jobs.inactive[job.key].rc
-            time.sleep(0.5)
-            LOG.debug('active %s, rc %r', active, rc)
-        return rc
-    except KeyboardInterrupt:
-        LOG.debug('KeyboardInterrupt')
-        sprint("\n(Stop monitoring): {}".format(job))
-    except BaseException:
-        LOG.info('exception', exc_info=1)
-        raise
-    finally:
-        LOG.debug('terminate monitor subprocess')
-        monitor.terminate()
-        monitor.kill()
+    with Popen(monitorCmd, stdout=sys.stdout, stderr=sys.stdout) as monitor:
+        try:
+            active = True
+            rc = 0
+            while active:
+                LOG.debug("monitoring, sleep 0.5")
+                with lockedSection(jobs):
+                    active = job.key in jobs.active.db
+                    rc = None
+                    if not active:
+                        rc = jobs.inactive[job.key].rc
+                time.sleep(0.5)
+                LOG.debug('active %s, rc %r', active, rc)
+            return rc
+        except KeyboardInterrupt:
+            LOG.debug('KeyboardInterrupt')
+            sprint("\n(Stop monitoring): {}".format(job))
+        except BaseException:
+            LOG.info('exception', exc_info=1)
+            raise
+        finally:
+            LOG.debug('terminate monitor subprocess')
+            monitor.terminate()
+            monitor.kill()
         monitor.wait()
     return 0
 
@@ -366,11 +368,11 @@ def addNonExecOptions(op):
     op.add_argument("--dot", action='store_true',
                     help='Show dependency graph for active jobs')
     op.add_argument("--png", action='store_true',
-                    help='Create dependency graph svg for active jobs in '
-                    '~%s/output/job.svg' % os.getenv('USER'))
+                    help='Create dependency graph svg for active jobs in ' +
+                    expanduser('~/output/job.svg'))
     op.add_argument("--svg", action='store_true',
-                    help='Create dependency graph png for active jobs in '
-                    '~%s/output/job.svg' % os.getenv('USER'))
+                    help='Create dependency graph png for active jobs in ' +
+                    expanduser('~/output/job.svg'))
     op.add_argument("-L", "--list-inactive", action="store_true",
                     help="List inactive jobs")
     op.add_argument("-W", "--watch", action="store_true",
@@ -456,11 +458,11 @@ def handleNonExecOptions(options, jobs):
         if options.dot:
             sprint(dot)
         else:
-            fName = '~%s/output/job.svg' % os.getenv('USER')
+            fName = expanduser('~/output/job.svg')
             ofile = os.path.expanduser(fName)
             cmd = ['dot', '-Tsvg', '-o', ofile]
-            proc = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-            stdout, stderr = proc.communicate(input=dot.encode('utf-8'))
+            with Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE) as proc:
+                stdout, stderr = proc.communicate(input=dot.encode('utf-8'))
             if stdout.strip() or stderr.strip():
                 raise ExitCode(stdout + stderr)
             sprint('Saved output to', fName)
@@ -576,10 +578,10 @@ def handleNonExecWriteOptions(options, jobs):
     elif options.watch:
         try:
             jobs.watchActivity()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as err:
             sprint("")
             sprint("Exit on user interrupt")
-            raise ExitCode(1)
+            raise ExitCode(1) from err
         return True
     else:
         return False

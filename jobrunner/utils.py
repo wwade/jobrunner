@@ -5,7 +5,6 @@ from contextlib import contextmanager
 import datetime
 import errno
 import fcntl
-import inspect
 import logging
 import os
 import signal
@@ -175,16 +174,11 @@ def pidDebug(*args):
 FnDetails = collections.namedtuple('FnDetails', 'filename, lineno, funcname')
 
 
-def stackDetails(depth=0):
-    caller = inspect.stack()[depth + 1]
-    return FnDetails(caller[1], caller[2], caller[3])
-
-
 def workspaceIdentity():
     return MOD_STATE.plugins.workspaceIdentity()
 
 
-def getAllowed():
+def _getAllowed():
     allowed = (list(range(ord('a'), ord('z') + 1)) +
                list(range(ord('A'), ord('Z') + 1)) +
                list(range(ord('0'), ord('9') + 1)) +
@@ -194,7 +188,7 @@ def getAllowed():
 
 
 def keyEscape(inp):
-    allowed = getAllowed()
+    allowed = _getAllowed()
     ret = ""
     for char in inp:
         if char in allowed:
