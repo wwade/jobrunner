@@ -208,7 +208,7 @@ class JobInfo(object):
     def __lt__(self, other):
         return self.__cmp__(other) < 0
 
-    def __cmp__(self, other):  # pylint: disable=cmp-method
+    def __cmp__(self, other):
         if not isinstance(other, type(self)):
             return -1
         if self._stop is None:

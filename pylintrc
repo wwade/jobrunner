@@ -60,9 +60,8 @@ disable=invalid-name,
 
         useless-object-inheritance,
         super-with-arguments,
-        consider-using-with,  # because python2 pylint version
-        raise-missing-from,  # because python2 pylint version
         redundant-u-string-prefix,
+        consider-using-f-string,
 
 
 # Enable the message, report, category or checker with the given id(s). You can

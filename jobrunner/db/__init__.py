@@ -30,7 +30,6 @@ from ..utils import (
     pidDebug,
     safeSleep,
     sprint,
-    stackDetails,
     utcNow,
 )
 
@@ -246,27 +245,14 @@ class JobsBase(object):
     def setDbCaching(self, enabled):
         pass
 
-    def debugPrint(self, msg):
-        if "lock" not in self.config.debugLevel:
-            return
-        fnDetails = stackDetails(depth=2)
-        if fnDetails.funcname == 'lock' or fnDetails.funcname == 'unlock':
-            fnDetails = stackDetails(depth=3)
-        if fnDetails.funcname == '_locked':
-            fnDetails = stackDetails(depth=4)
-        pidDebug(msg, "from",
-                 fnDetails.filename, fnDetails.funcname, fnDetails.lineno)
-
     def isLocked(self):
         raise NotImplementedError
 
     def lock(self):
         LOGLOCK.debug("lock DB")
-        self.debugPrint("< LOCK DB")
 
     def unlock(self):
         LOGLOCK.debug("unlock DB")
-        self.debugPrint("< UNLOCK DB")
 
     def prune(self, exceptNum=None):
         allJobs = []
@@ -486,8 +472,8 @@ class JobsBase(object):
                     self.inactive, None, filterWs=thisWs)
             try:
                 return jobList[-1]
-            except IndexError:
-                raise NoMatchingJobError("Job database is empty")
+            except IndexError as err:
+                raise NoMatchingJobError("Job database is empty") from err
         elif key in self.active.db:
             # Exact match, try active first
             return self.active[key]
