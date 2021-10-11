@@ -641,7 +641,6 @@ def showPstreeForKey(key, jobs, options):
         sprint("PID not found", j.pid)
     sprint("==============================================")
 
-
 def parseArgs(args=None):
     if args is None:
         prog = sys.argv[0]
