@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import collections
 from contextlib import contextmanager
 import datetime
@@ -12,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import Optional
 
 import chardet
 import dateutil.tz
@@ -176,6 +175,13 @@ FnDetails = collections.namedtuple('FnDetails', 'filename, lineno, funcname')
 
 def workspaceIdentity():
     return MOD_STATE.plugins.workspaceIdentity()
+
+
+def workspaceProject() -> Optional[str]:
+    proj, ok = MOD_STATE.plugins.workspaceProject()
+    if ok:
+        return proj
+    return os.getenv("WP")
 
 
 def _getAllowed():

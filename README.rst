@@ -142,7 +142,7 @@ Create new virtualenv and install an editable version of ``jobrunner``:
 .. code:: console
 
     pipenv --three install --dev
-    pipenv run install -e .
+    pipenv run pip install -e .
 
 Autoformat the code and check linters:
 

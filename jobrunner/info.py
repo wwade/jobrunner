@@ -26,6 +26,7 @@ from .utils import (
     unlocked,
     utcNow,
     workspaceIdentity,
+    workspaceProject,
 )
 
 LOG = getLogger(__name__)
@@ -64,7 +65,7 @@ class JobInfo(object):
         self._user = os.getenv('USER')
         self._env = dict(os.environ)
         self._workspace = workspaceIdentity()
-        self._proj = os.getenv('WP')
+        self._proj = workspaceProject()
         self._rc = None
         self.logfile = None
         self._key = key
