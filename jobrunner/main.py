@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from __future__ import absolute_import, division, print_function
-
 import argparse
 import errno
 import hashlib
@@ -19,7 +17,7 @@ import jobrunner.logging
 
 from .argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
 from .binutils import binDescriptionWithStandardFooter
-from .compat import encoding_open
+from .compat import encoding_open, metadata
 from .config import Config
 from .db import NoMatchingJobError
 from .plugins import Plugins
@@ -433,6 +431,10 @@ def handleNonExecOptions(options, jobs):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-return-statements
     # pylint: disable=too-many-statements
+    if options.version:
+        version = metadata.version("shell-jobrunner")
+        print(f"Version {version}")
+        return True
     if options.list:
         includeReminders = len(options.list) > 1
         jobs.listActive(thisWs=options.tw, pane=options.tp,
