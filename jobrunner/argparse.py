@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import os
 
 
@@ -11,6 +9,12 @@ def addArgumentParserBaseFlags(parser, logfileName):
 
     Provides ALL flags required by the Config class.
     '''
+    parser.add_argument(
+        "-V", "--version",
+        help="Display version info",
+        action="store_true",
+    )
+
     parser.add_argument(
         "-v",
         dest="verbose",
