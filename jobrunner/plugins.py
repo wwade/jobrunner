@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function
-
 import importlib
 import pkgutil
 import socket
+from typing import Tuple
 import warnings
 
 import jobrunner.plugin
@@ -46,3 +45,15 @@ class Plugins(object):
                 if ret:
                     return ret
         return socket.gethostname()
+
+    def workspaceProject(self) -> Tuple[str, bool]:
+        """
+        If the current context has a notion of a "project name", return the project
+        name as well as a bool True to indicate that the plugin is authoritative.
+        """
+        for plugin in self.plugins:
+            if hasattr(plugin, 'workspaceProject'):
+                ret, ok = plugin.workspaceProject()
+                if ok:
+                    return ret, ok
+        return "", False

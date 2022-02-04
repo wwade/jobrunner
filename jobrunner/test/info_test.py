@@ -33,6 +33,7 @@ def setJobEnv(jobInfo, newEnv):
 def newJob(uidx, cmd, workspaceIdentity="WS"):
     mockPlug = mock.MagicMock(plugins.Plugins)
     mockPlug.workspaceIdentity.return_value = workspaceIdentity
+    mockPlug.workspaceProject.return_value = ("myProject", True)
     utils.MOD_STATE.plugins = mockPlug
     parent = mock.MagicMock(db.JobsBase)
     parent.inactive = mock.MagicMock(db.DatabaseBase)
