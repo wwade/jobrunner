@@ -1,15 +1,13 @@
-from __future__ import absolute_import, division, print_function
-
+from builtins import map, range
 import errno
 from functools import total_ordering
 from logging import getLogger
 import os
 import pipes
 import string
+from typing import List, Optional
 
 import dateutil.tz
-import six
-from six.moves import map, range
 
 from jobrunner import utils
 
@@ -52,7 +50,7 @@ class JobInfo(object):
     def __init__(self, uidx, key=None):
         self.prog = None
         self.args = None
-        self.cmd = None
+        self._cmd = None
         self.reminder = None
         self.pwd = None
         self._autoJob = None
@@ -88,13 +86,13 @@ class JobInfo(object):
         self.__dict__.update(dct)
 
     def isLocked(self):
-        return self._parent.isLocked()
+        return self.parent.isLocked()
 
     def lock(self):
-        self._parent.lock()
+        self.parent.lock()
 
     def unlock(self):
-        self._parent.unlock()
+        self.parent.unlock()
 
     @property
     def autoJob(self):
@@ -132,6 +130,7 @@ class JobInfo(object):
 
     @property
     def parent(self):
+        assert self._parent is not None
         return self._parent
 
     @parent.setter
@@ -143,7 +142,8 @@ class JobInfo(object):
         return self._proj
 
     @property
-    def rc(self):
+    def rc(self) -> int:
+        assert self._rc is not None
         return self._rc
 
     @property
@@ -262,14 +262,20 @@ class JobInfo(object):
         self._persistKeyGenerated = persistKey
         return
 
-    def persistKey(self, _inactive):
+    def persistKey(self):
         if self._persistKey:
             return self._persistKey
-        elif self._key:
-            return self._key
-        else:
-            assert False, "invalid call to persistKey()"
-            return None
+        assert self._key, "invalid call to persistKey()"
+        return self._key
+
+    @property
+    def cmd(self) -> List[str]:
+        assert self._cmd is not None
+        return self._cmd
+
+    @cmd.setter
+    def cmd(self, value):
+        self._cmd = value
 
     def setCmd(self, cmd, reminder=None):
         self.pwd = os.getcwd()
@@ -346,7 +352,7 @@ class JobInfo(object):
         self.pid = None
         del parent.active[self.key]
         self.genPersistKey()
-        k = self.persistKey(parent.inactive)
+        k = self.persistKey()
         parent.inactive[k] = self
 
     @unlocked
@@ -384,6 +390,7 @@ class JobInfo(object):
         return str(stop - self.startTime).split('.', 1)[0]
 
     def removeLog(self, verbose):
+        assert self.logfile is not None
         if os.access(self.logfile, os.F_OK):
             if verbose:
                 sprint("Remove logfile '%s'" % self.logfile)
@@ -405,7 +412,7 @@ class JobInfo(object):
 
     def getEnvironment(self):
         ret = "\n"
-        for k, v in sorted(six.iteritems(self._env)):
+        for k, v in sorted(self._env.items()):
             ret += "\t%s=%s\n" % (self.escEnv(k), self.escEnv(v))
         return ret
 
@@ -581,6 +588,8 @@ def encodeJobInfo(obj):
 def decodeJobInfo(odict):
     if '_uidx' not in odict:
         return odict
+    if 'cmd' in odict:
+        odict['_cmd'] = odict.pop('cmd')
     uidx = odict['_uidx']
     newJob = service().db.jobInfo(uidx)
     for dateTimeKey in DATETIME_KEYS:

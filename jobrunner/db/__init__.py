@@ -8,6 +8,7 @@ import os.path
 import sys
 import tempfile
 import time
+from typing import Optional
 from uuid import uuid4
 
 from dateutil import parser
@@ -238,9 +239,27 @@ class JobsBase(object):
         self.plugins = plugins
         self._instanceId = uuid4().hex
         self.displayPending = set()
-        self.active = None
-        self.inactive = None
+        self._active: Optional[DatabaseBase] = None
+        self._inactive: Optional[DatabaseBase] = None
         self._lock = FileLock(self.config.lockFile)
+
+    @property
+    def active(self) -> DatabaseBase:
+        assert self._active
+        return self._active
+
+    @active.setter
+    def active(self, value: DatabaseBase) -> None:
+        self._active = value
+
+    @property
+    def inactive(self) -> DatabaseBase:
+        assert self._inactive
+        return self._inactive
+
+    @inactive.setter
+    def inactive(self, value: DatabaseBase) -> None:
+        self._inactive = value
 
     def setDbCaching(self, enabled):
         pass

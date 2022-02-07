@@ -19,7 +19,8 @@ from .argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
 from .binutils import binDescriptionWithStandardFooter
 from .compat import encoding_open, metadata
 from .config import Config
-from .db import NoMatchingJobError
+from .db import JobsBase, NoMatchingJobError
+from .info import JobInfo
 from .plugins import Plugins
 from .service import service
 from .service.registry import registerServices
@@ -57,7 +58,7 @@ def impl_main(args=None):
 
     options = parseArgs(args)
     config = Config(options)
-    jobs = service().db.jobs(config, plugins)
+    jobs: JobsBase = service().db.jobs(config, plugins)
 
     jobrunner.logging.setup(
         config.logDir,
@@ -84,6 +85,7 @@ def impl_main(args=None):
         if options.cc:
             for ccAddr in options.cc:
                 if '@' not in ccAddr:
+                    assert config.mailDomain
                     ccAddr += '@' + config.mailDomain
                 cmd += ['-c', ccAddr]
         if config.mailProgram == 'chatmail':
@@ -136,6 +138,8 @@ def impl_main(args=None):
         jobs.unlock()
         sys.exit(rc)
 
+    job: JobInfo
+    fd: int
     job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
                        key=options.key, reminder=options.reminder)
     job.genPersistKey()
@@ -175,7 +179,7 @@ def impl_main(args=None):
             sprint("\ninterrupted")
             aborted = True
         finally:
-            LOG.debug("unlocked %s", job, exc_info=1)
+            LOG.debug("unlocked %s", job, exc_info=True)
             job.unblocked(jobs)
             job.setDependencies(jobs, None)
     if aborted:
@@ -215,6 +219,7 @@ def impl_main(args=None):
         mailSize = 0
 
         # Remove 'to' address temporarily
+        assert cmd is not None
         lastArg = cmd.pop(-1)
         for j in mailDeps:
             depJob = jobs.inactive[j.permKey]
@@ -285,7 +290,7 @@ def monitorForkedJob(job, jobs):
             LOG.debug('KeyboardInterrupt')
             sprint("\n(Stop monitoring): {}".format(job))
         except BaseException:
-            LOG.info('exception', exc_info=1)
+            LOG.info('exception', exc_info=True)
             raise
         finally:
             LOG.debug('terminate monitor subprocess')
@@ -426,7 +431,7 @@ def addNonExecOptions(op):
                     "specified window")
 
 
-def handleNonExecOptions(options, jobs):
+def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-return-statements
@@ -652,7 +657,7 @@ def parseArgs(args=None):
         prog = None
 
     op = argparse.ArgumentParser(
-        prog=os.path.basename(prog),
+        prog=os.path.basename(prog) if prog else "job",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=DESC)
     op.add_argument("program", nargs='?')
@@ -797,22 +802,22 @@ def runJob(cmd, options, jobs, job, fd, doIsolate):
         rc = check_call(cmd, stdin=fpIn, stdout=fd, stderr=fd)
         LOG.debug("check_call() => rc=%d", rc)
     except KeyboardInterrupt:
-        LOG.debug("KeyboardInterrupt", exc_info=1)
+        LOG.debug("KeyboardInterrupt", exc_info=True)
         sprint("\ninterrupted")
         rc = -1
     except OSError as err:
-        LOG.debug("OSError %s", err, exc_info=1)
+        LOG.debug("OSError %s", err, exc_info=True)
         rc = -1 * err.errno
         sprint(err, file=encoding_open(job.logfile, 'a'))
     except CalledProcessError as err:
-        LOG.debug("CalledProcessError %s", err, exc_info=1)
+        LOG.debug("CalledProcessError %s", err, exc_info=True)
         rc = err.returncode
     except Exception:
-        LOG.debug("General exception", exc_info=1)
+        LOG.debug("General exception", exc_info=True)
         rc = -1
         raise
     finally:
-        LOG.debug("stop job, it has finished %s", job, exc_info=1)
+        LOG.debug("stop job, it has finished %s", job, exc_info=True)
         jobs.lock()
         LOG.debug("locked DB, writing 'stop' status rc=%d", rc)
         job.stop(jobs, rc)
