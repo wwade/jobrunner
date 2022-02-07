@@ -5,7 +5,7 @@ from logging import getLogger
 import os
 import pipes
 import string
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import dateutil.tz
 
@@ -47,6 +47,12 @@ def cmdString(cmd):
 @total_ordering
 class JobInfo(object):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
+    _unresolved = object()
+
+    @classmethod
+    def isUnresolved(cls, obj: Any) -> bool:
+        return obj is cls._unresolved
+
     def __init__(self, uidx, key=None):
         self.prog = None
         self.args = None
@@ -62,8 +68,8 @@ class JobInfo(object):
         self._host = os.getenv('HOSTNAME')
         self._user = os.getenv('USER')
         self._env = dict(os.environ)
-        self._workspace = workspaceIdentity()
-        self._proj = workspaceProject()
+        self._workspace = self.__class__._unresolved
+        self._proj = self.__class__._unresolved
         self._rc = None
         self.logfile = None
         self._key = key
@@ -76,6 +82,12 @@ class JobInfo(object):
         self._uidx = uidx
         self._mailJob = False
         self._isolate = False
+
+    def resolve(self, force=False):
+        if force or self.__class__.isUnresolved(self._workspace):
+            self._workspace = workspaceIdentity()
+        if force or self.__class__.isUnresolved(self._proj):
+            self._proj = workspaceProject()
 
     def __getstate__(self):
         odict = self.__dict__.copy()
@@ -138,10 +150,6 @@ class JobInfo(object):
         self._parent = parent
 
     @property
-    def proj(self):
-        return self._proj
-
-    @property
     def rc(self) -> int:
         assert self._rc is not None
         return self._rc
@@ -162,8 +170,8 @@ class JobInfo(object):
         return self._persistKeyGenerated
     persistKeyGenerated = property(persistKeyGeneratedGet)
 
-    def wsBasename(self):
-        return getattr(self, '_workspace')
+    def wsBasename(self) -> Optional[str]:
+        return self.workspace
 
     def cmpCommon(self, other, order):
         for func in order:
@@ -340,6 +348,7 @@ class JobInfo(object):
 
     @locked
     def start(self, parent):
+        self.resolve(force=True)
         self._start = utcNow()
         parent.inactive.lastKey = self.key
         self.genPersistKey()
@@ -451,8 +460,16 @@ class JobInfo(object):
             return None
 
     @property
-    def workspace(self):
-        return getattr(self, '_workspace')
+    def workspace(self) -> Optional[str]:
+        if isinstance(self._workspace, str):
+            return self._workspace
+        return None
+
+    @property
+    def proj(self) -> Optional[str]:
+        if isinstance(self._proj, str):
+            return self._proj
+        return None
 
     def getValue(self, what):
         items = {
@@ -582,6 +599,8 @@ def encodeJobInfo(obj):
             odict[dateTimeKey] = dateTimeToJson(odict.get(dateTimeKey))
         odict['_alldeps'] = list(odict.get('_alldeps', []))
         return odict
+    if JobInfo.isUnresolved(obj):
+        return None
     raise TypeError(repr(obj) + " is not JSON serializable")
 
 

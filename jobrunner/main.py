@@ -140,8 +140,9 @@ def impl_main(args=None):
 
     job: JobInfo
     fd: int
-    job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job,
-                       key=options.key, reminder=options.reminder)
+    job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job, key=options.key,
+                       reminder=options.reminder)
+    job.resolve()
     job.genPersistKey()
     jobs.active[job.key] = job
 
