@@ -1,15 +1,13 @@
-from __future__ import absolute_import, division, print_function
-
+from builtins import map, range
 import errno
 from functools import total_ordering
 from logging import getLogger
 import os
 import pipes
 import string
+from typing import Any, List, Optional
 
 import dateutil.tz
-import six
-from six.moves import map, range
 
 from jobrunner import utils
 
@@ -49,10 +47,16 @@ def cmdString(cmd):
 @total_ordering
 class JobInfo(object):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
+    _unresolved = object()
+
+    @classmethod
+    def isUnresolved(cls, obj: Any) -> bool:
+        return obj is cls._unresolved
+
     def __init__(self, uidx, key=None):
         self.prog = None
         self.args = None
-        self.cmd = None
+        self._cmd = None
         self.reminder = None
         self.pwd = None
         self._autoJob = None
@@ -64,8 +68,8 @@ class JobInfo(object):
         self._host = os.getenv('HOSTNAME')
         self._user = os.getenv('USER')
         self._env = dict(os.environ)
-        self._workspace = workspaceIdentity()
-        self._proj = workspaceProject()
+        self._workspace = self.__class__._unresolved
+        self._proj = self.__class__._unresolved
         self._rc = None
         self.logfile = None
         self._key = key
@@ -79,6 +83,12 @@ class JobInfo(object):
         self._mailJob = False
         self._isolate = False
 
+    def resolve(self, force=False):
+        if force or self.__class__.isUnresolved(self._workspace):
+            self._workspace = workspaceIdentity()
+        if force or self.__class__.isUnresolved(self._proj):
+            self._proj = workspaceProject()
+
     def __getstate__(self):
         odict = self.__dict__.copy()
         del odict['_parent']
@@ -88,13 +98,13 @@ class JobInfo(object):
         self.__dict__.update(dct)
 
     def isLocked(self):
-        return self._parent.isLocked()
+        return self.parent.isLocked()
 
     def lock(self):
-        self._parent.lock()
+        self.parent.lock()
 
     def unlock(self):
-        self._parent.unlock()
+        self.parent.unlock()
 
     @property
     def autoJob(self):
@@ -132,6 +142,7 @@ class JobInfo(object):
 
     @property
     def parent(self):
+        assert self._parent is not None
         return self._parent
 
     @parent.setter
@@ -139,11 +150,8 @@ class JobInfo(object):
         self._parent = parent
 
     @property
-    def proj(self):
-        return self._proj
-
-    @property
-    def rc(self):
+    def rc(self) -> int:
+        assert self._rc is not None
         return self._rc
 
     @property
@@ -162,8 +170,8 @@ class JobInfo(object):
         return self._persistKeyGenerated
     persistKeyGenerated = property(persistKeyGeneratedGet)
 
-    def wsBasename(self):
-        return getattr(self, '_workspace')
+    def wsBasename(self) -> Optional[str]:
+        return self.workspace
 
     def cmpCommon(self, other, order):
         for func in order:
@@ -262,14 +270,20 @@ class JobInfo(object):
         self._persistKeyGenerated = persistKey
         return
 
-    def persistKey(self, _inactive):
+    def persistKey(self):
         if self._persistKey:
             return self._persistKey
-        elif self._key:
-            return self._key
-        else:
-            assert False, "invalid call to persistKey()"
-            return None
+        assert self._key, "invalid call to persistKey()"
+        return self._key
+
+    @property
+    def cmd(self) -> List[str]:
+        assert self._cmd is not None
+        return self._cmd
+
+    @cmd.setter
+    def cmd(self, value):
+        self._cmd = value
 
     def setCmd(self, cmd, reminder=None):
         self.pwd = os.getcwd()
@@ -334,6 +348,7 @@ class JobInfo(object):
 
     @locked
     def start(self, parent):
+        self.resolve(force=True)
         self._start = utcNow()
         parent.inactive.lastKey = self.key
         self.genPersistKey()
@@ -346,7 +361,7 @@ class JobInfo(object):
         self.pid = None
         del parent.active[self.key]
         self.genPersistKey()
-        k = self.persistKey(parent.inactive)
+        k = self.persistKey()
         parent.inactive[k] = self
 
     @unlocked
@@ -384,6 +399,7 @@ class JobInfo(object):
         return str(stop - self.startTime).split('.', 1)[0]
 
     def removeLog(self, verbose):
+        assert self.logfile is not None
         if os.access(self.logfile, os.F_OK):
             if verbose:
                 sprint("Remove logfile '%s'" % self.logfile)
@@ -405,7 +421,7 @@ class JobInfo(object):
 
     def getEnvironment(self):
         ret = "\n"
-        for k, v in sorted(six.iteritems(self._env)):
+        for k, v in sorted(self._env.items()):
             ret += "\t%s=%s\n" % (self.escEnv(k), self.escEnv(v))
         return ret
 
@@ -444,8 +460,16 @@ class JobInfo(object):
             return None
 
     @property
-    def workspace(self):
-        return getattr(self, '_workspace')
+    def workspace(self) -> Optional[str]:
+        if isinstance(self._workspace, str):
+            return self._workspace
+        return None
+
+    @property
+    def proj(self) -> Optional[str]:
+        if isinstance(self._proj, str):
+            return self._proj
+        return None
 
     def getValue(self, what):
         items = {
@@ -575,12 +599,16 @@ def encodeJobInfo(obj):
             odict[dateTimeKey] = dateTimeToJson(odict.get(dateTimeKey))
         odict['_alldeps'] = list(odict.get('_alldeps', []))
         return odict
+    if JobInfo.isUnresolved(obj):
+        return None
     raise TypeError(repr(obj) + " is not JSON serializable")
 
 
 def decodeJobInfo(odict):
     if '_uidx' not in odict:
         return odict
+    if 'cmd' in odict:
+        odict['_cmd'] = odict.pop('cmd')
     uidx = odict['_uidx']
     newJob = service().db.jobInfo(uidx)
     for dateTimeKey in DATETIME_KEYS:

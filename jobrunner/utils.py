@@ -18,6 +18,7 @@ from six import text_type
 from six.moves import map, range
 
 from .compat import encoding_open
+from .plugins import Plugins
 
 PRUNE_NUM = 5000
 DATETIME_FMT = "%a %b %e, %Y %X %Z"
@@ -56,15 +57,15 @@ def sprint(*args, **kwargs):
 
 
 class ModState(object):
-    def __init__(self):
-        self._plugins = None
+    def __init__(self) -> None:
+        self._plugins: Optional[Plugins] = None
 
     @property
-    def plugins(self):
+    def plugins(self) -> Optional[Plugins]:
         return self._plugins
 
     @plugins.setter
-    def plugins(self, plugins):
+    def plugins(self, plugins: Plugins) -> None:
         self._plugins = plugins
 
 
@@ -173,11 +174,13 @@ def pidDebug(*args):
 FnDetails = collections.namedtuple('FnDetails', 'filename, lineno, funcname')
 
 
-def workspaceIdentity():
+def workspaceIdentity() -> Optional[str]:
+    assert MOD_STATE.plugins
     return MOD_STATE.plugins.workspaceIdentity()
 
 
 def workspaceProject() -> Optional[str]:
+    assert MOD_STATE.plugins
     proj, ok = MOD_STATE.plugins.workspaceProject()
     if ok:
         return proj
