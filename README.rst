@@ -31,7 +31,7 @@ Uninstallation
 
 
 .. |PyPI Release| image:: https://badge.fury.io/py/jobrunner-git.svg
-   :target: https://badge.fury.io/py/jobrunner-git
+    :target: https://badge.fury.io/py/jobrunner-git
    
 .. |shell-jobrunner Release| image:: https://badge.fury.io/py/shell-jobrunner.svg
    :target: https://badge.fury.io/py/shell-jobrunner
