@@ -10,6 +10,7 @@ isort = "*"
 modernize = "*"
 pylint = "*"
 pytest = "*"
+setuptools-scm = "*"
 mypy = "*"
 jobrunner-git = {editable = true, path = "."}
 
