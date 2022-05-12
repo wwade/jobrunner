@@ -126,10 +126,10 @@ class FileLock(object):
 
     def __del__(self):
         if self._fp:
-            sprint(os.getpid(), "WARNING: termination without unlocking")
+            sprint(os.getpid(),
+                   "WARNING: termination without unlocking",
+                   file=sys.stderr)
             self.unlock()
-            self._fp.close()
-            self._fp = None
 
     def isLocked(self):
         return bool(self._fp)

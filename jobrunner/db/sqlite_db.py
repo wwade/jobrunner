@@ -26,6 +26,9 @@ class Sqlite3KeyValueStore(DatabaseMeta):
         cursor = self._doQuery(query)
         return int(cursor.fetchone()[0])
 
+    def debug(self, fmt, *args):
+        LOG.debug("%-13s " + fmt, *([f"[{self._table}]"] + list(args)))
+
     @property
     def dirty(self):
         return self._dirty
@@ -33,16 +36,16 @@ class Sqlite3KeyValueStore(DatabaseMeta):
     def _setDirty(self, _key):
         assert self._locked
         self._dirty += 1
-        LOG.debug("dirty -> %d", self._dirty)
+        self.debug("dirty -> %d", self._dirty)
 
     def lock(self):
         assert not self._locked
-        LOG.debug("set locked")
+        self.debug("set locked")
         self._locked = True
 
     def unlock(self):
         assert self._locked
-        LOG.debug("set unlocked")
+        self.debug("set unlocked")
         self._locked = False
 
     def __setitem__(self, key, value):
@@ -91,12 +94,12 @@ class Sqlite3KeyValueStore(DatabaseMeta):
 
     def _createNew(self, cursor):
         cursor.execute("DROP TABLE IF EXISTS " + self._table)
-        cursor.execute("""
-        CREATE TABLE {} (
+        cursor.execute(f"""
+        CREATE TABLE {self._table} (
             key TEXT PRIMARY KEY,
             value TEXT
         )
-        """.format(self._table))
+        """)
         for key, value in self.defaultValueGenerator(self._schemaVersion):
             cursor.execute("INSERT INTO " + self._table + " VALUES (?, ?)",
                            (key, value))
@@ -159,7 +162,7 @@ def connectDb(filename):
 
 class Sqlite3Jobs(JobsBase):
     def __init__(self, config, plugins):
-        super(Sqlite3Jobs, self).__init__(config, plugins)
+        super().__init__(config, plugins)
         self._filename = resolveDbFile(config, 'jobsDb.sqlite')
         self._lock.lock()
         conn = connectDb(self._filename)
@@ -174,7 +177,7 @@ class Sqlite3Jobs(JobsBase):
         return self._lock.isLocked()
 
     def lock(self):
-        super(Sqlite3Jobs, self).lock()
+        super().lock()
         self._lock.lock()
         conn = connectDb(self._filename)
         self.active.conn = conn
@@ -184,7 +187,7 @@ class Sqlite3Jobs(JobsBase):
         conn.execute("begin")
 
     def unlock(self):
-        super(Sqlite3Jobs, self).unlock()
+        super().unlock()
         conn = self.active.conn
         if self.active.dirty or self.inactive.dirty:
             conn.commit()
