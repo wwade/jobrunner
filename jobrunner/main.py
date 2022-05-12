@@ -66,89 +66,86 @@ def impl_main(args=None):
         debug=options.debug)
     LOG.debug("starting with args %s", options)
     LOG.debug("python: %s", sys.version)
-    jobs.lock()
-    maybeHandleNonExecOptions(options, jobs)
-    maybeHandleNonExecWriteOptions(options, jobs)
+    with lockedSection(jobs):
+        maybeHandleNonExecOptions(options, jobs)
+        maybeHandleNonExecWriteOptions(options, jobs)
 
-    setQuiet(options.quiet)
+        setQuiet(options.quiet)
 
-    doIsolate = options.isolate
-    cmd = []
-    if options.mail:
-        oneJob = jobs.getJobMatch(options.mail[0], options.tw)
-        subj = '[job-status] '
-        if len(options.mail) > 1:
-            subj += "Multiple jobs: %s" % repr(options.mail)
+        doIsolate = options.isolate
+        cmd = []
+        if options.mail:
+            oneJob = jobs.getJobMatch(options.mail[0], options.tw)
+            subj = '[job-status] '
+            if len(options.mail) > 1:
+                subj += "Multiple jobs: %s" % repr(options.mail)
+            else:
+                subj += str(oneJob)
+            cmd.extend([config.mailProgram, '-s', subj])
+            if options.cc:
+                for ccAddr in options.cc:
+                    if '@' not in ccAddr:
+                        assert config.mailDomain
+                        ccAddr += '@' + config.mailDomain
+                    cmd += ['-c', ccAddr]
+            if config.mailProgram == 'chatmail':
+                # Special case for built-in chatmail, which should inherit any of the
+                # base args given to job, such as which rc file to use, etc.
+                cmd.extend(baseParsedArgsToArgList(args or sys.argv, options))
+            cmd.append(options.to)
+        elif options.command:
+            bashCmd = postCommand(options.command)
+            cmd = ['bash', '-c', bashCmd]
+        elif options.retry:
+            oldJob = jobs.getJobMatch(options.retry, options.tw)
+            if os.getcwd() != oldJob.pwd:
+                sprint(
+                    "NOTE: Changing directory to '%s' to retry job." %
+                    oldJob.pwd)
+                os.chdir(oldJob.pwd)
+            sprint("retry job '%s'" % oldJob.cmdStr)
+            cmd = oldJob.cmd
+            if oldJob.isolate:
+                doIsolate = oldJob.isolate
+        elif options.reminder:
+            cmd = None
+        elif options.program:
+            cmd = [options.program]
+            if options.args:
+                cmd = cmd + postCommand(options.args)
+        elif options.wait:
+            pass
         else:
-            subj += str(oneJob)
-        cmd.extend([config.mailProgram, '-s', subj])
-        if options.cc:
-            for ccAddr in options.cc:
-                if '@' not in ccAddr:
-                    assert config.mailDomain
-                    ccAddr += '@' + config.mailDomain
-                cmd += ['-c', ccAddr]
-        if config.mailProgram == 'chatmail':
-            # Special case for built-in chatmail, which should inherit any of the
-            # base args given to job, such as which rc file to use, etc.
-            cmd.extend(baseParsedArgsToArgList(args or sys.argv, options))
-        cmd.append(options.to)
-    elif options.command:
-        bashCmd = postCommand(options.command)
-        cmd = ['bash', '-c', bashCmd]
-    elif options.retry:
-        oldJob = jobs.getJobMatch(options.retry, options.tw)
-        if os.getcwd() != oldJob.pwd:
-            sprint(
-                "NOTE: Changing directory to '%s' to retry job." %
-                oldJob.pwd)
-            os.chdir(oldJob.pwd)
-        sprint("retry job '%s'" % oldJob.cmdStr)
-        cmd = oldJob.cmd
-        if oldJob.isolate:
-            doIsolate = oldJob.isolate
-    elif options.reminder:
-        cmd = None
-    elif options.program:
-        cmd = [options.program]
-        if options.args:
-            cmd = cmd + postCommand(options.args)
-    elif options.wait:
-        pass
-    else:
-        try:
-            sprint(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
-        except NoMatchingJobError as error:
-            jobs.unlock()
-            sprint("Error:", error)
-            sys.exit(1)
-        jobs.unlock()
-        sys.exit(0)
+            try:
+                sprint(jobs.getLog(key=None, thisWs=options.tw, skipReminders=True))
+            except NoMatchingJobError as error:
+                sprint("Error:", error)
+                sys.exit(1)
+            sys.exit(0)
 
-    deps = []
-    depSuccess = []
-    depWait = []
-    jobs.addDeps(options.blocked_by, options.tw, deps, None)
-    jobs.addDeps(options.wait, options.tw, deps, depWait)
-    jobs.addDeps(options.blocked_by_success, options.tw, deps, depSuccess)
-    jobs.addDeps(options.mail, options.tw, deps, None)
+        deps = []
+        depSuccess = []
+        depWait = []
+        jobs.addDeps(options.blocked_by, options.tw, deps, None)
+        jobs.addDeps(options.wait, options.tw, deps, depWait)
+        jobs.addDeps(options.blocked_by_success, options.tw, deps, depSuccess)
+        jobs.addDeps(options.mail, options.tw, deps, None)
 
-    if depWait:
-        rc = waitForDep(depWait, options, jobs)
-        jobs.unlock()
-        sys.exit(rc)
+        if depWait:
+            rc = waitForDep(depWait, options, jobs)
+            sys.exit(rc)
 
-    job: JobInfo
-    fd: int
-    job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job, key=options.key,
-                       reminder=options.reminder)
-    job.resolve()
-    job.genPersistKey()
-    jobs.active[job.key] = job
+        job: JobInfo
+        fd: int
+        job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job, key=options.key,
+                           reminder=options.reminder)
+        job.resolve()
+        job.genPersistKey()
+        jobs.active[job.key] = job
 
+    # unlocked
     scriptName = os.path.basename(sys.argv[0])
     if scriptName == 'job' and not options.foreground:
-        jobs.unlock()
         childPid = os.fork()
         if childPid > 0:
             LOG.info("forked child %d, close %d", childPid, fd)
@@ -158,88 +155,87 @@ def impl_main(args=None):
                 rc = monitorForkedJob(job, jobs)
             sys.exit(rc)
         os.setsid()
-        job.pid = os.getpid()
-        jobs.lock()
+    job.pid = os.getpid()
+
+    with lockedSection(jobs):
         jobs.active[job.key] = job
 
-    if options.mail:
-        job.mailJob = True
+        if options.mail:
+            job.mailJob = True
 
-    aborted = False
-    mailDeps = []
-    if deps:
-        try:
-            job.blocked(jobs)
-            while deps:
-                job.setDependencies(jobs, deps)
-                dep = deps.pop(0)
-                LOG.debug("wait for dep %s", dep)
-                jobs.waitFor(dep, options.verbose)
-                mailDeps.append(dep)
-        except KeyboardInterrupt:
-            sprint("\ninterrupted")
-            aborted = True
-        finally:
-            LOG.debug("unlocked %s", job, exc_info=True)
-            job.unblocked(jobs)
-            job.setDependencies(jobs, None)
-    if aborted:
-        LOG.debug("aborted %s", job)
-        job.stop(jobs, STOP_ABORT)
-        jobs.unlock()
-        sys.exit(-1)
-
-    for oldJob in depSuccess:
-        k = oldJob.permKey
-        jobs.waitInactive(k, options.verbose)
-        j = jobs.inactive[k]
-        if j.rc != 0:
-            out = "Dependent job failed: {}\n".format(j)
-            out += "{}\n".format(j.detail("vvv"))
-            LOG.debug("out %s", out)
-            os.write(fd, out.encode('utf-8'))
-            job.stop(jobs, STOP_DEPFAIL)
-            sprint("\nDependent job failed: %s" % j)
-            sprint("key: %s" % job.key)
-            sprint("return code: %d" % j.rc)
-            jobs.unlock()
-            sys.exit(j.rc)
-
-    job.start(jobs)
-    LOG.debug("started job %s", job)
-    if cmd is None and options.reminder is not None:
-        sprint("reminder: '%s'" % options.reminder)
-        jobs.unlock()
-        sys.exit(0)
-
-    if options.mail:
-        # Collect output files as attachments from dep jobs
-        # pylint: disable=consider-using-with
-        tmp = tempfile.NamedTemporaryFile(prefix='jobInfo-')
-        options.input = tmp.name
-        mailSize = 0
-
-        # Remove 'to' address temporarily
-        assert cmd is not None
-        lastArg = cmd.pop(-1)
-        for j in mailDeps:
-            depJob = jobs.inactive[j.permKey]
-            safeWrite(tmp, depJob.detail(options.verbose))
-            safeWrite(tmp, "\n" + SPACER_EACH + "\n")
-            lines = autoDecode(check_output(['tail', '-n20', depJob.logfile]))
-            safeWrite(tmp, lines)
-            safeWrite(tmp, SPACER_EACH + "\n")
-            safeWrite(tmp, "\n")
+        aborted = False
+        mailDeps = []
+        if deps:
             try:
-                stat = os.stat(depJob.logfile)
-            except OSError:
-                continue
-            if (mailSize + stat.st_size * 4 / 3) < 8 * 1024 * 1024:
-                mailSize += stat.st_size
-                cmd += ['-a', depJob.logfile]
-        tmp.flush()
-        cmd.append(lastArg)
+                job.blocked(jobs)
+                while deps:
+                    job.setDependencies(jobs, deps)
+                    dep = deps.pop(0)
+                    LOG.debug("wait for dep %s", dep)
+                    jobs.waitFor(dep, options.verbose)
+                    mailDeps.append(dep)
+            except KeyboardInterrupt:
+                sprint("\ninterrupted")
+                aborted = True
+            finally:
+                LOG.debug("unlocked %s", job, exc_info=True)
+                job.unblocked(jobs)
+                job.setDependencies(jobs, None)
+        if aborted:
+            LOG.debug("aborted %s", job)
+            job.stop(jobs, STOP_ABORT)
+            sys.exit(-1)
 
+        for oldJob in depSuccess:
+            k = oldJob.permKey
+            jobs.waitInactive(k, options.verbose)
+            j = jobs.inactive[k]
+            if j.rc != 0:
+                out = "Dependent job failed: {}\n".format(j)
+                out += "{}\n".format(j.detail("vvv"))
+                LOG.debug("out %s", out)
+                os.write(fd, out.encode('utf-8'))
+                job.stop(jobs, STOP_DEPFAIL)
+                sprint("\nDependent job failed: %s" % j)
+                sprint("key: %s" % job.key)
+                sprint("return code: %d" % j.rc)
+                sys.exit(j.rc)
+
+        job.start(jobs)
+        LOG.debug("started job %s", job)
+        if cmd is None and options.reminder is not None:
+            sprint("reminder: '%s'" % options.reminder)
+            sys.exit(0)
+
+        if options.mail:
+            # Collect output files as attachments from dep jobs
+            # pylint: disable=consider-using-with
+            tmp = tempfile.NamedTemporaryFile(prefix='jobInfo-')
+            options.input = tmp.name
+            mailSize = 0
+
+            # Remove 'to' address temporarily
+            assert cmd is not None
+            lastArg = cmd.pop(-1)
+            for j in mailDeps:
+                depJob = jobs.inactive[j.permKey]
+                safeWrite(tmp, depJob.detail(options.verbose))
+                safeWrite(tmp, "\n" + SPACER_EACH + "\n")
+                lines = autoDecode(check_output(['tail', '-n20', depJob.logfile]))
+                safeWrite(tmp, lines)
+                safeWrite(tmp, SPACER_EACH + "\n")
+                safeWrite(tmp, "\n")
+                try:
+                    stat = os.stat(depJob.logfile)
+                except OSError:
+                    continue
+                if (mailSize + stat.st_size * 4 / 3) < 8 * 1024 * 1024:
+                    mailSize += stat.st_size
+                    cmd += ['-a', depJob.logfile]
+            tmp.flush()
+            cmd.append(lastArg)
+
+    # unlocked
     runJob(cmd, options, jobs, job, fd, doIsolate)
 
 
@@ -516,7 +512,6 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         for index in options.index:
             logs.append(jobs.getLogByIndex(index, options.tw))
         sprint(" ".join(logs))
-        jobs.unlock()
         sys.exit(0)
     elif options.info:
         sprint(jobs.active)
@@ -754,14 +749,11 @@ def maybeHandle(options, jobs, handler):
     try:
         handled = handler(options, jobs)
         if handled:
-            jobs.unlock()
             sys.exit(0)
     except NoMatchingJobError as error:
-        jobs.unlock()
         print("Error:", error, file=sys.stderr)
         sys.exit(1)
     except ExitCode as exitCode:
-        jobs.unlock()
         sys.exit(exitCode.rc)
 
 
@@ -798,7 +790,6 @@ def runJob(cmd, options, jobs, job, fd, doIsolate):
         cmd = handleIsolate(cmd)
 
     try:
-        jobs.unlock()
         LOG.debug("starting check_call()")
         rc = check_call(cmd, stdin=fpIn, stdout=fd, stderr=fd)
         LOG.debug("check_call() => rc=%d", rc)
@@ -819,14 +810,13 @@ def runJob(cmd, options, jobs, job, fd, doIsolate):
         raise
     finally:
         LOG.debug("stop job, it has finished %s", job, exc_info=True)
-        jobs.lock()
-        LOG.debug("locked DB, writing 'stop' status rc=%d", rc)
-        job.stop(jobs, rc)
-        os.fsync(fd)
-        LOG.debug("locked DB, writing 'finish' status rc=%d", rc)
-        finish(job, rc)
-        jobs.unlock()
-        LOG.debug("unlocked, should now exit rc=%d", rc)
+        with lockedSection(jobs):
+            LOG.debug("locked DB, writing 'stop' status rc=%d", rc)
+            job.stop(jobs, rc)
+            os.fsync(fd)
+            LOG.debug("locked DB, writing 'finish' status rc=%d", rc)
+            finish(job, rc)
+            LOG.debug("unlocked, should now exit rc=%d", rc)
     LOG.debug("exit rc=%d", rc)
     sys.exit(rc)
 
