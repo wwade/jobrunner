@@ -264,6 +264,7 @@ class RunMailTest(TestCase):
     Test mail-related options
 
         --mail
+        --notify
         --to
         --cc
         --rc-file
@@ -291,13 +292,28 @@ class RunMailTest(TestCase):
                 # --cc
                 jobf('--rc-file', rcFile.name, '--mail', 'true', '--to', 'someone',
                      '--cc', 'another')
-            args2 = self.getMailArgs(lastKey())
-            print(repr(args2))
-            self.assertIn('-s', args2)
-            self.assertIn('-a', args2)
-            self.assertNotIn('me', args2)
-            self.assertIn('someone', args2)
-            self.assertIn('another@example.com', args2)
+                args2 = self.getMailArgs(lastKey())
+                print(repr(args2))
+                self.assertIn('-s', args2)
+                self.assertIn('-a', args2)
+                self.assertNotIn('me', args2)
+                self.assertIn('someone', args2)
+                self.assertIn('another@example.com', args2)
+
+    def testNotify(self):
+        with testEnv():
+            with NamedTemporaryFile() as rcFile:
+                rcFile.write(MAIL_CONFIG.encode('utf-8'))
+                rcFile.flush()
+                with NamedTemporaryFile() as dumpFile:
+                    os.environ["SEND_EMAIL_DUMP_FILE"] = dumpFile.name
+                    # --notify
+                    jobf('--rc-file', rcFile.name, '--notify', 'true')
+                    with open(dumpFile.name, "r", encoding="utf-8") as fp:
+                        args = json.load(fp)
+                    self.assertIn('-s', args)
+                    self.assertIn('-a', args)
+                    self.assertIn('me', args)
 
 
 class OtherCommandSmokeTest(TestCase):

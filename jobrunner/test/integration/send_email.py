@@ -1,8 +1,10 @@
 #!/usr/bin/env python
-from __future__ import absolute_import, division, print_function
-
+import json
+import os
 import sys
 
-import simplejson as json
-
 print(json.dumps(sys.argv[1:]))
+dumpFile = os.getenv("SEND_EMAIL_DUMP_FILE")
+if dumpFile:
+    with open(dumpFile, "w", encoding="utf-8") as fp:
+        json.dump(sys.argv[1:], fp)

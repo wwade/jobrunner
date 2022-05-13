@@ -470,7 +470,7 @@ class JobsBase(object):
             pass
         return True
 
-    def getJobMatch(self, key, thisWs, skipReminders=False):
+    def getJobMatch(self, key, thisWs, skipReminders=False) -> JobInfo:
         # pylint: disable=too-many-return-statements,too-many-branches,
         # pylint: disable=too-many-statements
         if key == '.':
