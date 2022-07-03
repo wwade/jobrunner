@@ -39,7 +39,7 @@ class _Module(object):
             LOG.warning("sudo check: already running as root")
         else:
             try:
-                out = autoDecode(check_output(['sudo', 'python', '-V'])).strip()
+                out = autoDecode(check_output(["sudo", "python", "-V"])).strip()
                 self.sudoOk = bool(
                     re.match(
                         r"python \d{1,5}\.\d.*",
@@ -63,18 +63,18 @@ class TestInterrupt(TestCase):
         with testEnv():
             # --pid
             # --int
-            run(['job', 'sleep', '60'])
+            run(["job", "sleep", "60"])
 
             def _findJob(fail=False):
-                return runningJob('sleep 60', fail=fail)
+                return runningJob("sleep 60", fail=fail)
             waitFor(_findJob)
-            out = jobf('--pid', 'sleep')
+            out = jobf("--pid", "sleep")
             print("pid", out)
             self.assertNotIn("b'job", out)
-            self.assertIn('sleep', out)
-            job('--int', 'sleep')
+            self.assertIn("sleep", out)
+            job("--int", "sleep")
             try:
-                job('--int', 'sleep')
+                job("--int", "sleep")
             except CalledProcessError:
                 pass
             waitFor(noJobs)
@@ -82,14 +82,14 @@ class TestInterrupt(TestCase):
     @mark.skipif(not _MODULE.sudoOk, reason="sudo check not possible")
     def testWithSudo(self):
         with testEnv():
-            run(['job', 'sudo', 'sleep', '60'])
+            run(["job", "sudo", "sleep", "60"])
 
             def _findJob(fail=False):
-                return runningJob('sleep 60', fail=fail)
+                return runningJob("sleep 60", fail=fail)
             waitFor(_findJob)
-            job('--int', 'sleep')
+            job("--int", "sleep")
             try:
-                job('--int', 'sleep')
+                job("--int", "sleep")
             except CalledProcessError:
                 pass
             waitFor(noJobs)

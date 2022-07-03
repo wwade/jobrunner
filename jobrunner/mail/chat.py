@@ -35,26 +35,26 @@ to-addr and -c currently operate identically.
 _DEBUG_LOG_FILE_NAME = "chatmail-debug"
 
 
-def _open(filename, mode='r'):
+def _open(filename, mode="r"):
     try:
-        return open(filename, mode=mode, encoding='utf-8')
+        return open(filename, mode=mode, encoding="utf-8")
     except TypeError:
         return open(filename, mode=mode)  # pylint: disable=W
 
 
 class ThreadIdCache(object):
     def __init__(self, cacheDir):
-        self._cacheFile = os.path.join(cacheDir, 'chatmail.json')
+        self._cacheFile = os.path.join(cacheDir, "chatmail.json")
 
     def _read(self):
         try:
-            with _open(self._cacheFile, 'r') as cacheFile:
+            with _open(self._cacheFile, "r") as cacheFile:
                 return json.load(cacheFile)
         except IOError:
             return {}
 
     def _write(self, data):
-        with _open(self._cacheFile, 'w') as cacheFile:
+        with _open(self._cacheFile, "w") as cacheFile:
             return json.dump(data, cacheFile)
 
     def get(self, key):
@@ -79,16 +79,16 @@ class PostError(Exception):
 
 def _postToGChat(text, uri, threadId=None):
     payload = {
-        'text': text,
+        "text": text,
     }
     headers = {
-        'Content-Type': 'application/json; charset=UTF-8',
+        "Content-Type": "application/json; charset=UTF-8",
     }
     if threadId:
-        payload['thread'] = {'name': threadId}
+        payload["thread"] = {"name": threadId}
     ret = requests.post(uri, json=payload, headers=headers)
     try:
-        return ret.json()['thread']['name']
+        return ret.json()["thread"]["name"]
     except (KeyError, TypeError):
         return None
 
@@ -118,7 +118,7 @@ def _getUserAtTokens(users, config):
 
 
 def _getMessageBody(opts):
-    bodyText = ''
+    bodyText = ""
     if opts.inFile:
         with _open(opts.inFile) as inFile:
             bodyText = inFile.read()
@@ -127,7 +127,7 @@ def _getMessageBody(opts):
 
     msgBody = ""
     if bodyText:
-        msgBody += '\n```' + bodyText + '```'
+        msgBody += "\n```" + bodyText + "```"
     if opts.attachment:
         msgBody += "\nSee " + " ".join(opts.attachment)
 
@@ -148,13 +148,13 @@ def parseArgs(args=None):
         description=DESC)
     addArgumentParserBaseFlags(ap, _DEBUG_LOG_FILE_NAME)
 
-    ap.add_argument('-s', dest='subject')
-    ap.add_argument('-c', dest='cc', action='append', default=[])
-    ap.add_argument('-a', dest='attachment', action='append', default=[])
-    ap.add_argument('-f', dest='inFile', action='store')
-    ap.add_argument('-T', '--new-thread', action='store_true',
-                    help='Do not re-use the previous chat thread for each hook')
-    ap.add_argument('toAddr', metavar='to-addr', nargs='+')
+    ap.add_argument("-s", dest="subject")
+    ap.add_argument("-c", dest="cc", action="append", default=[])
+    ap.add_argument("-a", dest="attachment", action="append", default=[])
+    ap.add_argument("-f", dest="inFile", action="store")
+    ap.add_argument("-T", "--new-thread", action="store_true",
+                    help="Do not re-use the previous chat thread for each hook")
+    ap.add_argument("toAddr", metavar="to-addr", nargs="+")
 
     return ap.parse_args(args)
 
@@ -197,5 +197,5 @@ def main(args=None):
     return OK
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

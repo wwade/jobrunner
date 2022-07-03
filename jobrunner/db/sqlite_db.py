@@ -156,20 +156,20 @@ class Sqlite3Database(DatabaseBase):
 
 def connectDb(filename):
     conn = sqlite3.connect(filename)
-    conn.isolation_level = 'EXCLUSIVE'
+    conn.isolation_level = "EXCLUSIVE"
     return conn
 
 
 class Sqlite3Jobs(JobsBase):
     def __init__(self, config, plugins):
         super().__init__(config, plugins)
-        self._filename = resolveDbFile(config, 'jobsDb.sqlite')
+        self._filename = resolveDbFile(config, "jobsDb.sqlite")
         self._lock.lock()
         conn = connectDb(self._filename)
-        self.active = Sqlite3Database(self, config, self._instanceId, 'active')
+        self.active = Sqlite3Database(self, config, self._instanceId, "active")
         self.active.setup(conn)
         self.inactive = Sqlite3Database(
-            self, config, self._instanceId, 'inactive')
+            self, config, self._instanceId, "inactive")
         self.inactive.setup(conn)
         self._lock.unlock()
 

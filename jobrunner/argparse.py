@@ -24,10 +24,10 @@ def addArgumentParserBaseFlags(parser, logfileName):
     parser.add_argument(
         "-d",
         "--state-dir",
-        dest='stateDir',
+        dest="stateDir",
         metavar="DIR",
         help="Specify state directory (default='%(default)s')",
-        default=os.getenv('JOBRUNNER_STATE_DIR', "~/.local/share/jobDb"))
+        default=os.getenv("JOBRUNNER_STATE_DIR", "~/.local/share/jobDb"))
     parser.add_argument("--rc-file", dest="rcFile",
                         help="Specify path to rc-file (default=\"%(default)s\")",
                         default="~/.config/jobrc")
@@ -42,14 +42,14 @@ def addArgumentParserBaseFlags(parser, logfileName):
 def baseParsedArgsToArgList(argv, args):
     argList = []
     if args.verbose:
-        argList.append('-v')
-    if '--state-dir' in argv or '-d' in argv:
-        argList.extend(['--state-dir', args.stateDir])
-    if '--rc-file' in argv:
-        argList.extend(['--rc-file', args.rcFile])
+        argList.append("-v")
+    if "--state-dir" in argv or "-d" in argv:
+        argList.extend(["--state-dir", args.stateDir])
+    if "--rc-file" in argv:
+        argList.extend(["--rc-file", args.rcFile])
     if args.debug:
-        argList.append('--debug')
+        argList.append("--debug")
     if args.debugLevel:
-        argList.append('--debugLocking')
+        argList.append("--debugLocking")
 
     return argList

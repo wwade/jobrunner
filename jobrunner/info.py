@@ -36,7 +36,7 @@ def getUtcTime(val):
     return val
 
 
-_TRANSLATION = {val: '<{:02X}>'.format(val) for val in range(0x80, 0x100)}
+_TRANSLATION = {val: "<{:02X}>".format(val) for val in range(0x80, 0x100)}
 
 
 def cmdString(cmd):
@@ -65,8 +65,8 @@ class JobInfo(object):
         self._stop = None
         self._depends = None
         self._alldeps = set()
-        self._host = os.getenv('HOSTNAME')
-        self._user = os.getenv('USER')
+        self._host = os.getenv("HOSTNAME")
+        self._user = os.getenv("USER")
         self._env = dict(os.environ)
         self._workspace = self.__class__._unresolved
         self._proj = self.__class__._unresolved
@@ -91,7 +91,7 @@ class JobInfo(object):
 
     def __getstate__(self):
         odict = self.__dict__.copy()
-        del odict['_parent']
+        del odict["_parent"]
         return odict
 
     def __setstate__(self, dct):
@@ -396,13 +396,13 @@ class JobInfo(object):
         if self.startTime is None:
             return "Blocked"
         stop = self.stopTime or utcNow()
-        return str(stop - self.startTime).split('.', 1)[0]
+        return str(stop - self.startTime).split(".", 1)[0]
 
     def removeLog(self, verbose):
         assert self.logfile is not None
         if os.access(self.logfile, os.F_OK):
             if verbose:
-                sprint("Remove logfile '%s'" % self.logfile)
+                sprint("Remove logfile %r" % self.logfile)
             os.unlink(self.logfile)
 
     isprint = set(string.printable) - set(string.whitespace) | {" "}
@@ -410,13 +410,13 @@ class JobInfo(object):
     @staticmethod
     def escEnv(value):
         ret = ""
-        LOG.debug('value [%r]', value)
+        LOG.debug("value [%r]", value)
         for char in value:
             if char in JobInfo.isprint:
                 ret += char
             else:
                 ret += "\\x%02x" % ord(char)
-        LOG.debug('ret [%r]', ret)
+        LOG.debug("ret [%r]", ret)
         return ret
 
     def getEnvironment(self):
@@ -442,13 +442,13 @@ class JobInfo(object):
             return "Blocked"
         elif self._stop:
             xStatus = {
-                utils.STOP_STOP: 'Stopped with --stop',
-                utils.STOP_DONE: 'Completed Reminder',
-                utils.STOP_ABORT: 'Interrupted',
-                utils.STOP_DEPFAIL: 'Dependent Job Failed',
+                utils.STOP_STOP: "Stopped with --stop",
+                utils.STOP_DONE: "Completed Reminder",
+                utils.STOP_ABORT: "Interrupted",
+                utils.STOP_DEPFAIL: "Dependent Job Failed",
             }
             rcStatus = (" (" + xStatus[self.rc] +
-                        ")" if self.rc in xStatus else '')
+                        ")" if self.rc in xStatus else "")
             return "Finished" + rcStatus
         else:
             return "Running"
@@ -473,24 +473,24 @@ class JobInfo(object):
 
     def getValue(self, what):
         items = {
-            'Directory': lambda: self.pwd,
-            'Project': lambda: self._proj,
-            'Log': lambda: self.logfile,
-            'Command': lambda: cmdString(self.cmd),
-            'Start': lambda: self.timeStr(self.startTime),
-            'Stop': lambda: self.timeStr(self._stop),
-            'Duration': self.getDuration,
-            'Exit Status': lambda: self._rc,
-            'User': lambda: self._user,
-            'Host': lambda: self._host,
-            'Environment': self.getEnvironment,
-            'Workspace': lambda: self.workspace,
-            'Key': lambda: self._key,
-            'Reminder': lambda: self.reminder,
-            'Persistent Key': self.showPersistKey,
-            'State': self.getState,
-            'PID': lambda: self.pid,
-            'Isolated': lambda: self.isolate,
+            "Directory": lambda: self.pwd,
+            "Project": lambda: self._proj,
+            "Log": lambda: self.logfile,
+            "Command": lambda: cmdString(self.cmd),
+            "Start": lambda: self.timeStr(self.startTime),
+            "Stop": lambda: self.timeStr(self._stop),
+            "Duration": self.getDuration,
+            "Exit Status": lambda: self._rc,
+            "User": lambda: self._user,
+            "Host": lambda: self._host,
+            "Environment": self.getEnvironment,
+            "Workspace": lambda: self.workspace,
+            "Key": lambda: self._key,
+            "Reminder": lambda: self.reminder,
+            "Persistent Key": self.showPersistKey,
+            "State": self.getState,
+            "PID": lambda: self.pid,
+            "Isolated": lambda: self.isolate,
         }
         try:
             return items[what]()
@@ -519,17 +519,17 @@ class JobInfo(object):
 
     def showReminder(self):
         order = [
-            'Key',
-            'Persistent Key',
-            'Reminder',
+            "Key",
+            "Persistent Key",
+            "Reminder",
         ]
         if self._stop:
-            order += ['State']
+            order += ["State"]
         order += [
-            'Directory',
-            'Workspace',
-            'Start',
-            'Stop',
+            "Directory",
+            "Workspace",
+            "Start",
+            "Stop",
         ]
         return self.showInOrder(order, None)
 
@@ -538,26 +538,26 @@ class JobInfo(object):
             return self.showReminder()
 
         order = [
-            'Key',
-            'Command',
-            'State',
-            'Exit Status',
-            'Directory',
-            'Workspace',
-            'Project',
-            'Log',
-            'Start',
-            'Stop',
-            'Duration',
-            'Isolated',
-            'PID',
+            "Key",
+            "Command",
+            "State",
+            "Exit Status",
+            "Directory",
+            "Workspace",
+            "Project",
+            "Log",
+            "Start",
+            "Stop",
+            "Duration",
+            "Isolated",
+            "PID",
         ]
         verb1 = [
-            'User',
-            'Host',
+            "User",
+            "Host",
         ]
         verb2 = [
-            'Environment'
+            "Environment"
         ]
 
         if level:
@@ -589,7 +589,7 @@ class JobInfo(object):
         return "%s %s[%s] %s" % (self.getDuration(), rc, self.key, cmdStr)
 
 
-DATETIME_KEYS = ('_create', '_start', '_stop')
+DATETIME_KEYS = ("_create", "_start", "_stop")
 
 
 def encodeJobInfo(obj):
@@ -597,7 +597,7 @@ def encodeJobInfo(obj):
         odict = obj.__getstate__()
         for dateTimeKey in DATETIME_KEYS:
             odict[dateTimeKey] = dateTimeToJson(odict.get(dateTimeKey))
-        odict['_alldeps'] = list(odict.get('_alldeps', []))
+        odict["_alldeps"] = list(odict.get("_alldeps", []))
         return odict
     if JobInfo.isUnresolved(obj):
         return None
@@ -605,14 +605,14 @@ def encodeJobInfo(obj):
 
 
 def decodeJobInfo(odict):
-    if '_uidx' not in odict:
+    if "_uidx" not in odict:
         return odict
-    if 'cmd' in odict:
-        odict['_cmd'] = odict.pop('cmd')
-    uidx = odict['_uidx']
+    if "cmd" in odict:
+        odict["_cmd"] = odict.pop("cmd")
+    uidx = odict["_uidx"]
     newJob = service().db.jobInfo(uidx)
     for dateTimeKey in DATETIME_KEYS:
         odict[dateTimeKey] = dateTimeFromJson(odict.get(dateTimeKey))
-    odict['_alldeps'] = set(odict.get('_alldeps', set()))
+    odict["_alldeps"] = set(odict.get("_alldeps", set()))
     newJob.__setstate__(odict)
     return newJob

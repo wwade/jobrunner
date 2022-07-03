@@ -17,7 +17,7 @@ from jobrunner.test.helpers import capturedOutput
 @patch("jobrunner.mail.chat.requests", new=MagicMock(requests))
 class ChatPostTest(TestCase):
     def testGoodRequest(self):
-        retMock = MagicMock(['json'])
+        retMock = MagicMock(["json"])
         chat.requests.post = MagicMock(return_value=retMock)
         retMock.json.return_value = {"thread": {"name": "somethread"}}
         self.assertEqual(
@@ -25,7 +25,7 @@ class ChatPostTest(TestCase):
             "somethread")
 
     def testBadRequestReturn(self):
-        retMock = MagicMock(['json'])
+        retMock = MagicMock(["json"])
         chat.requests.post = MagicMock(return_value=retMock)
 
         retValues = [
@@ -58,7 +58,7 @@ class ChatThreadIdCacheTest(TestCase):
 @patch("jobrunner.mail.chat.Config", spec=chat.Config)
 @patch("jobrunner.mail.chat.ThreadIdCache._read")
 @patch("jobrunner.mail.chat.ThreadIdCache._write")
-@patch('jobrunner.mail.chat.sys.stdin')
+@patch("jobrunner.mail.chat.sys.stdin")
 class ChatTest(TestCase):
     class Mocks(object):
         def __init__(self, testArgs):
@@ -100,10 +100,10 @@ class ChatTest(TestCase):
         hook = "https://somehook"
         mocks.configCls().gChatUserHook.return_value = hook
 
-        chat.main(['user1'])
+        chat.main(["user1"])
 
         mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
-        self.assertPostTextMatchesRegexp('NO SUBJECT')
+        self.assertPostTextMatchesRegexp("NO SUBJECT")
 
     def testBasicCallWithOptions(self, *mockArgs):
         mocks = ChatTest.Mocks(mockArgs)
@@ -114,18 +114,18 @@ class ChatTest(TestCase):
         with patch("jobrunner.mail.chat._open",
                    create=True, autospec=True) as openMock:
             # Mock inFile from -f option
-            openMock("mytext.txt").__enter__(
-            ).read.return_value = "a bunch of\ntext."
-            openMock.reset_mock()
-            ret = chat.main(['-s', 'My subject', '-c', 'user3', '-c', 'user4',
-                             '-a', 'attachfile.txt',
-                             '-f', 'mytext.txt', 'user1', 'user2'])
-            openMock.assert_called_once_with('mytext.txt')
+            with openMock("mytext.txt") as opener:
+                opener.read.return_value = "a bunch of\ntext."
+                openMock.reset_mock()
+                ret = chat.main(["-s", "My subject", "-c", "user3", "-c", "user4",
+                                 "-a", "attachfile.txt",
+                                 "-f", "mytext.txt", "user1", "user2"])
+                openMock.assert_called_once_with("mytext.txt")
 
         self.assertEqual(ret, 0)
         mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
         self.assertPostTextMatchesRegexp(
-            r'My subject.*a bunch of\ntext.*attachfile.txt')
+            r"My subject.*a bunch of\ntext.*attachfile.txt")
 
     def testPipeContent(self, *mockArgs):
         mocks = ChatTest.Mocks(mockArgs)
@@ -137,12 +137,12 @@ class ChatTest(TestCase):
 
             mocks.chatStdin.isatty.return_value = tty
             mocks.chatStdin.read.return_value = "a bunch of\ntext"
-            ret = chat.main(['-s', 'My subject', 'user1'])
+            ret = chat.main(["-s", "My subject", "user1"])
 
             self.assertEqual(ret, 0)
             mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
             self.assertPostTextMatchesRegexp(
-                r'\*My subject\*' + (r'\s*$' if tty else r'.*a bunch of\ntext'))
+                r"\*My subject\*" + (r"\s*$" if tty else r".*a bunch of\ntext"))
 
     def testCallWithMultipleHooks(self, *mockArgs):
         mocks = ChatTest.Mocks(mockArgs)
@@ -155,8 +155,8 @@ class ChatTest(TestCase):
         # pylint: disable-msg=unnecessary-lambda
         mocks.configCls().gChatUserHook = lambda k: hooks.get(k)
 
-        ret = chat.main(['-s', 'My subject', '-c', 'user3', '-c', 'user4',
-                         'user1', 'user2'])
+        ret = chat.main(["-s", "My subject", "-c", "user3", "-c", "user4",
+                         "user1", "user2"])
 
         self.assertEqual(ret, 0)
         calls = [call(ANY, hook, threadId=None)
@@ -171,8 +171,8 @@ class ChatTest(TestCase):
         mocks.configCls().gChatUserHook = lambda k: {"user1": hook}.get(k)
 
         with capturedOutput() as (_, err):
-            ret = chat.main(['-s', 'My subject', '-c', 'user3', '-c', 'user4',
-                             'user1', 'user2'])
+            ret = chat.main(["-s", "My subject", "-c", "user3", "-c", "user4",
+                             "user1", "user2"])
 
         self.assertEqual(ret, 1)
         self.assertEqual(mocks.postToGChat.call_count, 0)
@@ -191,8 +191,8 @@ class ChatTest(TestCase):
                 hook: threadId, "anotherhook": "x"}
             mocks.postToGChat.return_value = retThreadId
 
-            ret = chat.main(([] if reuseThreads else ['-T']) +
-                            ['-s', 'My subject', 'user1'])
+            ret = chat.main(([] if reuseThreads else ["-T"]) +
+                            ["-s", "My subject", "user1"])
 
             self.assertEqual(ret, 0)
             mocks.postToGChat.assert_called_once_with(
@@ -221,28 +221,28 @@ class ChatTest(TestCase):
 
             users = list(sorted(userIdDict))
 
-            ret = chat.main(['-s', 'My subject'] + users)
+            ret = chat.main(["-s", "My subject"] + users)
 
             self.assertEqual(ret, 0)
             mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
-            pattern = r'\*My subject\*'
+            pattern = r"\*My subject\*"
             tags = []
             if expectAtAll:
-                tags.append('<users/all>')
+                tags.append("<users/all>")
 
             for user in users:
                 if userIdDict[user]:
-                    tags.append('<users/%s>' % userIdDict[user])
+                    tags.append("<users/%s>" % userIdDict[user])
                 else:
-                    tags.append('@' + user)
+                    tags.append("@" + user)
 
-            pattern = ' '.join(tags) + ' ' + pattern
+            pattern = " ".join(tags) + " " + pattern
 
             self.assertPostTextMatchesRegexp(pattern)
 
-        noUsersWithId = {'user1': None, 'user2': None}
-        someUsersWithId = {'user1': '1234', 'user2': None}
-        allUsersWithId = {'user1': '1234', 'user2': '5678'}
+        noUsersWithId = {"user1": None, "user2": None}
+        someUsersWithId = {"user1": "1234", "user2": None}
+        allUsersWithId = {"user1": "1234", "user2": "5678"}
 
         for userDict in [noUsersWithId, someUsersWithId, allUsersWithId]:
             _runTest(CHATMAIL_AT_ALL.ALL, userDict, expectAtAll=True)

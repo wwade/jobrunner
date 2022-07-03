@@ -17,8 +17,8 @@ from jobrunner.utils import autoDecode
 
 from ..helpers import resetEnv
 
-HOSTNAME = 'host.example.com'
-HOME = '/home/me'
+HOSTNAME = "host.example.com"
+HOME = "/home/me"
 
 EXAMPLE_RCFILE = """\
 [mail]
@@ -35,9 +35,9 @@ class IntegrationTestTimeout(Exception):
 
 def setUpModuleHelper():
     resetEnv()
-    os.environ['HOME'] = HOME
-    os.environ['HOSTNAME'] = HOSTNAME
-    os.environ['JOBRUNNER_STATE_DIR'] = '/tmp/BADDIR'
+    os.environ["HOME"] = HOME
+    os.environ["HOSTNAME"] = HOSTNAME
+    os.environ["JOBRUNNER_STATE_DIR"] = "/tmp/BADDIR"
 
 
 class Env(object):
@@ -55,19 +55,19 @@ def curDir():
 @contextmanager
 def testEnv():
     tmpDir = mkdtemp()
-    os.environ['JOBRUNNER_STATE_DIR'] = tmpDir
+    os.environ["JOBRUNNER_STATE_DIR"] = tmpDir
     os.chdir(curDir())
     try:
-        print('tmpDir', tmpDir)
+        print("tmpDir", tmpDir)
         yield Env(tmpDir)
     finally:
-        print('rmTree', tmpDir)
+        print("rmTree", tmpDir)
         rmtree(tmpDir, ignore_errors=True)
-        os.environ['JOBRUNNER_STATE_DIR'] = '/tmp/BADDIR'
+        os.environ["JOBRUNNER_STATE_DIR"] = "/tmp/BADDIR"
 
 
 def run(cmd, capture=False, env=None):
-    print(' '.join(map(quote, cmd)))
+    print(" ".join(map(quote, cmd)))
     try:
         if capture:
             out = autoDecode(check_output(cmd, stderr=STDOUT, env=env))
@@ -83,17 +83,17 @@ def run(cmd, capture=False, env=None):
 
 
 def jobf(*cmd, **kwargs):
-    jobCmd = ['job', '--foreground'] + list(cmd)
+    jobCmd = ["job", "--foreground"] + list(cmd)
     return run(jobCmd, capture=True, **kwargs)
 
 
 def job(*cmd, **kwargs):
-    jobCmd = ['job'] + list(cmd)
+    jobCmd = ["job"] + list(cmd)
     return run(jobCmd, capture=True, **kwargs)
 
 
 def waitFor(func, timeout=60.0, failArg=True):
-    interval = [0] * 3 + [0.1] * 10 + [0.25] * 10
+    interval = [0.0] * 3 + [0.1] * 10 + [0.25] * 10
     elapsed = 0
     while elapsed <= timeout:
         startTime = time.time()
@@ -109,21 +109,21 @@ def waitFor(func, timeout=60.0, failArg=True):
         elapsed += sleepTime
         time.sleep(sleepTime)
     if failArg:
-        print('elapsed', elapsed)
+        print("elapsed", elapsed)
         func(fail=True)
-    raise IntegrationTestTimeout('timed out waiting for %r' % func)
+    raise IntegrationTestTimeout("timed out waiting for %r" % func)
 
 
 def activeJobs():
-    return run(['job', '-l'], capture=True)
+    return run(["job", "-l"], capture=True)
 
 
 def runningJob(name, fail=False):
-    out = run(['job', '-s', name], capture=True)
+    out = run(["job", "-s", name], capture=True)
     LOG.debug("runningJob(%r) => %s", name, out.strip())
-    reg1 = re.compile(r'\nState\s+Running\n')
-    reg2 = re.compile(r'\nDuration\s+Blocked\n')
-    pid = re.compile(r'\nPID\s+(\d+)\n')
+    reg1 = re.compile(r"\nState\s+Running\n")
+    reg2 = re.compile(r"\nDuration\s+Blocked\n")
+    pid = re.compile(r"\nPID\s+(\d+)\n")
     running = reg1.search(out)
     blocked = reg2.search(out)
     pidMatch = pid.search(out)
@@ -136,16 +136,16 @@ def noJobs(fail=False):
     jobs = activeJobs()
     if fail:
         print(jobs)
-    return jobs.splitlines()[0] == '(None)'
+    return jobs.splitlines()[0] == "(None)"
 
 
 def lastKey():
-    [ret] = run(['job', '-K'], capture=True).splitlines()
+    [ret] = run(["job", "-K"], capture=True).splitlines()
     return ret
 
 
 def inactiveCount():
-    return int(run(['job', '--count'], capture=True))
+    return int(run(["job", "--count"], capture=True))
 
 
 def spawn(cmd):

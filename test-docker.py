@@ -90,7 +90,7 @@ def mountsForContainer(version: VerInfo, pipConf: str) -> List[Tuple[str, str]]:
 
 def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str]):
 
-    with open("Pipfile", encoding='utf-8') as f:
+    with open("Pipfile", encoding="utf-8") as f:
         pipfile = f.read()
     pipfile = re.sub(
         r"^\s*python_version\s*=\s*\S+$",
@@ -98,7 +98,7 @@ def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str
         pipfile,
         flags=re.MULTILINE,
     )
-    with open("Pipfile", "w", encoding='utf-8') as f:
+    with open("Pipfile", "w", encoding="utf-8") as f:
         f.write(pipfile)
 
     mounts = mountsForContainer(version, pipConf)
@@ -150,7 +150,7 @@ def main() -> None:
     ap.add_argument("cmd", nargs=argparse.REMAINDER)
     args = ap.parse_args()
     cmd = args.cmd
-    if cmd and cmd[0].strip() == '--':
+    if cmd and cmd[0].strip() == "--":
         cmd.pop(0)
     versions: Iterable[VerInfo]
 
