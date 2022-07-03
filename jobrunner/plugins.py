@@ -13,9 +13,9 @@ class Plugins(object):
     def __init__(self):
         self.plugins = {
             plug.load() for plug in metadata.entry_points().get(
-                'wwade.jobrunner', [])}
+                "wwade.jobrunner", [])}
         deprecatedPlugins = {
-            importlib.import_module('jobrunner.plugin.{}'.format(name))
+            importlib.import_module("jobrunner.plugin.{}".format(name))
             for finder, name, ispkg
             in pkgutil.iter_modules(jobrunner.plugin.__path__)
         }
@@ -34,13 +34,13 @@ class Plugins(object):
     def getResources(self, jobs):
         ret = ""
         for plugin in self.plugins:
-            if hasattr(plugin, 'getResources'):
+            if hasattr(plugin, "getResources"):
                 ret += plugin.getResources(jobs)
         return ret
 
     def workspaceIdentity(self):
         for plugin in self.plugins:
-            if hasattr(plugin, 'workspaceIdentity'):
+            if hasattr(plugin, "workspaceIdentity"):
                 ret = plugin.workspaceIdentity()
                 if ret:
                     return ret
@@ -52,7 +52,7 @@ class Plugins(object):
         name as well as a bool True to indicate that the plugin is authoritative.
         """
         for plugin in self.plugins:
-            if hasattr(plugin, 'workspaceProject'):
+            if hasattr(plugin, "workspaceProject"):
                 ret, ok = plugin.workspaceProject()
                 if ok:
                     return ret, ok

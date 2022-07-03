@@ -25,8 +25,8 @@ existing mention of this user
 
 class ConfigEnum(object):
     __slots__ = (
-        'defaultName',
-        '_enumVals',
+        "defaultName",
+        "_enumVals",
     )
 
     def __init__(self, default, **enumVals):
@@ -47,7 +47,7 @@ class ConfigEnum(object):
         return self._enumVals[self.defaultName]
 
     def __getattr__(self, attr):
-        assert attr != '_enumVals'
+        assert attr != "_enumVals"
         if attr in self._enumVals:
             return self._enumVals[attr]
         else:
@@ -58,16 +58,16 @@ WATCH_REMINDER_FULL = "full"
 WATCH_REMINDER_SUMMARY = "summary"
 
 WATCH_REMINDER = ConfigEnum(
-    'SUMMARY',  # default
+    "SUMMARY",  # default
     FULL=WATCH_REMINDER_FULL,
     SUMMARY=WATCH_REMINDER_SUMMARY,
 )
 
 CHATMAIL_AT_ALL = ConfigEnum(
-    'NONE',  # default
-    ALL='all',
-    NONE='none',
-    NO_ID='no id',
+    "NONE",  # default
+    ALL="all",
+    NONE="none",
+    NO_ID="no id",
 )
 
 
@@ -108,9 +108,9 @@ def _getBoolConfig(cfgParser, section, option, default):
     val = _getConfig(cfgParser, section, option, None)
     if val is None:
         return default
-    if val.lower() == 'true':
+    if val.lower() == "true":
         return True
-    elif val.lower() == 'false':
+    elif val.lower() == "false":
         return False
     else:
         raise ConfigError(
@@ -131,11 +131,11 @@ _VAR_OPTIONS = object()
 class Config(object):
     # pylint: disable=too-many-instance-attributes
     validConfig = {
-        'mail': {'domain', 'program'},
-        'chatmail': {'at all', 'reuse threads'},
-        'chatmail.google-chat-userhooks': _VAR_OPTIONS,
-        'chatmail.google-chat-userids': _VAR_OPTIONS,
-        'ui': {'watch reminder'},
+        "mail": {"domain", "program"},
+        "chatmail": {"at all", "reuse threads"},
+        "chatmail.google-chat-userhooks": _VAR_OPTIONS,
+        "chatmail.google-chat-userids": _VAR_OPTIONS,
+        "ui": {"watch reminder"},
     }
 
     def _validateConfigParser(self, cfgParser):
@@ -173,20 +173,20 @@ class Config(object):
             cfgParser = six.moves.configparser.ConfigParser()
         cfgParser.read(rcFile)
         self._mailDomain = _getConfig(
-            cfgParser, "mail", "domain", os.getenv('HOSTNAME'))
+            cfgParser, "mail", "domain", os.getenv("HOSTNAME"))
         self._mailProgram = _getConfig(cfgParser, "mail", "program", "mail")
 
         self._uiWatchReminder = _getEnumConfig(
-            cfgParser, 'ui', 'watch reminder', WATCH_REMINDER)
+            cfgParser, "ui", "watch reminder", WATCH_REMINDER)
 
         self._chatmailAtAll = _getEnumConfig(
-            cfgParser, 'chatmail', 'at all', CHATMAIL_AT_ALL)
+            cfgParser, "chatmail", "at all", CHATMAIL_AT_ALL)
         self._chatmailReuseThreads = _getBoolConfig(
-            cfgParser, 'chatmail', 'reuse threads', True)
+            cfgParser, "chatmail", "reuse threads", True)
         self._gChatUserHooks = _getDictConfig(
-            cfgParser, 'chatmail.google-chat-userhooks')
+            cfgParser, "chatmail.google-chat-userhooks")
         self._gchatUserIds = _getDictConfig(
-            cfgParser, 'chatmail.google-chat-userids')
+            cfgParser, "chatmail.google-chat-userids")
 
         self._validateConfigParser(cfgParser)
 

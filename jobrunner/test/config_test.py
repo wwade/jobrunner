@@ -11,8 +11,8 @@ from jobrunner import config
 
 from .helpers import resetEnv
 
-HOSTNAME = 'host.example.com'
-HOME = '/home/me'
+HOSTNAME = "host.example.com"
+HOME = "/home/me"
 
 EXAMPLE_RCFILE = """\
 [ui]
@@ -37,29 +37,29 @@ BAD_SECTION = """\
 
 def setUpModule():
     resetEnv()
-    os.environ['HOSTNAME'] = HOSTNAME
-    os.environ['HOME'] = HOME
+    os.environ["HOSTNAME"] = HOSTNAME
+    os.environ["HOME"] = HOME
 
 
 class TestMixin(object):
     @staticmethod
     def config(tempFp=None):
         options = MagicMock()
-        options.rcFile = tempFp.name if tempFp else '/a-file-does-not-exist.cfg'
-        options.stateDir = '~/x'
+        options.rcFile = tempFp.name if tempFp else "/a-file-does-not-exist.cfg"
+        options.stateDir = "~/x"
         return config.Config(options)
 
 
 class TestRcParser(unittest.TestCase, TestMixin):
-    @patch('os.makedirs')
+    @patch("os.makedirs")
     def testStateDir(self, _makedirs):
         cfgObj = self.config()
-        self.assertEqual(os.path.join(HOME, 'x/db/'), cfgObj.dbDir)
+        self.assertEqual(os.path.join(HOME, "x/db/"), cfgObj.dbDir)
 
     # pylint: disable-msg=too-many-arguments
     def assertCfg(self, cfgObj, domain=HOSTNAME,
-                  program='mail', reminderSummary=True,
-                  chatmailAtAll='none', chatmailReuseThreads=True,
+                  program="mail", reminderSummary=True,
+                  chatmailAtAll="none", chatmailReuseThreads=True,
                   gChatUserHookDict=None, gChatUserIdDict=None):
         self.assertEqual(domain, cfgObj.mailDomain)
         self.assertEqual(program, cfgObj.mailProgram)
@@ -82,29 +82,29 @@ class TestRcParser(unittest.TestCase, TestMixin):
         self.assertCfg(cfgObj)
 
     def testEmptyFile(self):
-        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+        with tempfile.NamedTemporaryFile(mode="w") as tempFp:
             tempFp.flush()
             cfgObj = self.config(tempFp)
             self.assertCfg(cfgObj)
 
     def testConfigured(self):
-        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+        with tempfile.NamedTemporaryFile(mode="w") as tempFp:
             tempFp.write(EXAMPLE_RCFILE)
             tempFp.flush()
             cfgObj = self.config(tempFp)
             self.assertCfg(
-                cfgObj, domain='ex.com', program='mail-program',
-                reminderSummary=False, chatmailAtAll='all',
+                cfgObj, domain="ex.com", program="mail-program",
+                reminderSummary=False, chatmailAtAll="all",
                 chatmailReuseThreads=False,
                 gChatUserHookDict={
-                    'user1': 'https://chat.googleapis.com/v1/spaces/something1',
-                    'user2': 'https://chat.googleapis.com/v1/spaces/something2',
+                    "user1": "https://chat.googleapis.com/v1/spaces/something1",
+                    "user2": "https://chat.googleapis.com/v1/spaces/something2",
                 },
-                gChatUserIdDict={'user1': '1234'},
+                gChatUserIdDict={"user1": "1234"},
             )
 
     def testConfigureSummary(self):
-        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+        with tempfile.NamedTemporaryFile(mode="w") as tempFp:
             tempFp.write("[ui]\nwatch reminder=summary\n")
             tempFp.flush()
             cfgObj = self.config(tempFp)
@@ -113,15 +113,15 @@ class TestRcParser(unittest.TestCase, TestMixin):
 
 class TestMalformedRcFile(unittest.TestCase, TestMixin):
     def testBadSection(self):
-        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+        with tempfile.NamedTemporaryFile(mode="w") as tempFp:
             tempFp.write(EXAMPLE_RCFILE + BAD_SECTION)
             tempFp.flush()
-            pattern = r'unknown configuration sections: unknown'
+            pattern = r"unknown configuration sections: unknown"
             with six.assertRaisesRegex(self, config.ConfigError, pattern):
                 self.config(tempFp)
 
     def testBadOption(self):
-        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+        with tempfile.NamedTemporaryFile(mode="w") as tempFp:
             tempFp.write(EXAMPLE_RCFILE + "\n" + "xyz = foo\n")
             tempFp.flush()
             pattern = r'unknown configuration options in section "mail": xyz'
@@ -129,12 +129,12 @@ class TestMalformedRcFile(unittest.TestCase, TestMixin):
                 self.config(tempFp)
 
     def testReminderBadOption(self):
-        with tempfile.NamedTemporaryFile(mode='w') as tempFp:
+        with tempfile.NamedTemporaryFile(mode="w") as tempFp:
             tempFp.write("[ui]\nwatch reminder=foo\n")
             tempFp.flush()
             pattern = (
                 r'RC file has invalid "ui.watch reminder" setting foo.\s*' +
-                r'Valid options: (full, summary|summary, full)'
+                r"Valid options: (full, summary|summary, full)"
             )
             with six.assertRaisesRegex(self, config.ConfigError, pattern):
                 self.config(tempFp)

@@ -39,7 +39,7 @@ def strForEach(value):
         return text_type(value)
     except (UnicodeDecodeError, UnicodeEncodeError):
         LOG.debug("%r", value, exc_info=1)
-        return '{!r}'.format(value)
+        return f"{value!r}"
 
 
 def sprint(*args, **kwargs):
@@ -49,7 +49,7 @@ def sprint(*args, **kwargs):
     except IOError:
         LOG.debug("sprint ignore IOError", exc_info=1)
     except (UnicodeEncodeError, UnicodeDecodeError):
-        print('codec error', repr(args))
+        print("codec error", repr(args))
         LOG.debug("%r", args, exc_info=1)
     except BaseException:
         LOG.debug("sprint caught error", exc_info=1)
@@ -136,7 +136,7 @@ class FileLock(object):
 
     def lock(self):
         assert self._fp is None
-        self._fp = encoding_open(self._filename, 'a')
+        self._fp = encoding_open(self._filename, "a")
         fcntl.flock(self._fp, fcntl.LOCK_EX)
 
     def unlock(self):
@@ -171,7 +171,7 @@ def pidDebug(*args):
     sprint("+%05d+ %s" % (os.getpid(), " ".join(map(str, args))))
 
 
-FnDetails = collections.namedtuple('FnDetails', 'filename, lineno, funcname')
+FnDetails = collections.namedtuple("FnDetails", "filename, lineno, funcname")
 
 
 def workspaceIdentity() -> Optional[str]:
@@ -188,10 +188,10 @@ def workspaceProject() -> Optional[str]:
 
 
 def _getAllowed():
-    allowed = (list(range(ord('a'), ord('z') + 1)) +
-               list(range(ord('A'), ord('Z') + 1)) +
-               list(range(ord('0'), ord('9') + 1)) +
-               [ord(char) for char in ['_', '#']])
+    allowed = (list(range(ord("a"), ord("z") + 1)) +
+               list(range(ord("A"), ord("Z") + 1)) +
+               list(range(ord("0"), ord("9") + 1)) +
+               [ord(char) for char in ["_", "#"]])
     ret = [chr(char) for char in allowed]
     return ret
 
@@ -203,7 +203,7 @@ def keyEscape(inp):
         if char in allowed:
             ret += char
         else:
-            ret += '+'
+            ret += "+"
     return ret
 
 
@@ -252,17 +252,17 @@ def robotInfo(*info):
     for item in info:
         if isinstance(item, dict):
             for key, val in item.items():
-                msg.append('{}={}'.format(key, val))
+                msg.append("{}={}".format(key, val))
         else:
             msg.append(str(item))
     if robot():
-        sprint('\x00'.join(msg))
+        sprint("\x00".join(msg))
         sys.stdout.flush()
 
 
 def showMsgs():
     LOG.debug("showMsgs for %d messages", len(_DEBUGGER.msgQueue))
-    sprint('\n'.join(_DEBUGGER.msgQueue) + '\n')
+    sprint("\n".join(_DEBUGGER.msgQueue) + "\n")
     _DEBUGGER.msgQueue = []
     LOG.debug("showMsgs finished")
 
@@ -317,7 +317,7 @@ def killProcGroup(pgrp, jobs):
                 return False
             else:
                 sprint("killpg", pgrp, signum, "->", err)
-        sprint('Still trying to kill pgrp', pgrp)
+        sprint("Still trying to kill pgrp", pgrp)
         if jobs is None:
             time.sleep(1.5)
         else:
@@ -355,9 +355,9 @@ jobrunner.utils.killProcGroup(pgrp, None)
 
 def autoDecode(byteArray):
     detected = chardet.detect(byteArray)
-    encoding = detected['encoding']
-    if detected['confidence'] < 0.8:  # very arbitrary
+    encoding = detected["encoding"]
+    if detected["confidence"] < 0.8:  # very arbitrary
         LOG.debug("char encoding below confidence level 0.8 (%r). "
                   "Fall back to UTF-8.", detected)
-        encoding = 'utf-8'
+        encoding = "utf-8"
     return byteArray.decode(encoding)

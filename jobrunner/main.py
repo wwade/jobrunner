@@ -87,15 +87,15 @@ def impl_main(args=None):
             cmd = sendMailOrNotifyCmd(args, options.mail, options, config, oneJob)
         elif options.command:
             bashCmd = postCommand(options.command)
-            cmd = ['bash', '-c', bashCmd]
+            cmd = ["bash", "-c", bashCmd]
         elif options.retry:
             oldJob = jobs.getJobMatch(options.retry, options.tw)
             if os.getcwd() != oldJob.pwd and oldJob.pwd:
                 sprint(
-                    "NOTE: Changing directory to '%s' to retry job." %
+                    "NOTE: Changing directory to %r to retry job." %
                     oldJob.pwd)
                 os.chdir(oldJob.pwd)
-            sprint("retry job '%s'" % oldJob.cmdStr)
+            sprint("retry job %r" % oldJob.cmdStr)
             cmd = oldJob.cmd
             if oldJob.isolate:
                 doIsolate = oldJob.isolate
@@ -137,7 +137,7 @@ def impl_main(args=None):
 
     # unlocked
     scriptName = os.path.basename(sys.argv[0])
-    if scriptName == 'job' and not options.foreground:
+    if scriptName == "job" and not options.foreground:
         childPid = os.fork()
         if childPid > 0:
             LOG.info("forked child %d, close %d", childPid, fd)
@@ -186,7 +186,7 @@ def impl_main(args=None):
                 out = "Dependent job failed: {}\n".format(j)
                 out += "{}\n".format(j.detail("vvv"))
                 LOG.debug("out %s", out)
-                os.write(fd, out.encode('utf-8'))
+                os.write(fd, out.encode("utf-8"))
                 job.stop(jobs, STOP_DEPFAIL)
                 sprint("\nDependent job failed: %s" % j)
                 sprint("key: %s" % job.key)
@@ -196,7 +196,7 @@ def impl_main(args=None):
         job.start(jobs)
         LOG.debug("started job %s", job)
         if cmd is None and options.reminder is not None:
-            sprint("reminder: '%s'" % options.reminder)
+            sprint("reminder: %r" % options.reminder)
             sys.exit(0)
 
         assert cmd is not None
@@ -250,16 +250,16 @@ def monitorForkedJob(job, jobs):
                     if not active:
                         rc = jobs.inactive[job.key].rc
                 time.sleep(0.5)
-                LOG.debug('active %s, rc %r', active, rc)
+                LOG.debug("active %s, rc %r", active, rc)
             return rc
         except KeyboardInterrupt:
-            LOG.debug('KeyboardInterrupt')
+            LOG.debug("KeyboardInterrupt")
             sprint("\n(Stop monitoring): {}".format(job))
         except BaseException:
-            LOG.info('exception', exc_info=True)
+            LOG.info("exception", exc_info=True)
             raise
         finally:
-            LOG.debug('terminate monitor subprocess')
+            LOG.debug("terminate monitor subprocess")
             monitor.terminate()
             monitor.kill()
         monitor.wait()
@@ -271,8 +271,8 @@ removeChars = frozenset("\x1B\x0d")
 
 def safeWrite(fd, value):
     value = six.text_type(value)
-    value = ''.join(c for c in value if c not in removeChars)
-    fd.write(value.encode('utf-8'))
+    value = "".join(c for c in value if c not in removeChars)
+    fd.write(value.encode("utf-8"))
 
 
 def postCommand(cmd: List[str]) -> List[str]:
@@ -334,14 +334,14 @@ def addNonExecOptions(op):
         "--list-keys",
         action="store_true",
         help="List keys for active jobs, one per line.")
-    op.add_argument("--dot", action='store_true',
-                    help='Show dependency graph for active jobs')
-    op.add_argument("--png", action='store_true',
-                    help='Create dependency graph svg for active jobs in ' +
-                    expanduser('~/output/job.svg'))
-    op.add_argument("--svg", action='store_true',
-                    help='Create dependency graph png for active jobs in ' +
-                    expanduser('~/output/job.svg'))
+    op.add_argument("--dot", action="store_true",
+                    help="Show dependency graph for active jobs")
+    op.add_argument("--png", action="store_true",
+                    help="Create dependency graph svg for active jobs in " +
+                    expanduser("~/output/job.svg"))
+    op.add_argument("--svg", action="store_true",
+                    help="Create dependency graph png for active jobs in " +
+                    expanduser("~/output/job.svg"))
     op.add_argument("-L", "--list-inactive", action="store_true",
                     help="List inactive jobs")
     op.add_argument("-W", "--watch", action="store_true",
@@ -350,8 +350,8 @@ def addNonExecOptions(op):
                     help="Get details for job specified by KEY")
     op.add_argument("-K", "--last-key", action="store_true",
                     help="Get the latest key")
-    op.add_argument("--index", "-n", action='append', type=int,
-                    help='Get log file name, by index, from recent jobs')
+    op.add_argument("--index", "-n", action="append", type=int,
+                    help="Get log file name, by index, from recent jobs")
     op.add_argument("--pid", metavar="KEY", action="append",
                     help="Show pstree for job specified by KEY")
     op.add_argument("-g", "--get-log", metavar="KEY", action="append",
@@ -363,7 +363,7 @@ def addNonExecOptions(op):
         "--int",
         metavar="KEY",
         action="append",
-        help='Kill (INT) the specified job using its process group ID')
+        help="Kill (INT) the specified job using its process group ID")
     op.add_argument(
         "--stop",
         metavar="KEY",
@@ -376,7 +376,7 @@ def addNonExecOptions(op):
     op.add_argument(
         "--prune-except",
         type=int,
-        metavar='COUNT',
+        metavar="COUNT",
         action="store",
         help="Prune inactive jobs and log files, leaving the "
         "last COUNT jobs in the database.")
@@ -391,7 +391,7 @@ def addNonExecOptions(op):
         const=1,
         help="Display recent activity per workspace (repeat multiple "
         "times for a longer activity window)")
-    op.add_argument("-A", "--activity-window", metavar='HOURS', type=float,
+    op.add_argument("-A", "--activity-window", metavar="HOURS", type=float,
                     action="store",
                     help="Display recent activity per workspace within the "
                     "specified window")
@@ -431,14 +431,14 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         if options.dot:
             sprint(dot)
         else:
-            fName = expanduser('~/output/job.svg')
+            fName = expanduser("~/output/job.svg")
             ofile = os.path.expanduser(fName)
-            cmd = ['dot', '-Tsvg', '-o', ofile]
+            cmd = ["dot", "-Tsvg", "-o", ofile]
             with Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE) as proc:
-                stdout, stderr = proc.communicate(input=dot.encode('utf-8'))
+                stdout, stderr = proc.communicate(input=dot.encode("utf-8"))
             if stdout.strip() or stderr.strip():
                 raise ExitCode(stdout + stderr)
-            sprint('Saved output to', fName)
+            sprint("Saved output to", fName)
         return True
     elif options.list_inactive:
         jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
@@ -536,7 +536,7 @@ def handleNonExecWriteOptions(options, jobs):
     elif options.delete:
         for k in options.delete:
             j = jobs.inactive[k]
-            sprint("Delete job '%s'" % j.key)
+            sprint("Delete job %r" % j.key)
             j.removeLog(verbose=True)
             del jobs.inactive[j.key]
         return True
@@ -585,11 +585,11 @@ class Pstree(object):
 def getPstree(pid):
     pstree = Pstree(None)
     try:
-        return Pstree(check_output(['pstree', '-alpg', str(pid)]))
+        return Pstree(check_output(["pstree", "-alpg", str(pid)]))
     except (OSError, CalledProcessError) as error:
         pstree.errors.append(error)
     try:
-        return Pstree(check_output(['ps', '-fp', str(pid)]))
+        return Pstree(check_output(["ps", "-fp", str(pid)]))
     except (OSError, CalledProcessError) as error:
         pstree.errors.append(error)
     return pstree
@@ -625,16 +625,16 @@ def parseArgs(args=None):
         prog=os.path.basename(prog) if prog else "job",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=DESC)
-    op.add_argument("program", nargs='?')
+    op.add_argument("program", nargs="?")
     op.add_argument("args", nargs=argparse.REMAINDER)
 
     addArgumentParserBaseFlags(op, _DEBUG_LOG_FILE_NAME)
 
     out = op.add_mutually_exclusive_group()
-    out.add_argument('--robot-format', dest='quiet', action='store_const',
-                     const='robot', help='Output job execution formatted for robots')
-    out.add_argument('-q', '--quiet', action='store_const', const='quiet',
-                     help='Do not print any messages')
+    out.add_argument("--robot-format", dest="quiet", action="store_const",
+                     const="robot", help="Output job execution formatted for robots")
+    out.add_argument("-q", "--quiet", action="store_const", const="quiet",
+                     help="Do not print any messages")
     execMode = op.add_mutually_exclusive_group()
     execMode.add_argument("-f", "--foreground", action="store_true",
                           help="Do not fork, run in foreground.")
@@ -677,7 +677,7 @@ def parseArgs(args=None):
     op.add_argument("-t", "--to", metavar="ADDRESS",
                     help="Specify 'to' address for mail notification "
                     "(default=%(default)s)",
-                    default=os.getenv('USER'))
+                    default=os.getenv("USER"))
     op.add_argument("--cc", metavar="ADDRESS", action="append",
                     help="Specify 'CC' address for mail notification")
     op.add_argument("--tw", "--this-workspace", action="store_true",
@@ -742,13 +742,13 @@ def maybeHandleNonExecWriteOptions(options, jobs):
 def handleIsolate(cmd):
     isolateName = keyEscape(" ".join(cmd))
     if len(isolateName) > 45:
-        hashVal = hashlib.new('md5')
+        hashVal = hashlib.new("md5")
         for char in cmd:
             hashVal.update(char.encode("raw_unicode_escape"))
         isolateName = hashVal.hexdigest()[:16]
-    netnsd = ['isolate', '-n', isolateName]
+    netnsd = ["isolate", "-n", isolateName]
     netnsd += cmd
-    LOG.info('Isolating command %r -> %r', cmd, netnsd)
+    LOG.info("Isolating command %r -> %r", cmd, netnsd)
     return netnsd
 
 
@@ -760,19 +760,19 @@ def sendMailOrNotifyCmd(
         job: JobInfo,
 ) -> List[str]:
     cmd = []
-    subj = '[job-status] '
+    subj = "[job-status] "
     if len(notifyArg) > 1:
         subj += "Multiple jobs: %s" % repr(notifyArg)
     else:
         subj += str(job)
-    cmd.extend([config.mailProgram, '-s', subj])
+    cmd.extend([config.mailProgram, "-s", subj])
     if options.cc:
         for ccAddr in options.cc:
-            if '@' not in ccAddr:
+            if "@" not in ccAddr:
                 assert config.mailDomain
-                ccAddr += '@' + config.mailDomain
-            cmd += ['-c', ccAddr]
-    if config.mailProgram == 'chatmail':
+                ccAddr += "@" + config.mailDomain
+            cmd += ["-c", ccAddr]
+    if config.mailProgram == "chatmail":
         # Special case for built-in chatmail, which should inherit any of the
         # base args given to job, such as which rc file to use, etc.
         cmd.extend(baseParsedArgsToArgList(args or sys.argv, options))
@@ -787,11 +787,11 @@ def extendMailOrNotifyCmdLockRequired(
 ) -> Tuple[List[str], IO]:
     # Collect output files as attachments from dep jobs
     # pylint: disable=consider-using-with
-    tmp = tempfile.NamedTemporaryFile(prefix='jobInfo-')
+    tmp = tempfile.NamedTemporaryFile(prefix="jobInfo-")
     inp = tmp
     mailSize = 0
 
-    # Remove 'to' address temporarily
+    # Remove "to" address temporarily
     assert cmd is not None
     lastArg = cmd.pop(-1)
     for j in mailDeps:
@@ -799,7 +799,7 @@ def extendMailOrNotifyCmdLockRequired(
         safeWrite(tmp, depJob.detail(False))
         safeWrite(tmp, "\n" + SPACER_EACH + "\n")
         assert depJob.logfile
-        lines = autoDecode(check_output(['tail', '-n20', depJob.logfile]))
+        lines = autoDecode(check_output(["tail", "-n20", depJob.logfile]))
         safeWrite(tmp, lines)
         safeWrite(tmp, SPACER_EACH + "\n")
         safeWrite(tmp, "\n")
@@ -809,7 +809,7 @@ def extendMailOrNotifyCmdLockRequired(
             continue
         if (mailSize + stat.st_size * 4 / 3) < 8 * 1024 * 1024:
             mailSize += stat.st_size
-            cmd += ['-a', depJob.logfile]
+            cmd += ["-a", depJob.logfile]
     tmp.flush()
     cmd.append(lastArg)
     return cmd, inp
@@ -846,7 +846,7 @@ def runJob(
     except OSError as err:
         LOG.debug("OSError %s", err, exc_info=True)
         rc = -1 * err.errno
-        sprint(err, file=encoding_open(job.logfile, 'a'))
+        sprint(err, file=encoding_open(job.logfile, "a"))
     except CalledProcessError as err:
         LOG.debug("CalledProcessError %s", err, exc_info=True)
         rc = err.returncode

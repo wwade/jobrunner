@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-# Copyright (c) 2021 Arista Networks, Inc.  All rights reserved.
-# Arista Networks, Inc. Confidential and Proprietary.
-
-from __future__ import absolute_import, division, print_function
 
 # pylint: disable=unused-import
 

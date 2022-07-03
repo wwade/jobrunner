@@ -47,13 +47,13 @@ class NoMatchingJobError(Exception):
 
 class DatabaseMeta(object):
     # pylint: disable=too-many-instance-attributes
-    SV = '_schemaVersion_'
-    LASTKEY = '_lastKey_'
-    ITEMCOUNT = '_itemCount_'
-    RECENT = '_recentItems_'
-    IDX = '_currentIndex_'
-    LASTJOB = '_lastJob_'
-    CHECKPOINT = '_checkPoint_'
+    SV = "_schemaVersion_"
+    LASTKEY = "_lastKey_"
+    ITEMCOUNT = "_itemCount_"
+    RECENT = "_recentItems_"
+    IDX = "_currentIndex_"
+    LASTJOB = "_lastJob_"
+    CHECKPOINT = "_checkPoint_"
     initvals = frozenset([SV, LASTKEY, LASTJOB, ITEMCOUNT, CHECKPOINT])
     special = frozenset(list(initvals) + [RECENT, IDX])
 
@@ -74,7 +74,7 @@ class DatabaseBase(DatabaseMeta):
         self.config = config
         self._parent = parent
         self._instanceId = instanceId
-        self.ident = 'N/A'
+        self.ident = "N/A"
 
     @property
     def db(self):
@@ -196,7 +196,7 @@ class DatabaseBase(DatabaseMeta):
         return key in self.db
 
     def __str__(self):
-        return "%s DB %d '%s' ver %s" % (
+        return "%s DB %d %r ver %s" % (
             self.__class__.__name__, self.count, self.ident, self.db[self.SV])
 
     def uidx(self):
@@ -225,7 +225,7 @@ def reminderWatchFull(activeReminder):
             if wsVal:
                 workspace = "%s: " % wsVal
             reminderList.append(
-                '[%s%s]' %
+                "[%s%s]" %
                 (workspace, remindJob.cmdStr))
         reminders = " " + " ".join(reminderList)
     return reminders
@@ -286,7 +286,7 @@ class JobsBase(object):
         if len(allJobs) > limit:
             for job in allJobs[: -1 * limit]:
                 if self.config.verbose:
-                    sprint("Prune '%s'" % job.key)
+                    sprint("Prune %r" % job.key)
                 job.removeLog(self.config.verbose)
                 del self.inactive[job.key]
 
@@ -344,11 +344,11 @@ class JobsBase(object):
             if curWs:
                 jobList = [j for j in jobList if curWs == j.workspace]
         if filterPane:
-            curPane = os.getenv('TMUX_PANE', None)
+            curPane = os.getenv("TMUX_PANE", None)
             if curPane:
                 jobList = [
                     j for j in jobList if j.matchEnv(
-                        'TMUX_PANE', curPane)]
+                        "TMUX_PANE", curPane)]
         return jobList
 
     def listDb(self, db, limit, filterWs=False, filterPane=False, useCp=False,
@@ -387,17 +387,17 @@ class JobsBase(object):
     def dotStrForKey(key, active, inactive, attrs=False):
         if key in active:
             job = active[key]
-            attrList = ''
+            attrList = ""
         elif key in inactive:
             job = inactive[key]
-            colour = 'dimgray' if job.rc == 0 else 'red'
-            attrList = ' [color=%s, fontcolor=%s]' % (colour, colour)
+            colour = "dimgray" if job.rc == 0 else "red"
+            attrList = " [color=%s, fontcolor=%s]" % (colour, colour)
         else:
-            return 'n/a'
-        jobStr = job.cmdStr + '\\n[' + job.key + ']'
+            return "n/a"
+        jobStr = job.cmdStr + "\\n[" + job.key + "]"
         workspace = job.wsBasename()
         if workspace:
-            jobStr += '\\nWS: ' + workspace
+            jobStr += "\\nWS: " + workspace
         ret = '"%s"' % jobStr.replace('"', '\\"')
         if attrs:
             ret += attrList
@@ -408,12 +408,12 @@ class JobsBase(object):
         # pylint: disable=too-many-arguments,too-many-locals
         jobList = self.filterJobs(active, limit=None, filterWs=filterWs,
                                   filterPane=filterPane, useCp=useCp)
-        dot = ''
+        dot = ""
         if not jobList:
             dot += 'digraph active { "(None)"; }'
             return dot
-        dot += 'digraph active {\n'
-        dot += ' rankdir=BT;\n'
+        dot += "digraph active {\n"
+        dot += " rankdir=BT;\n"
         printedSingles = set()
         needsPrinting = set()
         for job in sorted(jobList):
@@ -425,16 +425,16 @@ class JobsBase(object):
                     needsPrinting.add(job.key)
                     depStr = self.dotStrForKey(dep, active, inactive)
                     needsPrinting.add(dep)
-                    dot += ' %s -> %s;\n' % (jobStr, depStr)
+                    dot += " %s -> %s;\n" % (jobStr, depStr)
             else:
                 printedSingles.add(job.key)
                 jobStr = self.dotStrForKey(
                     job.key, active, inactive, attrs=True)
-                dot += ' %s;\n' % jobStr
+                dot += " %s;\n" % jobStr
         for key in needsPrinting - printedSingles:
             jobStr = self.dotStrForKey(key, active, inactive, attrs=True)
-            dot += ' %s;\n' % jobStr
-        dot += '}'
+            dot += " %s;\n" % jobStr
+        dot += "}"
         return dot
 
     def countInactive(self):
@@ -473,7 +473,7 @@ class JobsBase(object):
     def getJobMatch(self, key, thisWs, skipReminders=False) -> JobInfo:
         # pylint: disable=too-many-return-statements,too-many-branches,
         # pylint: disable=too-many-statements
-        if key == '.':
+        if key == ".":
             lastJob = self.active.lastJob
             if lastJob:
                 return self.getJobMatch(lastJob, thisWs)
@@ -544,7 +544,7 @@ class JobsBase(object):
             if candidates:
                 return candidates[0]
 
-            raise NoMatchingJobError("No job for key '%s'" % key)
+            raise NoMatchingJobError("No job for key %r" % key)
 
     def getLog(self, key, thisWs, skipReminders=False):
         return self.getJobMatch(key, thisWs, skipReminders).logfile
@@ -605,8 +605,8 @@ class JobsBase(object):
             sprint("%s" % timestr + details + " " * clearNum)
 
     def getResources(self):
-        loads = ['%.0f' % v for v in os.getloadavg()]
-        val = 'load: {}/{}/{}'.format(*loads)
+        loads = ["%.0f" % v for v in os.getloadavg()]
+        val = "load: {}/{}/{}".format(*loads)
         val += self.plugins.getResources(self)
         return val
 
@@ -664,11 +664,11 @@ class JobsBase(object):
                           ", " + resource)
                 if timeNow <= blinkEnd:
                     if blinkState:
-                        outStr = '\033[45m' + outStr + '\033[0m'
+                        outStr = "\033[45m" + outStr + "\033[0m"
                     blinkState = not blinkState
                 else:
                     blinkState = True
-                sys.stdout.write(" " * clearLen + "\r" + outStr + '\r')
+                sys.stdout.write(" " * clearLen + "\r" + outStr + "\r")
                 clearLen = len(outStr) + 2
                 clearLen = max(clearLen, 30)
                 sys.stdout.flush()
@@ -690,7 +690,7 @@ class JobsBase(object):
             if not j.reminder:
                 continue
             if not j.startTime:
-                sprint('not started yet', str(j), j.workspace)
+                sprint("not started yet", str(j), j.workspace)
                 continue
             remind.setdefault(j.workspace, []).append(j)
         for k in self.inactive.keys():
@@ -721,14 +721,14 @@ class JobsBase(object):
 
             def _isPass(rc):
                 return rc == 0 or rc in utils.SPECIAL_STATUS
-            key = 'pass' if _isPass(j.rc) else 'fail'
+            key = "pass" if _isPass(j.rc) else "fail"
             if wkspace in perWs and key in perWs[wkspace]:
                 continue
             perWs.setdefault(wkspace, {})[key] = j
             age = int((unow - j.stopTime).total_seconds())
-            perWs[wkspace]['age'] = min(
+            perWs[wkspace]["age"] = min(
                 age, perWs[wkspace].get(
-                    'age', float('inf')))
+                    "age", float("inf")))
 
         def _byAge(refA, refB):
             if refA not in perWs and refB not in perWs:
@@ -738,15 +738,15 @@ class JobsBase(object):
             elif refA not in perWs:
                 return 1
             else:
-                return cmp_(perWs[refA]['age'], perWs[refB]['age'])
-        sprint('-' * 75)
+                return cmp_(perWs[refA]["age"], perWs[refB]["age"])
+        sprint("-" * 75)
         wsList = list(set(perWs.keys()).union(set(remind.keys())))
         for wkspace in sorted(wsList, key=cmp_to_key(_byAge)):
             if wkspace:
-                sprint(os.path.basename(wkspace) + ':')
+                sprint(os.path.basename(wkspace) + ":")
             else:
-                sprint('Outside of any workspace:')
-            for res in ['pass', 'fail']:
+                sprint("Outside of any workspace:")
+            for res in ["pass", "fail"]:
                 if wkspace in perWs and res in perWs[wkspace]:
                     j = perWs[wkspace][res]
                     sec = int((unow - j.stopTime).total_seconds())
@@ -754,17 +754,17 @@ class JobsBase(object):
                     sec -= tmHour * 60 * 60
                     tmMin = sec / 60
                     sec -= tmMin * 60
-                    diffTime = '%d:%02d:%02d' % (tmHour, tmMin, sec)
+                    diffTime = "%d:%02d:%02d" % (tmHour, tmMin, sec)
                     sprint(
-                        '  last %s, \033[97m%s\033[0m ago' %
+                        "  last %s, \033[97m%s\033[0m ago" %
                         (res, diffTime))
-                    sprint('    ' + text_type(j))
+                    sprint("    " + text_type(j))
             if wkspace in remind:
-                sprint('  reminders:')
+                sprint("  reminders:")
                 for j in remind[wkspace]:
-                    sprint('    \033[92m%s\033[0m' % j.reminder)
-            sprint('')
-        sprint('-' * 75)
+                    sprint("    \033[92m%s\033[0m" % j.reminder)
+            sprint("")
+        sprint("-" * 75)
 
     def addDeps(self, fromWhere, thisWs, deps, depSuccess):
         if fromWhere:
@@ -782,7 +782,7 @@ class JobsBase(object):
     def new(self, cmd, isolate, autoJob=False, key=None, reminder=None):
         # pylint: disable=too-many-arguments
         if key and key in self.active.db:
-            raise Exception("Active key conflict for key '%s'" % key)
+            raise Exception("Active key conflict for key %r" % key)
         job = service().db.jobInfo(self.uidx(), key)
         job.isolate = isolate
         job.setCmd(cmd, reminder)
