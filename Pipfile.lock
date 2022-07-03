@@ -113,11 +113,11 @@
         },
         "setuptools-scm": {
             "hashes": [
-                "sha256:53afbaa882f43e5ec8e14f2d93b9c268dc62eb3f6cc8b2790f8cb97903e53c02",
-                "sha256:ec120c99027a785c7a349667480a5b2100dfc7d5063e545c93f3735508945aef"
+                "sha256:7934c856b042199eb44e1523b46abb881726b7d61b3c9b41a756e4ffb4adf73b",
+                "sha256:cf8ab8e235bed840cd4559b658af0d8e8a70896a191bbc510ee914ec5325332d"
             ],
             "index": "pypi",
-            "version": "==7.0.2"
+            "version": "==7.0.3"
         },
         "simplejson": {
             "hashes": [
