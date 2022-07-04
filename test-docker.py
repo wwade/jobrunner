@@ -1,24 +1,27 @@
 #!/usr/bin/env python
 
 import argparse
-from collections import namedtuple
 import contextlib
+from dataclasses import dataclass
 import os
 import os.path
 import pipes
 import re
-import shutil
 import subprocess
 import sys
 from typing import Iterable, List, Tuple
 
-VerInfo = namedtuple("VerInfo", ("version", "lock", "default"))
+
+@dataclass(frozen=True)
+class VerInfo:
+    version: str
+
 
 VERSIONS = (
-    VerInfo("3.8", "Pipfile-3.8.lock", False),
-    VerInfo("3.9", "Pipfile-3.9.lock", False),
-    VerInfo("3.10", "Pipfile-3.10.lock", False),
-    VerInfo("3.7", "Pipfile.lock", True),
+    VerInfo("3.8"),
+    VerInfo("3.9"),
+    VerInfo("3.10"),
+    VerInfo("3.7"),
 )
 
 PIPCONF = (
@@ -44,13 +47,6 @@ def assertFileClean(filename: str):
     out = subprocess.check_output(["git", "status", "--porcelain", filename])
     if out:
         raise UserError("File is unclean and will be overwritten: " + filename)
-
-
-def assertClean(versions: Iterable[VerInfo]):
-    for version in versions:
-        lockFile = version.lock
-        assertFileClean(lockFile)
-    assertFileClean("Pipfile")
 
 
 def resolvePipConf() -> str:
@@ -123,14 +119,11 @@ def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str
 
 
 @contextlib.contextmanager
-def pipfileForVersion(version: VerInfo, keepModifiedPipfile: bool):
-    if not version.default:
-        shutil.copyfile(version.lock, "Pipfile.lock")
+def pipfileForVersion(keepModifiedPipfile: bool):
     try:
         yield
     finally:
-        if not version.default and not keepModifiedPipfile:
-            shutil.copyfile("Pipfile.lock", version.lock)
+        if not keepModifiedPipfile:
             subprocess.check_output(["git", "checkout",
                                      "Pipfile", "Pipfile.lock"])
 
@@ -140,7 +133,7 @@ def main() -> None:
     ap.add_argument(
         "--versions",
         metavar="VERSION",
-        choices=sorted([v[0] for v in VERSIONS]),
+        choices=sorted([v.version for v in VERSIONS]),
         nargs="*",
         help="specify version(s) to test, select from %(choices)s. "
         "Default is all.",
@@ -160,13 +153,11 @@ def main() -> None:
         versions = VERSIONS
 
     print(versions)
-    if not args.ignore_unclean:
-        assertClean(versions)
 
     pipConf = resolvePipConf()
 
     for version in versions:
-        with pipfileForVersion(version, bool(cmd)):
+        with pipfileForVersion(bool(cmd)):
             execVersion(version, pipConf, args.upgrade, cmd)
 
 
