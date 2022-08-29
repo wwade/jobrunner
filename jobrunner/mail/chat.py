@@ -77,7 +77,7 @@ class PostError(Exception):
     pass
 
 
-def _postToGChat(text, uri, threadId=None):
+def _postToGChat(text, uri, timeout, threadId=None):
     payload = {
         "text": text,
     }
@@ -86,7 +86,7 @@ def _postToGChat(text, uri, threadId=None):
     }
     if threadId:
         payload["thread"] = {"name": threadId}
-    ret = requests.post(uri, json=payload, headers=headers)
+    ret = requests.post(uri, json=payload, headers=headers, timeout=timeout)
     try:
         return ret.json()["thread"]["name"]
     except (KeyError, TypeError):
@@ -154,6 +154,9 @@ def parseArgs(args=None):
     ap.add_argument("-f", dest="inFile", action="store")
     ap.add_argument("-T", "--new-thread", action="store_true",
                     help="Do not re-use the previous chat thread for each hook")
+    ap.add_argument("--timeout", type=int, default=10,
+                    help="Specify timeout (in seconds) for REST API requests "
+                    "(default=%(default)s)")
     ap.add_argument("toAddr", metavar="to-addr", nargs="+")
 
     return ap.parse_args(args)
@@ -191,7 +194,7 @@ def main(args=None):
                     if not opts.new_thread and config.chatmailReuseThreads
                     else None)
 
-        newThreadId = _postToGChat(msg, hook, threadId=threadId)
+        newThreadId = _postToGChat(msg, hook, opts.timeout, threadId=threadId)
         threadCache.put(hook, newThreadId)
 
     return OK

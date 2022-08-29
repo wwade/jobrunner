@@ -13,6 +13,8 @@ from jobrunner.test.helpers import capturedOutput
 
 # pylint: disable-msg=protected-access
 
+TIMEOUT = 10
+
 
 @patch("jobrunner.mail.chat.requests", new=MagicMock(requests))
 class ChatPostTest(TestCase):
@@ -21,7 +23,7 @@ class ChatPostTest(TestCase):
         chat.requests.post = MagicMock(return_value=retMock)
         retMock.json.return_value = {"thread": {"name": "somethread"}}
         self.assertEqual(
-            chat._postToGChat("foo", "https://something"),
+            chat._postToGChat("foo", "https://something", TIMEOUT),
             "somethread")
 
     def testBadRequestReturn(self):
@@ -36,7 +38,7 @@ class ChatPostTest(TestCase):
         for retVal in retValues:
             retMock.json.return_value = retVal
             self.assertEqual(
-                chat._postToGChat("foo", "https://something"),
+                chat._postToGChat("foo", "https://something", TIMEOUT),
                 None)
 
 
@@ -93,7 +95,7 @@ class ChatTest(TestCase):
 
     def testRequestSafetySanity(self, *_):
         with self.assertRaises(AttributeError):
-            chat.requests.post()
+            chat.requests.post("http://example.com/foo")
 
     def testBasicCall(self, *mockArgs):
         mocks = ChatTest.Mocks(mockArgs)
@@ -102,7 +104,7 @@ class ChatTest(TestCase):
 
         chat.main(["user1"])
 
-        mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
+        mocks.postToGChat.assert_called_once_with(ANY, hook, TIMEOUT, threadId=None)
         self.assertPostTextMatchesRegexp("NO SUBJECT")
 
     def testBasicCallWithOptions(self, *mockArgs):
@@ -123,7 +125,7 @@ class ChatTest(TestCase):
                 openMock.assert_called_once_with("mytext.txt")
 
         self.assertEqual(ret, 0)
-        mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
+        mocks.postToGChat.assert_called_once_with(ANY, hook, TIMEOUT, threadId=None)
         self.assertPostTextMatchesRegexp(
             r"My subject.*a bunch of\ntext.*attachfile.txt")
 
@@ -140,7 +142,8 @@ class ChatTest(TestCase):
             ret = chat.main(["-s", "My subject", "user1"])
 
             self.assertEqual(ret, 0)
-            mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
+            mocks.postToGChat.assert_called_once_with(ANY, hook, TIMEOUT,
+                                                      threadId=None)
             self.assertPostTextMatchesRegexp(
                 r"\*My subject\*" + (r"\s*$" if tty else r".*a bunch of\ntext"))
 
@@ -159,7 +162,7 @@ class ChatTest(TestCase):
                          "user1", "user2"])
 
         self.assertEqual(ret, 0)
-        calls = [call(ANY, hook, threadId=None)
+        calls = [call(ANY, hook, TIMEOUT, threadId=None)
                  for hook in set(hooks.values())]
         self.assertEqual(mocks.postToGChat.call_count, len(calls))
         mocks.postToGChat.assert_has_calls(calls, any_order=True)
@@ -196,7 +199,7 @@ class ChatTest(TestCase):
 
             self.assertEqual(ret, 0)
             mocks.postToGChat.assert_called_once_with(
-                ANY, hook,
+                ANY, hook, TIMEOUT,
                 threadId=threadId if reuseThreads else None)
             if threadId == retThreadId:
                 self.assertEqual(mocks.threadCacheWrite.call_count, 0)
@@ -224,7 +227,8 @@ class ChatTest(TestCase):
             ret = chat.main(["-s", "My subject"] + users)
 
             self.assertEqual(ret, 0)
-            mocks.postToGChat.assert_called_once_with(ANY, hook, threadId=None)
+            mocks.postToGChat.assert_called_once_with(ANY, hook, TIMEOUT,
+                                                      threadId=None)
             pattern = r"\*My subject\*"
             tags = []
             if expectAtAll:
