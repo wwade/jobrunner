@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
 jobs:
-  - job: 'ubuntu_20_04'
+  - job: Ubuntu_20_04
     pool:
       vmImage: ubuntu-20.04
     strategy:
@@ -21,9 +21,9 @@ jobs:
     steps:
       - template: steps.yaml
 
-  - job: 'macOS_10_15'
+  - job: Mac_OS_latest
     pool:
-      vmImage: 'macOS-10.15'
+      vmImage: macos-latest
     strategy:
       matrix:
         Python39:
