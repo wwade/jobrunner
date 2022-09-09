@@ -348,7 +348,7 @@ jobrunner.utils.killProcGroup(pgrp, None)
         try:
             subprocess.check_call(cmd)
         except subprocess.CalledProcessError as error:
-            LOG("cmd %r => error=%s", cmd, error, exc_info=True)
+            LOG.debug("cmd %r => error=%s", cmd, error, exc_info=True)
             return error.output
     return None
 
