@@ -799,7 +799,13 @@ def extendMailOrNotifyCmdLockRequired(
         safeWrite(tmp, depJob.detail(False))
         safeWrite(tmp, "\n" + SPACER_EACH + "\n")
         assert depJob.logfile
-        lines = autoDecode(check_output(["tail", "-n20", depJob.logfile]))
+        out = check_output(["tail", "-n20", depJob.logfile])
+        try:
+            lines = autoDecode(out)
+        except ValueError as err:
+            LOG.debug("error decoding output from log file %r for %s: %s",
+                      depJob.logfile, depJob, err)
+            lines = f"{out[:50]}\n"
         safeWrite(tmp, lines)
         safeWrite(tmp, SPACER_EACH + "\n")
         safeWrite(tmp, "\n")
