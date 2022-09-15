@@ -643,7 +643,7 @@ def parseArgs(args=None):
     op.add_argument("-c", "--command", metavar="CMD",
                     help="Specify complete bash command to execute "
                     "(argument to bash -c)")
-    op.add_argument("--retry", metavar="KEY", action="store",
+    op.add_argument("--retry", "-y", metavar="KEY", action="store",
                     help="Retry job specified by KEY")
     op.add_argument(
         "-r",
