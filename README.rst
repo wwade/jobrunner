@@ -167,8 +167,8 @@ Run CI checks locally
 
     ./test-docker.py [--versions 2.7 3.7 3.8] [--upgrade] [--ignore-unclean]
 
-.. |Build Status| image:: https://dev.azure.com/wadecarpenter/jobrunner/_apis/build/status/wwade.jobrunner%20(azure%20native)?branchName=master
-   :target: https://dev.azure.com/wadecarpenter/jobrunner/_build/latest?definitionId=2&branchName=master
+.. |Build Status| image:: https://dev.azure.com/wadecarpenter/jobrunner/_apis/build/status/wwade.jobrunner%20(azure%20native)?branchName=main
+   :target: https://dev.azure.com/wadecarpenter/jobrunner/_build/latest?definitionId=2&branchName=main
 
 .. |PyPI Release| image:: https://badge.fury.io/py/shell-jobrunner.svg
    :target: https://badge.fury.io/py/shell-jobrunner
