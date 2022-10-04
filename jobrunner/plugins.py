@@ -11,11 +11,10 @@ from .compat import get_plugins
 
 class Plugins(object):
     def __init__(self):
-
         self.plugins = {plug.load() for plug in get_plugins("wwade.jobrunner")}
         deprecatedPlugins = {
             importlib.import_module("jobrunner.plugin.{}".format(name))
-            for finder, name, ispkg
+            for _, name, _
             in pkgutil.iter_modules(jobrunner.plugin.__path__)
         }
         if deprecatedPlugins:
