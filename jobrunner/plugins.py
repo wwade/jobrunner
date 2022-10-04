@@ -6,14 +6,13 @@ import warnings
 
 import jobrunner.plugin
 
-from .compat import metadata
+from .compat import get_plugins
 
 
 class Plugins(object):
     def __init__(self):
-        self.plugins = {
-            plug.load() for plug in metadata.entry_points().get(
-                "wwade.jobrunner", [])}
+
+        self.plugins = {plug.load() for plug in get_plugins("wwade.jobrunner")}
         deprecatedPlugins = {
             importlib.import_module("jobrunner.plugin.{}".format(name))
             for finder, name, ispkg
