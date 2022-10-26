@@ -9,8 +9,8 @@ flake8 = "*"
 isort = "*"
 mock = "*"
 pexpect = "*"
-pylint = "*"
 pytest = "*"
+pylint = "*"
 
 [packages]
 chardet = "*"
