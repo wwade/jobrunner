@@ -246,11 +246,11 @@
         },
         "autopep8": {
             "hashes": [
-                "sha256:99afd5a60d30c6d426319e15db2ed7833d2da38f7f94a8753a1953509cc78e5d",
-                "sha256:f0058220e4cc0ef6121996fc8ec1c32f0735e446be23c4e1f692de0bf23174dd"
+                "sha256:8b1659c7f003e693199f52caffdc06585bb0716900bbc6a7442fd931d658c077",
+                "sha256:ad924b42c2e27a1ac58e432166cc4588f5b80747de02d0d35b1ecbd3e7d57207"
             ],
             "index": "pypi",
-            "version": "==1.7.1"
+            "version": "==2.0.0"
         },
         "dill": {
             "hashes": [
