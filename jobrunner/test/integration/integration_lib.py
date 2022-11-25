@@ -52,7 +52,7 @@ def curDir():
 
 
 @contextmanager
-def testEnv():
+def getTestEnv():
     tmpDir = mkdtemp()
     os.environ["JOBRUNNER_STATE_DIR"] = tmpDir
     os.chdir(curDir())
