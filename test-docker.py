@@ -5,8 +5,8 @@ import contextlib
 from dataclasses import dataclass
 import os
 import os.path
-from shlex import quote
 import re
+from shlex import quote
 import subprocess
 import sys
 from typing import Iterable, List, Tuple
