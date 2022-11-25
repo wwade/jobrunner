@@ -5,7 +5,7 @@ import contextlib
 from dataclasses import dataclass
 import os
 import os.path
-import pipes
+from shlex import quote
 import re
 import subprocess
 import sys
@@ -21,7 +21,7 @@ VERSIONS = (
     VerInfo("3.8"),
     VerInfo("3.9"),
     VerInfo("3.10"),
-    VerInfo("3.7"),
+    VerInfo("3.11"),
 )
 
 PIPCONF = (
@@ -57,7 +57,7 @@ def resolvePipConf() -> str:
 
 
 def runDocker(version: VerInfo, cmd: List[str]):
-    cmdStr = " ".join(map(pipes.quote, cmd))
+    cmdStr = " ".join(map(quote, cmd))
     print("+", cmdStr)
     try:
         subprocess.check_call(cmd)
