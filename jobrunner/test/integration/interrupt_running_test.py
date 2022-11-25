@@ -12,13 +12,13 @@ from pytest import mark
 from jobrunner.utils import autoDecode
 
 from .integration_lib import (
+    getTestEnv,
     job,
     jobf,
     noJobs,
     run,
     runningJob,
     setUpModuleHelper,
-    getTestEnv,
     waitFor,
 )
 

@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from jobrunner.plugins import Plugins
+import jobrunner.plugins
 
 logger = logging.getLogger(__name__)
 
@@ -90,11 +90,11 @@ class PluginMMMLowPrio(Plugin):
 def testPluginPriorities(plugins, workspaceProject, resources):
     with mock.patch("jobrunner.plugins.get_plugins") as gp, \
             mock.patch("importlib.import_module") as im, \
-            mock.patch("socket.gethostname", return_value="xxx"):
+            mock.patch.object(jobrunner.plugins, "gethostname", return_value="xxx"):
         im.return_value = []
         gp.return_value = plugins
 
-        p = Plugins()
+        p = jobrunner.plugins.Plugins()
 
         logger.info("only PluginNoPrio implements getResources()")
         assert resources == p.getResources(None)

@@ -39,6 +39,10 @@ PRIO_LOWEST = 1 << 31
 PRIO_HIGHEST = 0
 
 
+def gethostname() -> str:
+    return socket.gethostname()
+
+
 class Plugins(object):
     def __init__(self):
         plugins = {plug.load() for plug in get_plugins("wwade.jobrunner")}
@@ -89,7 +93,8 @@ class Plugins(object):
         for ret in self._pluginCalls("workspaceIdentity"):
             if ret:
                 return ret
-        return socket.gethostname()
+        logger.debug("using gethostname as fallback for workspaceIdentity")
+        return gethostname()
 
     def workspaceProject(self) -> Tuple[str, bool]:
         """

@@ -18,6 +18,7 @@ from jobrunner.utils import autoDecode
 from ...compat import encoding_open
 from .integration_lib import (
     activeJobs,
+    getTestEnv,
     inactiveCount,
     job,
     jobf,
@@ -26,7 +27,6 @@ from .integration_lib import (
     run,
     setUpModuleHelper,
     spawn,
-    getTestEnv,
     waitFor,
 )
 
