@@ -3,7 +3,7 @@ import errno
 from functools import total_ordering
 from logging import getLogger
 import os
-import pipes
+from shlex import quote
 import string
 from typing import Any, List, Optional
 
@@ -40,7 +40,7 @@ _TRANSLATION = {val: "<{:02X}>".format(val) for val in range(0x80, 0x100)}
 
 
 def cmdString(cmd):
-    unicodeString = " ".join(map(pipes.quote, cmd))
+    unicodeString = " ".join(map(quote, cmd))
     return "".join(_TRANSLATION.get(ord(c), c) for c in unicodeString)
 
 

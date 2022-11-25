@@ -12,13 +12,13 @@ from pytest import mark
 from jobrunner.utils import autoDecode
 
 from .integration_lib import (
+    getTestEnv,
     job,
     jobf,
     noJobs,
     run,
     runningJob,
     setUpModuleHelper,
-    testEnv,
     waitFor,
 )
 
@@ -60,7 +60,7 @@ def setUpModule():
 
 class TestInterrupt(TestCase):
     def testAsUser(self):
-        with testEnv():
+        with getTestEnv():
             # --pid
             # --int
             run(["job", "sleep", "60"])
@@ -81,7 +81,7 @@ class TestInterrupt(TestCase):
 
     @mark.skipif(not _MODULE.sudoOk, reason="sudo check not possible")
     def testWithSudo(self):
-        with testEnv():
+        with getTestEnv():
             run(["job", "sudo", "sleep", "60"])
 
             def _findJob(fail=False):

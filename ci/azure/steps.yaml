@@ -1,40 +1,35 @@
 steps:
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '$(python.version)'
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
 
-- script: python -m pip install --upgrade pip setuptools wheel pipenv
-  displayName: 'Install tools'
+  - script: python -m pip install --upgrade pip setuptools wheel pipenv
+    displayName: 'Install tools'
 
-- script: |
-    set -x
-    verLock="Pipfile-$(python.version).lock"
-    if [[ -f "$verLock" ]]
-    then
-      ln -svf "$verLock" Pipfile.lock
-    fi
-  displayName: 'Set up Pipfile-$(python.version)'
 
-- script: pipenv --python '$(python.version)' sync --dev --keep-outdated
-  displayName: 'pipenv install --dev'
+  - script: |
+      set -x
+      verLock="Pipfile-$(python.version).lock"
+      if [[ -f "$verLock" ]]
+      then
+        ln -svf "$verLock" Pipfile.lock
+      fi
+    displayName: 'Set up Pipfile-$(python.version)'
 
-- script: |
-    set -xe
-    FILES=(setup.py jobrunner)
-    pipenv run isort -c --diff "${FILES[@]}"
-    pipenv run autopep8 --exit-code -ra --diff "${FILES[@]}"
-    pipenv run pylint -d fixme "${FILES[@]}"
-    find jobrunner -type f -name "*.py" -not -name "compat.py" | xargs pipenv run flake8 setup.py
-  displayName: Run linters
+  - script: pipenv --python '$(python.version)' sync --dev --keep-outdated
+    displayName: Install virtualenv using Pipenv
 
-- script: pipenv run pip install .
-  displayName: 'Install jobrunner'
+  - script: pipenv run make lint
+    displayName: Run linters
 
-- script: pipenv run pytest -v -l --junitxml=junit/test-results.xml --durations=10 jobrunner/
-  displayName: Run tests
+  - script: pipenv run make install
+    displayName: Install jobrunner
 
-- task: PublishTestResults@2
-  condition: succeededOrFailed()
-  inputs:
-      testResultsFiles: '**/test-*.xml'
-      testRunTitle: Publish test results for $(Agent.JobName)
+  - script: pipenv run make check
+    displayName: Run tests
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+        testResultsFiles: '**/test-*.xml'
+        testRunTitle: Publish test results for $(Agent.JobName)

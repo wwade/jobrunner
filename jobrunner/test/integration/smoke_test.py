@@ -18,6 +18,7 @@ from jobrunner.utils import autoDecode
 from ...compat import encoding_open
 from .integration_lib import (
     activeJobs,
+    getTestEnv,
     inactiveCount,
     job,
     jobf,
@@ -26,7 +27,6 @@ from .integration_lib import (
     run,
     setUpModuleHelper,
     spawn,
-    testEnv,
     waitFor,
 )
 
@@ -52,13 +52,13 @@ def unicodeCase():
 
 
 def testUnicodeSmoke(capsys):
-    with testEnv():
+    with getTestEnv():
         with capsys.disabled():
             unicodeCase()
 
 
 def testUnicodeSmoke2():
-    with testEnv():
+    with getTestEnv():
         unicodeCase()
 
 
@@ -68,7 +68,7 @@ def testUnicodeSmoke2():
     (["job", "-g", "xxx"], r"^Error: No job for key .xxx.$"),
 ])
 def testEmptyDb(cmd, expected):
-    with testEnv():
+    with getTestEnv():
         with pytest.raises(CalledProcessError) as error:
             run(cmd, capture=True)
         output = autoDecode(error.value.output)
@@ -78,7 +78,7 @@ def testEmptyDb(cmd, expected):
 
 class SmokeTest(TestCase):
     def testBasic(self):
-        with testEnv() as env:
+        with getTestEnv() as env:
             waitFile1 = env.path("waitFile1")
             waitFile2 = env.path("waitFile2")
             print(run(["job"] + awaitFile(waitFile1, 1)))
@@ -130,7 +130,7 @@ class RunExecOptionsTest(TestCase):
 
     def test(self):
         # pylint: disable=too-many-statements
-        with testEnv() as env:
+        with getTestEnv() as env:
             os.environ["TMUX_PANE"] = "pane1"
             # --quiet
             # --foreground
@@ -208,7 +208,7 @@ class RunExecOptionsTest(TestCase):
             assert data == outData
 
     def testWatchWait(self):
-        with testEnv():
+        with getTestEnv():
             # --watch
             # --wait
             print("+ job --watch")
@@ -232,7 +232,7 @@ class RunExecOptionsTest(TestCase):
             waiter.expect(EOF)
 
     def testRobot(self):
-        with testEnv():
+        with getTestEnv():
             out = jobf("--robot-format", "true")
             sep = "\x00"
             matchOut = r"""
@@ -246,7 +246,7 @@ class RunExecOptionsTest(TestCase):
 
     def testMonitor(self):
         # --monitor
-        with testEnv():
+        with getTestEnv():
             child = spawn(["job", "--monitor", "-c", "echo MARKOUTPUT"])
             child.expect(r"\sMARKOUTPUT\s")
             child.sendintr()
@@ -276,7 +276,7 @@ class RunMailTest(TestCase):
         return json.load(encoding_open(lastLog))
 
     def test(self):
-        with testEnv():
+        with getTestEnv():
             with NamedTemporaryFile() as rcFile:
                 rcFile.write(MAIL_CONFIG.encode("utf-8"))
                 rcFile.flush()
@@ -301,7 +301,7 @@ class RunMailTest(TestCase):
                 self.assertIn("another@example.com", args2)
 
     def testNotify(self):
-        with testEnv():
+        with getTestEnv():
             with NamedTemporaryFile() as rcFile:
                 rcFile.write(MAIL_CONFIG.encode("utf-8"))
                 rcFile.flush()
@@ -330,7 +330,7 @@ class OtherCommandSmokeTest(TestCase):
     """
     @staticmethod
     def testSmoke():
-        with testEnv():
+        with getTestEnv():
             # --get-all-logs
             jobf("true")
             jobf("--get-all-logs")
@@ -359,7 +359,7 @@ class RunNonExecOptionsTest(TestCase):
 
     def test(self):
         # pylint: disable=too-many-locals
-        with testEnv():
+        with getTestEnv():
             # --last-key
             jobf("-v", "echo", "first")
             firstKey = lastKey()
