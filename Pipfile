@@ -20,6 +20,7 @@ requests = "*"
 setuptools-scm = ">=3.4"
 simplejson = "*"
 six = "*"
+wrapt = "*"
 
 [requires]
 python_version = "3.9"
