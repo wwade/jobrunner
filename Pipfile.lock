@@ -21,7 +21,7 @@
                 "sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3",
                 "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18"
             ],
-            "index": "pypi",
+            "markers": "python_full_version >= '3.6.0'",
             "version": "==2022.12.7"
         },
         "chardet": {
@@ -347,11 +347,11 @@
         },
         "isort": {
             "hashes": [
-                "sha256:6f62d78e2f89b4500b080fe3a81690850cd254227f27f75c3a0c491a1f351ba7",
-                "sha256:e8443a5e7a020e9d7f97f1d7d9cd17c88bcb3bc7e218bf9cf5095fe550be2951"
+                "sha256:dd8bbc5c0990f2a095d754e50360915f73b4c26fc82733eb5bfc6b48396af4d2",
+                "sha256:e486966fba83f25b8045f8dd7455b0a0d1e4de481e1d7ce4669902d9fb85e622"
             ],
             "index": "pypi",
-            "version": "==5.10.1"
+            "version": "==5.11.2"
         },
         "lazy-object-proxy": {
             "hashes": [
