@@ -1,8 +1,8 @@
-from __future__ import absolute_import, division, print_function
-
+from json import load
 from logging import getLogger
 import os
 import re
+from shlex import quote
 from subprocess import CalledProcessError, check_call
 from tempfile import NamedTemporaryFile
 import time
@@ -210,26 +210,50 @@ class RunExecOptionsTest(TestCase):
     def testWatchWait(self):
         with getTestEnv():
             # --watch
+            # --notifier
             # --wait
             print("+ job --watch")
-            child = spawn(["job", "--watch"])
-            child.expect("No jobs running")
-            child.expect(r"\r")
-            sleeper = spawn(["job", "--foreground", "sleep", "60"])
-            sleeper.expect(r"execute: sleep 60")
+            watch = spawn(["job", "--watch"])
+            watch.expect("No jobs running")
+            watch.expect(r"\r")
 
-            # Confirm --watch output
-            child.expect(r"1 job running")
-            child.sendintr()
+            with NamedTemporaryFile() as notifierOut:
+                notifierOut.close()
+                env = dict(os.environ)
+                env["DUMP_FILE"] = notifierOut.name
+                cmd = ["job", "--notifier", "./dump_json_input.py"]
+                print("+", map(quote, cmd))
+                notifier = spawn(cmd, env=env)
 
-            # Wait for the sleep 60
-            waiter = spawn(["job", "--wait", "sleep"])
-            waiter.expect(r"adding dependency.*sleep 60")
+                sleeper = spawn(["job", "--foreground", "sleep", "60"])
+                sleeper.expect(r"execute: sleep 60")
 
-            # Kill the sleep 60
-            sleeper.sendintr()
-            waiter.expect(r"Dependent job failed:.*sleep 60")
-            waiter.expect(EOF)
+                # Confirm --watch output
+                watch.expect(r"1 job running")
+                watch.sendintr()
+
+                # Wait for the sleep 60
+                waiter = spawn(["job", "--wait", "sleep"])
+                waiter.expect(r"adding dependency.*sleep 60")
+
+                # Kill the sleep 60
+                sleeper.sendintr()
+                waiter.expect(r"Dependent job failed:.*sleep 60")
+                waiter.expect(EOF)
+
+                notifier.expect("dumped")
+                notifier.sendintr()
+                notifier.expect(EOF)
+                notifierOut.close()
+
+                with open(notifierOut.name, encoding="utf-8") as fp:
+                    dumped = load(fp)
+                    print(dumped)
+                    self.assertIn("subject", dumped)
+                    self.assertIn("body", dumped)
+                    self.assertIn("rc", dumped)
+                    self.assertEqual(-1, dumped["rc"])
+                    self.assertRegex(dumped["subject"], r"^Job finished.*sleep 60$")
 
     def testRobot(self):
         with getTestEnv():

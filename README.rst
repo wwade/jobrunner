@@ -129,6 +129,47 @@ Sample rcfile:
     # It should show up as "user/some_long_integer" somewhere in the span's metadata.
     user1 = <long integer>
 
+System Notifications (Systemd user service example)
+---------------------------------------------------
+
+If you want to enable notifications when jobs finish, one way to do this is to use the --notifier
+argument.
+
+``~/.config/systemd/user/job-notify.service``:
+
+.. code:: aconf
+
+    [Unit]
+    Description=Jobrunner Notifier
+
+    [Service]
+    Type=simple
+    ExecStart=env job --notifier jsonNotify.py
+    RestartSec=30
+    Restart=always
+
+    [Install]
+    WantedBy=default.target
+
+``~/.local/bin/jsonNotify.py``:
+
+.. code:: python
+
+    #!/usr/bin/env python3
+
+    from json import load
+    import subprocess
+    from sys import stdin
+
+    cmd = ["notify-send"]
+    data = load(stdin)
+    rc = data.get("rc", 0)
+    if rc != 0:
+        cmd += ["--urgency=critical"]
+    cmd += [data["subject"], data["body"]]
+    subprocess.run(cmd)
+
+
 Hacking
 -------
 

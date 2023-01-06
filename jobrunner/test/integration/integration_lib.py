@@ -147,7 +147,7 @@ def inactiveCount():
     return int(run(["job", "--count"], capture=True))
 
 
-def spawn(cmd):
+def spawn(cmd, env=None):
     print(" ".join(map(quote, cmd)))
-    child = pexpect.spawn(cmd[0], cmd[1:], echo=True)
+    child = pexpect.spawn(cmd[0], cmd[1:], echo=True, env=env)
     return child
