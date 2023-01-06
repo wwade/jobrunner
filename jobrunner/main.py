@@ -345,7 +345,9 @@ def addNonExecOptions(op):
     op.add_argument("-L", "--list-inactive", action="store_true",
                     help="List inactive jobs")
     op.add_argument("-W", "--watch", action="store_true",
-                    help="Watch for any job acitvity")
+                    help="Watch for any job activity")
+    op.add_argument("--notifier", metavar="PROGRAM",
+                    help="Notify using PROGRAM on any job activity")
     op.add_argument("-s", "--show", metavar="KEY", action="append",
                     help="Get details for job specified by KEY")
     op.add_argument("-K", "--last-key", action="store_true",
@@ -493,9 +495,10 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         return False
 
 
-def handleNonExecWriteOptions(options, jobs):
+def handleNonExecWriteOptions(options, jobs: JobsBase):
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-return-statements
+    # pylint: disable=too-many-statements
     if options.stop:
         errors = []
         for k in options.stop:
@@ -554,6 +557,12 @@ def handleNonExecWriteOptions(options, jobs):
             sprint("")
             sprint("Exit on user interrupt")
             raise ExitCode(1) from err
+        return True
+    elif options.notifier:
+        try:
+            jobs.notifyActivity(options.notifier)
+        except KeyboardInterrupt:
+            pass
         return True
     else:
         return False
@@ -796,7 +805,7 @@ def extendMailOrNotifyCmdLockRequired(
     lastArg = cmd.pop(-1)
     for j in mailDeps:
         depJob = jobs.inactive[j.permKey]
-        safeWrite(tmp, depJob.detail(False))
+        safeWrite(tmp, depJob.detail())
         safeWrite(tmp, "\n" + SPACER_EACH + "\n")
         assert depJob.logfile
         out = check_output(["tail", "-n20", depJob.logfile])

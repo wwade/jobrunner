@@ -1,11 +1,10 @@
-from builtins import map, range
 import errno
 from functools import total_ordering
 from logging import getLogger
 import os
 from shlex import quote
 import string
-from typing import Any, List, Optional
+from typing import Any, Iterable, List, Optional, Sized
 
 import dateutil.tz
 
@@ -497,7 +496,8 @@ class JobInfo(object):
         except AttributeError:
             return "N/A"
 
-    def showInOrder(self, order, level):
+    def showInOrder(self, order: Iterable[str],
+                    level: Optional[Sized] = None) -> str:
         longLine = 0
         for k in order:
             if len(k) > longLine:
@@ -533,7 +533,7 @@ class JobInfo(object):
         ]
         return self.showInOrder(order, None)
 
-    def detail(self, level):
+    def detail(self, level: Optional[Sized] = None) -> str:
         if self.reminder:
             return self.showReminder()
 

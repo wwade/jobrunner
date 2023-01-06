@@ -1,22 +1,18 @@
-from __future__ import absolute_import, division, print_function
-
 from datetime import datetime
 from functools import cmp_to_key
 import logging
 import os
 import os.path
+import subprocess
 import sys
 import tempfile
 import time
-from typing import Optional
+from typing import List, Optional
 from uuid import uuid4
 
 from dateutil import parser
 from dateutil.tz import tzlocal, tzutc
 import simplejson as json
-import six
-from six import text_type
-from six.moves import filter
 
 from jobrunner import utils
 
@@ -83,9 +79,6 @@ class DatabaseBase(DatabaseMeta):
     def filterJobs(self, k):
         return k not in self.special
 
-    def iteritems(self):
-        return six.iteritems(self.db)
-
     def getCount(self):
         return int(self.db[self.ITEMCOUNT])
 
@@ -99,7 +92,7 @@ class DatabaseBase(DatabaseMeta):
     def getCheckpoint(self):
         try:
             return dateTimeFromJson(json.loads(self.db[self.CHECKPOINT]))
-        except (KeyError, EOFError, json.scanner.JSONDecodeError):
+        except (KeyError, EOFError, json.JSONDecodeError):
             epoch = datetime.utcfromtimestamp(0)
             return epoch.replace(tzinfo=tzutc())
 
@@ -291,9 +284,14 @@ class JobsBase(object):
                 del self.inactive[job.key]
 
     @staticmethod
-    def getDbSorted(db, _limit, useCp=False, filterWs=False):
+    def getDbSorted(db: DatabaseBase,
+                    _limit: Optional[int] = None,
+                    useCp=False,
+                    filterWs=False) -> List[JobInfo]:
+        cpUtc = None
         if useCp:
             cpUtc = db.checkpoint
+        curWs = None
         if filterWs:
             curWs = utils.workspaceIdentity()
         jobList = []
@@ -303,16 +301,15 @@ class JobsBase(object):
                     job = db[k]
                 except KeyError:
                     continue
-                if useCp:
+                if cpUtc:
                     refTime = job.createTime
                     if not refTime or refTime < cpUtc:
                         continue
-                if filterWs:
-                    if job.workspace != curWs:
-                        continue
+                if filterWs and job.workspace != curWs:
+                    continue
                 jobList.append(job)
-#             if _limit and len( jobList ) > _limit:
-#                break
+            if _limit and len(jobList) > _limit:
+                break
         jobList.sort(reverse=False)
         return jobList
 
@@ -610,6 +607,24 @@ class JobsBase(object):
         val += self.plugins.getResources(self)
         return val
 
+    def notifyActivity(self, callback: str) -> None:
+        curJobs = {j.key for j in self.getDbSorted(self.active, None, False)}
+        while True:
+            safeSleep(1, self)
+            activeJobs = {j.key for j in self.getDbSorted(self.active, None, False)}
+            for k in curJobs - activeJobs:
+                if k not in self.inactive:
+                    continue
+                job = self.inactive[k]
+                payload = {
+                    "subject": "Job finished " + str(job),
+                    "body": job.detail(),
+                    "rc": job.rc,
+                }
+                inp = json.dumps(payload)
+                subprocess.run([callback], input=inp, text=True, check=False)
+            curJobs = activeJobs
+
     def watchActivity(self):
         # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         def _nonReminder(job):
@@ -758,7 +773,7 @@ class JobsBase(object):
                     sprint(
                         "  last %s, \033[97m%s\033[0m ago" %
                         (res, diffTime))
-                    sprint("    " + text_type(j))
+                    sprint("    " + str(j))
             if wkspace in remind:
                 sprint("  reminders:")
                 for j in remind[wkspace]:
