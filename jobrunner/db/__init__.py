@@ -1,13 +1,15 @@
 from datetime import datetime
 from functools import cmp_to_key
+from hashlib import md5
 import logging
 import os
 import os.path
+import posixpath
 import subprocess
 import sys
 import tempfile
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import uuid4
 
 from dateutil import parser
@@ -15,6 +17,7 @@ from dateutil.tz import tzlocal, tzutc
 import simplejson as json
 
 from jobrunner import utils
+from jobrunner.config import Config
 
 from ..info import JobInfo, decodeJobInfo, encodeJobInfo
 from ..service import service
@@ -224,10 +227,14 @@ def reminderWatchFull(activeReminder):
     return reminders
 
 
+def getLogParentDir(filename: str) -> str:
+    return md5(filename.encode()).hexdigest()[:2]
+
+
 class JobsBase(object):
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, config, plugins):
+    def __init__(self, config: Config, plugins):
         self.config = config
         self.plugins = plugins
         self._instanceId = uuid4().hex
@@ -794,7 +801,8 @@ class JobsBase(object):
     def uidx(self):
         return self.active.uidx()
 
-    def new(self, cmd, isolate, autoJob=False, key=None, reminder=None):
+    def new(self, cmd, isolate,
+            autoJob=False, key=None, reminder=None) -> Tuple[JobInfo, int]:
         # pylint: disable=too-many-arguments
         if key and key in self.active.db:
             raise Exception("Active key conflict for key %r" % key)
@@ -804,9 +812,12 @@ class JobsBase(object):
         job.pid = os.getpid()
         job.autoJob = autoJob
         logfile = "___" + job.key + ".log"
-        (fp, job.logfile) = tempfile.mkstemp(suffix=logfile,
-                                             dir=self.config.logDir)
+        dirName = getLogParentDir(logfile)
+        logDir = posixpath.join(self.config.logDir, dirName)
+        os.makedirs(logDir, exist_ok=True)
+        (fd, logFileName) = tempfile.mkstemp(suffix=logfile, dir=logDir)
+        job.logfile = logFileName
         job.parent = self
         if not autoJob:
             self.active.lastJob = job.key
-        return job, fp
+        return job, fd
