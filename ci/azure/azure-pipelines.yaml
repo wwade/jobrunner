@@ -4,13 +4,11 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
 jobs:
-  - job: Ubuntu_20_04
+  - job: Ubuntu_22_04
     pool:
-      vmImage: ubuntu-20.04
+      vmImage: ubuntu-22.04
     strategy:
       matrix:
-        Python38:
-          python.version: '3.8'
         Python39:
           python.version: '3.9'
         Python310:
@@ -20,9 +18,29 @@ jobs:
     steps:
       - template: steps.yaml
 
-  - job: Mac_OS_latest
+  - job: Ubuntu_20_04
     pool:
-      vmImage: macos-latest
+      vmImage: ubuntu-20.04
+    strategy:
+      matrix:
+        Python38:
+          python.version: '3.8'
+    steps:
+      - template: steps.yaml
+
+  - job: MacOS_11
+    pool:
+      vmImage: macos-11
+    strategy:
+      matrix:
+        Python39:
+          python.version: '3.8'
+    steps:
+      - template: steps.yaml
+
+  - job: MacOS_12
+    pool:
+      vmImage: macos-12
     strategy:
       matrix:
         Python39:
