@@ -443,7 +443,11 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
             sprint("Saved output to", fName)
         return True
     elif options.list_inactive:
-        jobs.listInactive(options.tw, options.tp, options.since_checkpoint)
+        jobs.listInactive(
+            options.tw,
+            options.tp,
+            options.since_checkpoint,
+            limit=None)
         return True
     elif options.count:
         sprint(jobs.countInactive())

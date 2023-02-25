@@ -455,7 +455,7 @@ class JobsBase(object):
             includeReminders=includeReminders,
             keysOnly=keysOnly)
 
-    def listInactive(self, thisWs, pane, useCp, limit=5):
+    def listInactive(self, thisWs, pane, useCp, limit: Optional[int] = 5):
         self.listDb(
             self.inactive,
             limit,
