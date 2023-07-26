@@ -6,17 +6,7 @@ steps:
   - script: python -m pip install --upgrade pip setuptools wheel pipenv
     displayName: 'Install tools'
 
-
-  - script: |
-      set -x
-      verLock="Pipfile-$(python.version).lock"
-      if [[ -f "$verLock" ]]
-      then
-        ln -svf "$verLock" Pipfile.lock
-      fi
-    displayName: 'Set up Pipfile-$(python.version)'
-
-  - script: pipenv --python '$(python.version)' sync --dev --keep-outdated
+  - script: pipenv --python '$(python.version)' sync --dev
     displayName: Install virtualenv using Pipenv
 
   - script: pipenv run make lint

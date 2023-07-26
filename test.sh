@@ -16,7 +16,7 @@ set -x
 
 pipenv=(python -m pipenv)
 
-"${pipenv[@]}" --python "$PY" "${PIPENV_CMD:-sync}" "${mirror[@]}" --dev --keep-outdated
+"${pipenv[@]}" --python "$PY" "${PIPENV_CMD:-sync}" "${mirror[@]}" --dev
 
 FILES=(setup.py jobrunner)
 if [[ "$PY" =~ 3\. ]]

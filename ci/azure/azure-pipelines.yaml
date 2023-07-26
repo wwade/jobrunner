@@ -28,16 +28,6 @@ jobs:
     steps:
       - template: steps.yaml
 
-  - job: MacOS_11
-    pool:
-      vmImage: macos-11
-    strategy:
-      matrix:
-        Python39:
-          python.version: '3.8'
-    steps:
-      - template: steps.yaml
-
   - job: MacOS_12
     pool:
       vmImage: macos-12
