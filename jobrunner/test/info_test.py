@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+import json
 from logging import getLogger
 import os
 import unittest
 
 import mock
-import simplejson as json
 import six
 
 from jobrunner import db, info, plugins, utils

@@ -1,3 +1,4 @@
+import json
 from json import load
 from logging import getLogger
 import os
@@ -10,7 +11,6 @@ from unittest import TestCase
 
 from pexpect import EOF
 import pytest
-import simplejson as json
 import six
 
 from jobrunner.utils import autoDecode

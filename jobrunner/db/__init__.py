@@ -1,6 +1,7 @@
 from datetime import datetime
 from functools import cmp_to_key
 from hashlib import md5
+import json
 import logging
 import os
 import os.path
@@ -14,7 +15,6 @@ from uuid import uuid4
 
 from dateutil import parser
 from dateutil.tz import tzlocal, tzutc
-import simplejson as json
 
 from jobrunner import utils
 from jobrunner.config import Config

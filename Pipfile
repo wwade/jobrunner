@@ -18,7 +18,6 @@ dateutils = "*"
 importlib-metadata = "*"
 requests = "*"
 setuptools-scm = ">=3.4"
-simplejson = "*"
 six = "*"
 wrapt = "*"
 
