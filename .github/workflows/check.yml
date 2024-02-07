@@ -39,14 +39,6 @@ jobs:
         run: |
           pipenv run make check
 
-      - name: Report results ${{ matrix.python-version }}
-        uses: dorny/test-reporter@v1
-        if: ${{ always() }}
-        with:
-          name: Pytest Results ${{ matrix.python-version }}
-          path: junit/test-results.xml
-          reporter: java-junit
-
   all-testing:
     runs-on: ubuntu-latest
     needs: [check]
