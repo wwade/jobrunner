@@ -9,8 +9,9 @@ flake8 = "*"
 isort = "*"
 mock = "*"
 pexpect = "*"
-pytest = "*"
+pytest = "~=7.0"
 pylint = "*"
+pytest-retry = "*"
 
 [packages]
 chardet = "*"
