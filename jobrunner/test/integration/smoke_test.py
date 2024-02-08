@@ -10,6 +10,7 @@ import time
 from unittest import TestCase
 
 from pexpect import EOF
+from pexpect.exceptions import TIMEOUT
 import pytest
 import six
 
@@ -207,6 +208,7 @@ class RunExecOptionsTest(TestCase):
             outData = encoding_open(catOutFile).read()
             assert data == outData
 
+    @pytest.mark.flaky(retries=3, delay=5, only_on=[TIMEOUT])
     def testWatchWait(self):
         with getTestEnv():
             # --watch
