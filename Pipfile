@@ -9,7 +9,7 @@ flake8 = "*"
 isort = "*"
 mock = "*"
 pexpect = "*"
-pytest = "~=7.0"
+pytest = "~=8.0"
 pylint = "*"
 pytest-retry = "*"
 
