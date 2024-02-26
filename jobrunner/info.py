@@ -498,10 +498,7 @@ class JobInfo(object):
 
     def showInOrder(self, order: Iterable[str],
                     level: Optional[Sized] = None) -> str:
-        longLine = 0
-        for k in order:
-            if len(k) > longLine:
-                longLine = len(k)
+        longLine = max(len(k) for k in order)
         ret = utils.SPACER + "\n"
         for k in order:
             fmt = "%%-%ds   %%s\n" % longLine
