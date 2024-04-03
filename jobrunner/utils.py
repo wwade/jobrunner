@@ -38,7 +38,7 @@ def strForEach(value):
     try:
         return text_type(value)
     except (UnicodeDecodeError, UnicodeEncodeError):
-        LOG.debug("%r", value, exc_info=1)
+        LOG.debug("%r", value, exc_info=True)
         return f"{value!r}"
 
 
@@ -47,12 +47,12 @@ def sprint(*args, **kwargs):
     try:
         print(*list(map(strForEach, args)), **kwargs)
     except IOError:
-        LOG.debug("sprint ignore IOError", exc_info=1)
+        LOG.debug("sprint ignore IOError", exc_info=True)
     except (UnicodeEncodeError, UnicodeDecodeError):
         print("codec error", repr(args))
-        LOG.debug("%r", args, exc_info=1)
+        LOG.debug("%r", args, exc_info=True)
     except BaseException:
-        LOG.debug("sprint caught error", exc_info=1)
+        LOG.debug("sprint caught error", exc_info=True)
         raise
 
 
@@ -90,7 +90,7 @@ def lockedSection(jobs):
     try:
         yield
     except BaseException:
-        LOG.debug("lockedSection exception", exc_info=1)
+        LOG.debug("lockedSection exception", exc_info=True)
         raise
     finally:
         jobs.unlock()
@@ -353,11 +353,15 @@ jobrunner.utils.killProcGroup(pgrp, None)
     return None
 
 
-def autoDecode(byteArray):
+def autoDecode(byteArray: bytes) -> str:
     detected = chardet.detect(byteArray)
+    if not detected:
+        return byteArray.decode()
+
     encoding = detected["encoding"]
     if detected["confidence"] < 0.8:  # very arbitrary
         LOG.debug("char encoding below confidence level 0.8 (%r). "
                   "Fall back to UTF-8.", detected)
         encoding = "utf-8"
+
     return byteArray.decode(encoding)
