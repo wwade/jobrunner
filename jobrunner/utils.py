@@ -365,3 +365,11 @@ def autoDecode(byteArray: bytes) -> str:
         encoding = "utf-8"
 
     return byteArray.decode(encoding)
+
+
+def humanTimeDeltaSecs(a: datetime.datetime, b: datetime.datetime) -> str:
+    """
+    Returns a human readable string for the time difference a - b.
+    """
+    seconds = round((a - b).total_seconds(), 0)
+    return f"{datetime.timedelta(seconds=seconds)}"
