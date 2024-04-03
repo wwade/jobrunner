@@ -27,6 +27,7 @@ from ..utils import (
     dateTimeFromJson,
     dateTimeToJson,
     doMsg,
+    humanTimeDeltaSecs,
     pidDebug,
     safeSleep,
     sprint,
@@ -771,12 +772,7 @@ class JobsBase(object):
             for res in ["pass", "fail"]:
                 if wkspace in perWs and res in perWs[wkspace]:
                     j = perWs[wkspace][res]
-                    sec = int((unow - j.stopTime).total_seconds())
-                    tmHour = sec / (60 * 60)
-                    sec -= tmHour * 60 * 60
-                    tmMin = sec / 60
-                    sec -= tmMin * 60
-                    diffTime = "%d:%02d:%02d" % (tmHour, tmMin, sec)
+                    diffTime = humanTimeDeltaSecs(unow, j.stopTime)
                     sprint(
                         "  last %s, \033[97m%s\033[0m ago" %
                         (res, diffTime))
