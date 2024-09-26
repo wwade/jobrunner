@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 jobs:
   check:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: ["pypy3.9", "pypy3.10", "3.9", "3.10", "3.11"]
