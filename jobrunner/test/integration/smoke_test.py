@@ -226,7 +226,7 @@ class RunExecOptionsTest(TestCase):
                 notifier = spawn(cmd, env=env)
 
                 sleeper = spawn(["job", "--foreground", "sleep", "60"])
-                sleeper.expect(r"execute: sleep 60")
+                sleeper.expect(r"] \+ sleep 60")
 
                 # Confirm --watch output
                 watch.expect(r"1 job running")
@@ -246,7 +246,7 @@ class RunExecOptionsTest(TestCase):
 
                 # Kill the sleep 60
                 sleeper.sendintr()
-                waiter.expect(r"Dependent job failed:.*sleep 60")
+                waiter.expect(r"dependent job failed:.*sleep 60")
                 waiter.expect(EOF)
 
                 notifier.expect("dumped")
@@ -282,6 +282,45 @@ class RunExecOptionsTest(TestCase):
             child = spawn(["job", "--monitor", "-c", "echo MARKOUTPUT"])
             child.expect(r"\sMARKOUTPUT\s")
             child.sendintr()
+
+    def testOutputFormat(self):
+        """Test that job output has consistent [key] prefix format."""
+        with getTestEnv():
+            # Test successful job output format
+            out = jobf("true")
+            # Verify key prefix and command format: [<key>] + <command>
+            six.assertRegex(self, out, r"(?m)^\[\d+_true\] \+ true$")
+            # Verify key prefix and return code format: [<key>] return code: <rc>
+            six.assertRegex(self, out, r"(?m)^\[\d+_true\] return code: 0$")
+
+            # Test failed job output format
+            try:
+                jobf("false")
+                self.fail("Expected CalledProcessError")
+            except CalledProcessError as error:
+                out = autoDecode(error.output)
+                six.assertRegex(self, out, r"(?m)^\[\d+_false\] \+ false$")
+                six.assertRegex(self, out, r"(?m)^\[\d+_false\] return code: 1$")
+
+            # Test dependency failure message format
+            try:
+                jobf("false")
+            except CalledProcessError:
+                pass
+            failKey = lastKey()
+            try:
+                jobf("-B", failKey, "true")
+                self.fail("Expected CalledProcessError")
+            except CalledProcessError as error:
+                out = autoDecode(error.output)
+                # Should have key prefix (of the waiting job) for failure message
+                # Format: [{waiting_job_key}] dependent job failed: ...
+                # [{failed_job_key}] {cmd}
+                six.assertRegex(
+                    self, out,
+                    r"(?m)^\[\d+_true\] dependent job failed:.*\[" +
+                    re.escape(failKey) + r"\].*false"
+                )
 
 
 MAIL_CONFIG = """
