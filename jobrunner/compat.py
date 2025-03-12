@@ -2,9 +2,9 @@
 
 # pylint: disable=unused-import
 
+from importlib import metadata
 from typing import List
 
-from importlib import metadata
 
 def get_plugins(group: str) -> List[metadata.EntryPoint]:
     eps = metadata.entry_points()
