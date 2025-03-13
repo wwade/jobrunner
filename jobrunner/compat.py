@@ -2,26 +2,17 @@
 
 # pylint: disable=unused-import
 
+from importlib import metadata
 from typing import List
-
-try:
-    from importlib import metadata
-    __importlib = True
-except ImportError:
-    # Running on pre-3.8 Python; use importlib-metadata package
-    import importlib_metadata as metadata
-    __importlib = False
 
 
 def get_plugins(group: str) -> List[metadata.EntryPoint]:
     eps = metadata.entry_points()
-    if __importlib:
-        return list(eps.get(group, []))
-    return list(eps.select(group=group))
+    if not hasattr(eps, 'get'):
+        # in 3.12+, EntryPoints.get() should be replaced by select().
+        return list(eps.select(group=group))
+    return list(eps.get(group, []))
 
 
 def encoding_open(filename, mode='r', encoding='utf-8', **kwargs):
-    try:
-        return open(filename, mode=mode, encoding=encoding, **kwargs)
-    except TypeError:
-        return open(filename, mode=mode, **kwargs)  # pylint: disable=W
+    return open(filename, mode=mode, encoding=encoding, **kwargs)
