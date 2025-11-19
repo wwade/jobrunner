@@ -1,5 +1,4 @@
 FILES =
-FILES += setup.py
 FILES += jobrunner
 FILES += test-docker.py
 
@@ -15,7 +14,7 @@ lint: in-venv
 	isort -c --diff $(FILES)
 	autopep8 --exit-code -ra --diff $(FILES)
 	pylint -d fixme $(FILES)
-	find jobrunner -type f -name "*.py" -not -name "compat.py" | xargs flake8 setup.py
+	find jobrunner -type f -name "*.py" -not -name "compat.py" -print0 | xargs -0 flake8
 
 .PHONY: install
 install: in-venv
