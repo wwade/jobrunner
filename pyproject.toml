@@ -1,4 +1,87 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+requires = ["poetry-core>=2.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[project]
+name = "shell-jobrunner"
+dynamic = ["version"]
+description = "Shell-based job runner with logging"
+readme = "README.rst"
+requires-python = ">=3.9"
+license = "GPL-3.0-or-later"
+classifiers = [
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+    "Topic :: Terminals",
+    "Topic :: System :: Shells",
+]
+dependencies = [
+    "chardet==5.2.0",
+    "dateutils==0.6.12",
+    "requests==2.32.4",
+    "six==1.16.0",
+    "wrapt==1.16.0",
+    "setuptools-scm==8.0.4",
+    "importlib-metadata==7.1.0; python_version<'3.10'",
+]
+
+[dependency-groups]
+dev = [
+    "autopep8==2.1.0",
+    "flake8==7.3.0",
+    "isort==5.13.2",
+    "mock==5.1.0",
+    "pexpect==4.9.0",
+    "pytest==8.1.1",
+    "pylint==3.1.0",
+    "pytest-retry==1.6.2",
+    "dill==0.4.0",
+    "flake8-pyproject==1.2.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/wwade/jobrunner"
+Repository = "https://github.com/wwade/jobrunner"
+
+[project.scripts]
+job = "jobrunner.main:main"
+chatmail = "jobrunner.mail.chat:main"
+
+[tool.poetry]
+version = "0.0.0"  # Dynamic from setuptools-scm
+packages = [{include = "jobrunner"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
 
 [tool.setuptools_scm]
+# Enable setuptools-scm for dynamic versioning
+
+[tool.autopep8]
+max-line-length = 85
+
+[tool.pycodestyle]
+max-line-length = 85
+
+[tool.flake8]
+max-line-length = 85
+
+[tool.pytest.ini_options]
+testpaths = ["jobrunner"]

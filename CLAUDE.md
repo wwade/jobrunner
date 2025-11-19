@@ -10,9 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Initial Setup
 ```bash
-# Create virtualenv and install development dependencies
-pipenv --three install --dev
-pipenv run pip install -e .
+# Install Poetry (if not already installed)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Install dependencies
+poetry install --all-extras
 ```
 
 ### Code Formatting
@@ -20,8 +22,8 @@ pipenv run pip install -e .
 # Format and lint code (required before commits)
 ./format.sh
 
-# Or within pipenv
-pipenv run ./format.sh
+# Or with poetry
+poetry run ./format.sh
 ```
 
 ### Running Tests
@@ -30,9 +32,9 @@ pipenv run ./format.sh
 ```bash
 ./test.sh
 ```
-This script automatically handles pipenv setup, runs all linters, installs the package, and runs pytest with recommended options. Use this before committing.
+This script automatically handles poetry setup, runs all linters, installs the package, and runs pytest with recommended options. Use this before committing.
 
-**Quick test run (if already in virtualenv):**
+**Quick test run (if already in poetry env):**
 ```bash
 make check        # Just run tests, skip linting
 make all          # Lint + install + test
@@ -41,13 +43,13 @@ make all          # Lint + install + test
 **Manual pytest (most flexible):**
 ```bash
 # Run all tests with details
-pipenv run pytest -v -l --durations=10 jobrunner/
+poetry run pytest -v -l --durations=10 jobrunner/
 
 # Run a specific test file
-pipenv run pytest jobrunner/test/config_test.py
+poetry run pytest jobrunner/test/config_test.py
 
 # Run a specific test
-pipenv run pytest jobrunner/test/config_test.py::TestClassName::test_method_name
+poetry run pytest jobrunner/test/config_test.py::TestClassName::test_method_name
 ```
 
 **Other Makefile targets:**
