@@ -18,26 +18,33 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install tools
+      - name: Install Poetry
         run: |
-          python -m pip install --upgrade pip setuptools wheel pipenv
+          python -m pip install --upgrade pip
+          pipx install poetry
+          poetry --version
 
-      - name: Install virtualenv using Pipenv
+      - name: Configure Poetry
         run: |
-          pipenv --python ${{ matrix.python-version }} sync --dev
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project false
+
+      - name: Install dependencies
+        run: |
+          poetry install --all-extras
 
       - name: Run linters
         if: ${{ matrix.python-version == '3.9' }}
         run: |
-          pipenv run make lint
+          poetry run make lint
 
       - name: Install jobrunner
         run: |
-          pipenv run make install
+          poetry run make install
 
       - name: Run tests
         run: |
-          pipenv run make check
+          poetry run make check
 
   all-testing:
     runs-on: ubuntu-latest

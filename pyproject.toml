@@ -1,4 +1,95 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+requires = ["poetry-core>=2.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[project]
+name = "shell-jobrunner"
+dynamic = ["version"]
+description = "Shell-based job runner with logging"
+readme = "README.rst"
+requires-python = ">=3.9"
+license = {text = "GPL-3.0-only"}
+authors = [
+    {name = "Wade Berrier", email = "wberrier@gmail.com"}
+]
+classifiers = [
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+    "Topic :: Terminals",
+    "Topic :: System :: Shells",
+]
+dependencies = [
+    "chardet",
+    "dateutils",
+    "requests",
+    "six",
+    "wrapt",
+    "setuptools-scm>=3.4",
+    "importlib-metadata; python_version<'3.10'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "autopep8",
+    "flake8",
+    "isort",
+    "mock",
+    "pexpect",
+    "pytest~=8.1",
+    "pylint~=3.1.0",
+    "pytest-retry",
+    "dill",
+]
+
+[project.urls]
+Homepage = "https://github.com/wwade/jobrunner"
+Repository = "https://github.com/wwade/jobrunner"
+
+[project.scripts]
+job = "jobrunner.main:main"
+chatmail = "jobrunner.mail.chat:main"
+
+[tool.poetry]
+name = "shell-jobrunner"
+version = "0.0.0"  # Dynamic from setuptools-scm
+description = "Shell-based job runner with logging"
+authors = ["Wade Berrier <wberrier@gmail.com>"]
+packages = [{include = "jobrunner"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
 
 [tool.setuptools_scm]
+# Enable setuptools-scm for dynamic versioning
+
+[tool.pycodestyle]
+max-line-length = 85
+
+[tool.flake8]
+max-line-length = 85
+
+[tool.pytest.ini_options]
+testpaths = ["jobrunner"]
+
+[dependency-groups]
+dev = [
+    "dill (>=0.4.0,<0.5.0)"
+]
