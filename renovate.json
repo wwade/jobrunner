@@ -5,8 +5,8 @@
   ],
   "packageRules": [
     {
-      "matchConfidence": ["high", "very high"],
-      "groupName": "all high confidence dependencies"
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
     }
   ]
 }
