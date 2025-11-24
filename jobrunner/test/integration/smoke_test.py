@@ -436,7 +436,10 @@ class RunNonExecOptionsTest(TestCase):
             # --show
             six.assertRegex(self, job("--show", secondKey), progEchoRe)
             # --info
-            self.assertIn("activeJobs", job("--info"))
+            jobInfo = job("--info")
+            assert isinstance(jobInfo, str)
+            self.assertRegex(jobInfo, r"DB \d+ 'active' ver 2")
+            self.assertRegex(jobInfo, r"DB \d+ 'inactive' ver 2")
 
             #  --set-checkpoint
             job("--set-checkpoint", ".")
