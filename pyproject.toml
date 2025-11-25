@@ -41,7 +41,7 @@ dependencies = [
 dev = [
     "autopep8==2.3.2",
     "flake8==7.3.0",
-    "isort==5.13.2",
+    "isort==7.0.0",
     "mock==5.2.0",
     "pexpect==4.9.0",
     "pytest==8.4.2",
