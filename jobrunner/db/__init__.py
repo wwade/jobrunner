@@ -342,7 +342,6 @@ class JobsBase(object):
 
     def filterJobs(self, db, limit, filterWs=False,
                    filterPane=False, useCp=False):
-        # pylint: disable=too-many-arguments
         jobList = self.getDbSorted(db, limit, useCp)
         if filterWs:
             curWs = utils.workspaceIdentity()
@@ -358,7 +357,7 @@ class JobsBase(object):
 
     def listDb(self, db, limit, filterWs=False, filterPane=False, useCp=False,
                includeReminders=False, keysOnly=False):
-        # pylint: disable=too-many-arguments, too-many-branches
+        # pylint: disable=too-many-branches
         jobList = self.filterJobs(db, limit, filterWs, filterPane, useCp)
         hasDeps = False
         for job in jobList:
@@ -410,7 +409,7 @@ class JobsBase(object):
 
     def makeDot(self, active, inactive, filterWs=False,
                 filterPane=False, useCp=False):
-        # pylint: disable=too-many-arguments,too-many-locals
+        # pylint: disable=too-many-locals
         jobList = self.filterJobs(active, limit=None, filterWs=filterWs,
                                   filterPane=filterPane, useCp=useCp)
         dot = ""
@@ -446,7 +445,6 @@ class JobsBase(object):
         return len(self.inactive.db) - (len(self.inactive.special) - 1)
 
     def listActive(self, thisWs, pane, useCp, includeReminders, keysOnly=False):
-        # pylint: disable=too-many-arguments
         self.listDb(
             self.active,
             None,
@@ -799,7 +797,6 @@ class JobsBase(object):
 
     def new(self, cmd, isolate,
             autoJob=False, key=None, reminder=None) -> Tuple[JobInfo, int]:
-        # pylint: disable=too-many-arguments
         if key and key in self.active.db:
             raise Exception("Active key conflict for key %r" % key)
         job = service().db.jobInfo(self.uidx(), key)

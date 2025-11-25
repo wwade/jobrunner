@@ -56,7 +56,6 @@ class TestRcParser(unittest.TestCase, TestMixin):
         cfgObj = self.config()
         self.assertEqual(os.path.join(HOME, "x/db/"), cfgObj.dbDir)
 
-    # pylint: disable-msg=too-many-arguments
     def assertCfg(self, cfgObj, domain=HOSTNAME,
                   program="mail", reminderSummary=True,
                   chatmailAtAll="none", chatmailReuseThreads=True,

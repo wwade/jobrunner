@@ -161,7 +161,9 @@ disable=raw-checker-failed,
         useless-object-inheritance,
         super-with-arguments,
         redundant-u-string-prefix,
-        consider-using-f-string
+        consider-using-f-string,
+        too-many-positional-arguments,
+        too-many-arguments
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
