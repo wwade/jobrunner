@@ -844,7 +844,6 @@ def runJob(
         fd: int,
         doIsolate: bool,
 ) -> None:
-    # pylint: disable=too-many-arguments
     # pylint: disable=too-many-statements
     LOG.info("execute: %s", job.cmdStr)
     doMsg("execute:", job.cmdStr)

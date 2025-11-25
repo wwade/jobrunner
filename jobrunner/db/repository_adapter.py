@@ -8,7 +8,6 @@ while internally using the new SqliteJobRepository and JobService.
 # pylint: disable=protected-access
 # pylint: disable=import-outside-toplevel
 # pylint: disable=too-many-return-statements
-# pylint: disable=too-many-arguments
 
 from __future__ import annotations
 

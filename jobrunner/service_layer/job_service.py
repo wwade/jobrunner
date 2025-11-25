@@ -78,7 +78,7 @@ class JobService:
         self._file_lock = lock or FileLock(config.lockFile)
         self._lock = LockContextManager(self._file_lock)
 
-    # pylint: disable-next=too-many-arguments, too-many-locals
+    # pylint: disable-next=too-many-locals
     def create_job(
         self,
         cmd: Optional[List[str]],
