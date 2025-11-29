@@ -9,7 +9,7 @@ def main():
     data = load(stdin)
     with open(environ["DUMP_FILE"], "w", encoding="utf-8") as fp:
         dump(data, fp, indent=2)
-    print("dumped")
+    print("dumped", flush=True)
 
 
 if __name__ == "__main__":
