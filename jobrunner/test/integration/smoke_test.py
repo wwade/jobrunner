@@ -10,7 +10,6 @@ import time
 from unittest import TestCase
 
 from pexpect import EOF
-from pexpect.exceptions import TIMEOUT
 import pytest
 import six
 
@@ -208,7 +207,6 @@ class RunExecOptionsTest(TestCase):
             outData = encoding_open(catOutFile).read()
             assert data == outData
 
-    @pytest.mark.flaky(retries=3, delay=5, only_on=[TIMEOUT])
     def testWatchWait(self):
         with getTestEnv():
             # --watch
@@ -237,6 +235,14 @@ class RunExecOptionsTest(TestCase):
                 # Wait for the sleep 60
                 waiter = spawn(["job", "--wait", "sleep"])
                 waiter.expect(r"adding dependency.*sleep 60")
+
+                # CRITICAL: Give the notifier time to poll and see the job is active.
+                # The notifier polls every 1 second. If we kill the job before the
+                # notifier's first poll includes it in curJobs, the notification will
+                # never be sent (the job won't be in "curJobs - activeJobs"). Sleep
+                # for 1.5 seconds to ensure the notifier has polled at least once and
+                # captured the sleep job in its active jobs list.
+                time.sleep(1.5)
 
                 # Kill the sleep 60
                 sleeper.sendintr()
