@@ -66,12 +66,13 @@ def impl_main(args=None):
 
     options = parseArgs(args)
     config = Config(options)
-    jobs: JobsBase = service().db.jobs(config, plugins)
-
     jobrunner.logging.setup(
         config.logDir,
         _DEBUG_LOG_FILE_NAME,
         debug=options.debug)
+
+    jobs: JobsBase = service().db.jobs(config, plugins)
+
     LOG.debug("starting with args %s", options)
     LOG.debug("python: %s", sys.version)
     with lockedSection(jobs):
