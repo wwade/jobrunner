@@ -41,6 +41,7 @@ class SqliteJobRepository(JobRepository):
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
+        self._debug_sql = LOG.isEnabledFor(logging.DEBUG)
         self._ensure_db_dir()
         self._conn: Optional[sqlite3.Connection] = None
         self._init_schema()
@@ -58,13 +59,19 @@ class SqliteJobRepository(JobRepository):
             self._conn.row_factory = sqlite3.Row
         return self._conn
 
+    def _execute(self, cursor, query: str, params=None):
+        if self._debug_sql:
+            LOG.debug("query=%r params=%r", query.strip(), params)
+
+        return cursor.execute(query, params) if params else cursor.execute(query)
+
     def _init_schema(self):
         """Create database schema if it doesn't exist."""
         conn = self._get_conn()
         cursor = conn.cursor()
 
         # Main jobs table
-        cursor.execute("""
+        self._execute(cursor, """
             CREATE TABLE IF NOT EXISTS jobs (
                 key TEXT PRIMARY KEY,
                 uidx INTEGER NOT NULL,
@@ -97,27 +104,27 @@ class SqliteJobRepository(JobRepository):
         """)
 
         # Indices for fast queries
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_status "
-            "ON jobs(status)")
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_workspace "
-            "ON jobs(workspace)")
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_create_time "
-            "ON jobs(create_time)")
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_stop_time "
-            "ON jobs(stop_time)")
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_status_workspace "
-            "ON jobs(status, workspace)")
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_status_create "
-            "ON jobs(status, create_time)")
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_jobs_status "
+                      "ON jobs(status)")
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_jobs_workspace "
+                      "ON jobs(workspace)")
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_jobs_create_time "
+                      "ON jobs(create_time)")
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_jobs_stop_time "
+                      "ON jobs(stop_time)")
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_jobs_status_workspace "
+                      "ON jobs(status, workspace)")
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_jobs_status_create "
+                      "ON jobs(status, create_time)")
 
         # Metadata table
-        cursor.execute("""
+        self._execute(cursor, """
             CREATE TABLE IF NOT EXISTS metadata (
                 key TEXT PRIMARY KEY,
                 value TEXT
@@ -125,7 +132,9 @@ class SqliteJobRepository(JobRepository):
         """)
 
         # Initialize metadata if not present
-        cursor.execute("SELECT COUNT(*) FROM metadata WHERE key = 'schema_version'")
+        self._execute(
+            cursor,
+            "SELECT COUNT(*) FROM metadata WHERE key = 'schema_version'")
         if cursor.fetchone()[0] == 0:
             self._init_metadata(cursor)
 
@@ -133,24 +142,24 @@ class SqliteJobRepository(JobRepository):
 
     def _init_metadata(self, cursor):
         """Initialize metadata with default values."""
-        cursor.execute(
-            "INSERT INTO metadata (key, value) VALUES (?, ?)",
-            ("schema_version", SCHEMA_VERSION))
-        cursor.execute(
-            "INSERT INTO metadata (key, value) VALUES (?, ?)",
-            ("last_key", ""))
-        cursor.execute(
-            "INSERT INTO metadata (key, value) VALUES (?, ?)",
-            ("last_job", ""))
-        cursor.execute(
-            "INSERT INTO metadata (key, value) VALUES (?, ?)",
-            ("checkpoint", ""))
-        cursor.execute(
-            "INSERT INTO metadata (key, value) VALUES (?, ?)",
-            ("recent_keys", "[]"))
-        cursor.execute(
-            "INSERT INTO metadata (key, value) VALUES (?, ?)",
-            ("current_index", "0"))
+        self._execute(cursor,
+                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
+                      ("schema_version", SCHEMA_VERSION))
+        self._execute(cursor,
+                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
+                      ("last_key", ""))
+        self._execute(cursor,
+                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
+                      ("last_job", ""))
+        self._execute(cursor,
+                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
+                      ("checkpoint", ""))
+        self._execute(cursor,
+                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
+                      ("recent_keys", "[]"))
+        self._execute(cursor,
+                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
+                      ("current_index", "0"))
 
     def _job_to_row(self, job: Job) -> tuple:
         """Convert Job to database row tuple."""
@@ -226,7 +235,7 @@ class SqliteJobRepository(JobRepository):
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        cursor.execute("""
+        self._execute(cursor, """
             INSERT OR REPLACE INTO jobs (
                 key, uidx, prog, args_json, cmd_json, reminder, pwd,
                 create_time, start_time, stop_time, status, rc, pid, blocked,
@@ -248,7 +257,7 @@ class SqliteJobRepository(JobRepository):
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM jobs WHERE key = ?", (key,))
+        self._execute(cursor, "SELECT * FROM jobs WHERE key = ?", (key,))
         row = cursor.fetchone()
 
         if row is None:
@@ -261,7 +270,7 @@ class SqliteJobRepository(JobRepository):
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM jobs WHERE key = ?", (key,))
+        self._execute(cursor, "DELETE FROM jobs WHERE key = ?", (key,))
         conn.commit()
 
         # Remove from recent keys
@@ -272,7 +281,7 @@ class SqliteJobRepository(JobRepository):
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT 1 FROM jobs WHERE key = ? LIMIT 1", (key,))
+        self._execute(cursor, "SELECT 1 FROM jobs WHERE key = ? LIMIT 1", (key,))
         return cursor.fetchone() is not None
 
     def find_all(
@@ -307,7 +316,7 @@ class SqliteJobRepository(JobRepository):
             query += " LIMIT ?"
             params.append(limit)
 
-        cursor.execute(query, params)
+        self._execute(cursor, query, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     def find_active(self, workspace: Optional[str] = None) -> List[Job]:
@@ -324,7 +333,7 @@ class SqliteJobRepository(JobRepository):
 
         query += " ORDER BY create_time"
 
-        cursor.execute(query, params)
+        self._execute(cursor, query, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     def find_completed(
@@ -349,7 +358,7 @@ class SqliteJobRepository(JobRepository):
             query += " LIMIT ?"
             params.append(limit)
 
-        cursor.execute(query, params)
+        self._execute(cursor, query, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     def search_by_command(
@@ -368,7 +377,7 @@ class SqliteJobRepository(JobRepository):
             sql += " LIMIT ?"
             params.append(limit)
 
-        cursor.execute(sql, params)
+        self._execute(cursor, sql, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     def get_metadata(self) -> Metadata:
@@ -377,7 +386,7 @@ class SqliteJobRepository(JobRepository):
         cursor = conn.cursor()
 
         def get_meta(key: str, default: str = "") -> str:
-            cursor.execute("SELECT value FROM metadata WHERE key = ?", (key,))
+            self._execute(cursor, "SELECT value FROM metadata WHERE key = ?", (key,))
             row = cursor.fetchone()
             return row[0] if row else default
 
@@ -410,9 +419,10 @@ class SqliteJobRepository(JobRepository):
         cursor = conn.cursor()
 
         def set_meta(key: str, value: str):
-            cursor.execute(
-                "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
-                (key, value))
+            self._execute(cursor,
+                          "INSERT OR REPLACE INTO metadata (key, value) "
+                          "VALUES (?, ?)",
+                          (key, value))
 
         set_meta("schema_version", metadata.schema_version)
         set_meta("last_key", metadata.last_key)
@@ -428,13 +438,15 @@ class SqliteJobRepository(JobRepository):
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT value FROM metadata WHERE key = 'current_index'")
+        self._execute(
+            cursor,
+            "SELECT value FROM metadata WHERE key = 'current_index'")
         row = cursor.fetchone()
         current = int(row[0]) if row else 0
 
-        cursor.execute(
-            "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
-            ("current_index", str(current + 1)))
+        self._execute(cursor,
+                      "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
+                      ("current_index", str(current + 1)))
 
         conn.commit()
         return current
@@ -445,11 +457,11 @@ class SqliteJobRepository(JobRepository):
         cursor = conn.cursor()
 
         if status is None:
-            cursor.execute("SELECT COUNT(*) FROM jobs")
+            self._execute(cursor, "SELECT COUNT(*) FROM jobs")
         else:
-            cursor.execute(
-                "SELECT COUNT(*) FROM jobs WHERE status = ?",
-                (status.value,))
+            self._execute(cursor,
+                          "SELECT COUNT(*) FROM jobs WHERE status = ?",
+                          (status.value,))
 
         row = cursor.fetchone()
         return row[0] if row else 0
