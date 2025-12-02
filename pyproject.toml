@@ -60,8 +60,8 @@ job = "jobrunner.main:main"
 chatmail = "jobrunner.mail.chat:main"
 
 [tool.poetry]
-version = "0.0.0"  # Dynamic from setuptools-scm
 packages = [{include = "jobrunner"}]
+version = "0.0.0"  # Dynamic from setuptools-scm
 
 [tool.poetry.dependencies]
 python = "^3.9"

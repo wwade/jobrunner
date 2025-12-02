@@ -368,6 +368,52 @@ class OtherCommandSmokeTest(TestCase):
             jobf("--get-all-logs")
 
 
+class RunFindTest(TestCase):
+    """
+    Test the --find option for searching jobs by keyword.
+    """
+
+    def test(self):
+        with getTestEnv():
+            # Create test jobs with different patterns
+            jobf("echo", "find_test_1")
+            jobf("echo", "find_test_2")
+            jobf("echo", "other_command")
+
+            # Test basic find by command keyword
+            findOutput = job("--find", "find_test")
+            self.assertIn("find_test_1", findOutput)
+            self.assertIn("find_test_2", findOutput)
+            self.assertNotIn("other_command", findOutput)
+
+            # Test finding by key prefix
+            key3 = lastKey()
+            keyPrefix = key3[:10]
+            findByKey = job("--find", keyPrefix)
+            self.assertIn(key3, findByKey)
+
+            # Test with verbose output
+            findVerbose = job("-v", "--find", "find_test")
+            self.assertIn("Command", findVerbose)
+            self.assertIn("echo find_test", findVerbose)
+
+            # Test with no matches
+            findEmpty = job("--find", "nonexistent_pattern_xyz")
+            self.assertIn("No jobs matching", findEmpty)
+
+            # Test with --tw (this workspace) filter
+            findTw = job("--tw", "--find", "find_test")
+            # Should still find jobs since we're in the same workspace
+            self.assertIn("find_test", findTw)
+
+            # Test multiple --find arguments
+            jobf("echo", "pattern_a")
+            jobf("echo", "pattern_b")
+            multiFind = job("--find", "pattern_a", "--find", "pattern_b")
+            self.assertIn("pattern_a", multiFind)
+            self.assertIn("pattern_b", multiFind)
+
+
 class RunNonExecOptionsTest(TestCase):
     """
     Test the following (non-exec related) options

@@ -269,3 +269,25 @@ class RepositoryAdapter(JobsBase):
             self._repo.update_metadata(metadata)
 
         return job_info, fd
+
+    def findJobsMatching(self, keyword, thisWs, skipReminders=False):
+        """
+        Find all jobs matching the given keyword.
+
+        Similar to getJobMatch but returns all matching jobs instead of just one.
+        Uses efficient SQL query via the repository.
+        """
+        from jobrunner import utils
+
+        # Determine workspace filter
+        workspace = utils.workspaceIdentity() if thisWs else None
+
+        # Query repository
+        jobs = self._repo.find_matching(
+            keyword=keyword,
+            workspace=workspace,
+            skip_reminders=skipReminders
+        )
+
+        # Convert to JobInfo objects
+        return [job_to_jobinfo(job, parent=self) for job in jobs]

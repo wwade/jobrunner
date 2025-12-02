@@ -138,6 +138,44 @@ make format       # Format code (./format.sh)
 - Integration tests use helper scripts: `dump_json_input.py`, `send_email.py`, `await_file.py`
 - Service registry must be cleared for testing: `registerServices(testing=True)`
 
+### Writing Clean Tests
+
+**Use assertEqual for Collection Comparisons:**
+When testing collections, use `assertEqual` to directly compare lists instead of checking length and individual items separately. This is more concise and asserts both content AND order in a single assertion.
+
+```python
+# Good: Single assertion checks length, content, and order
+matches = self.repo.find_matching("test")
+self.assertEqual(["job2", "job1"], [job.key for job in matches])
+
+# Avoid: Multiple assertions, verbose, doesn't verify order
+matches = self.repo.find_matching("test")
+self.assertEqual(len(matches), 2)
+match_keys = [job.key for job in matches]
+self.assertIn("job1", match_keys)
+self.assertIn("job2", match_keys)
+```
+
+Benefits:
+- Single line instead of 3-4 lines
+- Verifies exact order, not just membership
+- Clear test failures showing expected vs actual
+- Less boilerplate code
+
+**Extract to Helper Methods When Repeated:**
+If you're doing the same collection transformation multiple times in a test, extract it to a helper method:
+
+```python
+class TestSqliteJobRepository(unittest.TestCase):
+    def assertMatchingJobs(self, expected: Iterable[str], matches: Iterable[Job]) -> None:
+        """Assert that matches contain exactly the expected job keys in order."""
+        self.assertEqual(expected, [job.key for job in matches])
+
+    def test_find_matching(self):
+        matches = self.repo.find_matching("test")
+        self.assertMatchingJobs(["job2", "job1"], matches)
+```
+
 ## Important Patterns
 
 **Logging:**
