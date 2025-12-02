@@ -2,6 +2,7 @@
 Tests for repository layer.
 """
 
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 import os
 import tempfile
@@ -198,6 +199,109 @@ class TestSqliteJobRepository(unittest.TestCase):
 
         self.assertEqual(self.repo.count(JobStatus.RUNNING), 1)
         self.assertEqual(self.repo.count(JobStatus.COMPLETED), 1)
+
+    def assertMatchingJobs(
+            self, expected: Iterable[str], matches: Iterable[Job]) -> None:
+        self.assertEqual(expected, [job.key for job in matches])
+
+    def test_find_matching(self):
+        """Test finding jobs matching a keyword."""
+        now = datetime.now(tzutc())
+
+        # Create jobs with different command patterns
+        job1 = Job(
+            key="job1",
+            uidx=1,
+            cmd=["echo", "test message"],
+            status=JobStatus.RUNNING,
+            create_time=now,
+            start_time=now,
+            mail_job=False,
+        )
+        job2 = Job(
+            key="job2",
+            uidx=2,
+            cmd=["python", "test.py"],
+            status=JobStatus.COMPLETED,
+            create_time=now + timedelta(seconds=1),
+            start_time=now + timedelta(seconds=1),
+            stop_time=now + timedelta(seconds=10),
+            mail_job=False,
+        )
+        job3 = Job(
+            key="another_key",
+            uidx=3,
+            cmd=["ls", "-la"],
+            status=JobStatus.COMPLETED,
+            create_time=now + timedelta(seconds=2),
+            stop_time=now + timedelta(seconds=11),
+            mail_job=False,
+        )
+        job4 = Job(
+            key="mail_job",
+            uidx=4,
+            cmd=["echo", "test"],
+            status=JobStatus.COMPLETED,
+            create_time=now + timedelta(seconds=3),
+            stop_time=now + timedelta(seconds=12),
+            mail_job=True,  # This should be filtered out
+        )
+        job5 = Job(
+            key="reminder_job",
+            uidx=5,
+            cmd=["sleep", "10"],
+            reminder="test reminder",
+            status=JobStatus.RUNNING,
+            create_time=now + timedelta(seconds=4),
+            mail_job=False,
+        )
+
+        self.repo.save(job1)
+        self.repo.save(job2)
+        self.repo.save(job3)
+        self.repo.save(job4)
+        self.repo.save(job5)
+
+        # Test: Find jobs by command keyword "test"
+        matches = self.repo.find_matching("test")
+        # job1, job2 (not job4 as it's mail_job, not job5 as "test" not in cmd)
+        self.assertMatchingJobs(["job2", "job1"], matches)
+
+        # Test: Find jobs by key prefix
+        matches = self.repo.find_matching("another")
+        self.assertMatchingJobs(["another_key"], matches)
+
+        # Test: Skip reminders (using "sleep" to match reminder_job)
+        matches_with_reminder = self.repo.find_matching("sleep")
+        self.assertMatchingJobs(["reminder_job"], matches_with_reminder)
+
+        matches_no_reminder = self.repo.find_matching("sleep", skip_reminders=True)
+        self.assertMatchingJobs([], matches_no_reminder)
+
+        # Test: Filter by workspace
+        job_with_ws = Job(
+            key="ws_job",
+            uidx=6,
+            cmd=["echo", "test"],
+            status=JobStatus.COMPLETED,
+            create_time=now + timedelta(seconds=5),
+            start_time=now + timedelta(seconds=5),
+            stop_time=now + timedelta(seconds=15),
+            workspace="/home/user/project",
+            mail_job=False,
+        )
+        self.repo.save(job_with_ws)
+
+        matches = self.repo.find_matching("test", workspace="/home/user/project")
+        self.assertMatchingJobs(["ws_job"], matches)
+
+        # Test: No matches
+        matches = self.repo.find_matching("nonexistent_keyword")
+        self.assertMatchingJobs([], matches)
+
+        # Test: Ordering - active jobs first, then completed by most recent
+        matches = self.repo.find_matching("test")
+        self.assertMatchingJobs(["ws_job", "job2", "job1"], matches)
 
 
 if __name__ == "__main__":

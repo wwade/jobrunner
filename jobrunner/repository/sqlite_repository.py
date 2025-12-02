@@ -380,6 +380,59 @@ class SqliteJobRepository(JobRepository):
         self._execute(cursor, sql, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
+    def find_matching(
+        self,
+        keyword: str,
+        workspace: Optional[str] = None,
+        skip_reminders: bool = False,
+    ) -> List[Job]:
+        """
+        Find all jobs matching the given keyword.
+
+        Searches for jobs where the keyword appears in:
+        - The command string (cmd_json)
+        - The job key
+
+        Args:
+            keyword: Search term to match
+            workspace: Optional workspace filter
+            skip_reminders: If True, exclude reminder jobs
+
+        Returns:
+            List of matching Job objects, with active jobs first,
+            then inactive jobs in reverse chronological order
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        # Build SQL query
+        sql = """
+            SELECT * FROM jobs
+            WHERE (cmd_json LIKE ? OR key LIKE ?)
+            AND mail_job = 0
+        """
+        params = [f"%{keyword}%", f"{keyword}%"]
+
+        if workspace is not None:
+            sql += " AND workspace = ?"
+            params.append(workspace)
+
+        if skip_reminders:
+            sql += " AND (reminder IS NULL OR reminder = '')"
+
+        # Order by: active jobs first (by create_time), then completed jobs
+        # (by stop_time DESC)
+        sql += """
+            ORDER BY
+                CASE WHEN status = 'COMPLETED'
+                    THEN 1 ELSE 0 END,
+                CASE WHEN status = 'COMPLETED'
+                    THEN stop_time ELSE create_time END DESC
+        """
+
+        self._execute(cursor, sql, params)
+        return [self._row_to_job(row) for row in cursor.fetchall()]
+
     def get_metadata(self) -> Metadata:
         """Get repository metadata."""
         conn = self._get_conn()

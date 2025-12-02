@@ -351,6 +351,8 @@ def addNonExecOptions(op):
                     help="Notify using PROGRAM on any job activity")
     op.add_argument("-s", "--show", metavar="KEY", action="append",
                     help="Get details for job specified by KEY")
+    op.add_argument("-F", "--find", metavar="KEYWORD", action="append",
+                    help="List jobs matching KEYWORD")
     op.add_argument("-K", "--last-key", action="store_true",
                     help="Get the latest key")
     op.add_argument("--index", "-n", action="append", type=int,
@@ -472,6 +474,18 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         for k in options.show:
             j = jobs.getJobMatch(k, options.tw)
             sprint(j.detail(options.verbose))
+        return True
+    elif options.find:
+        for keyword in options.find:
+            matches = jobs.findJobsMatching(keyword, options.tw)
+            if not matches:
+                sprint("No jobs matching %r" % keyword)
+            else:
+                for j in matches:
+                    if options.verbose:
+                        sprint(j.detail(options.verbose))
+                    else:
+                        sprint(j)
         return True
     elif options.pid:
         for key in options.pid:
