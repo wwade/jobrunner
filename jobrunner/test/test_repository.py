@@ -304,6 +304,18 @@ class TestSqliteJobRepository(unittest.TestCase):
         matches = self.repo.find_matching("test")
         self.assertMatchingJobs(["job2", "ws_job", "job1"], matches)
 
+        # Test: Filter by checkpoint (since parameter)
+        checkpoint = now + timedelta(seconds=2)
+        matches_since_checkpoint = self.repo.find_matching("test", since=checkpoint)
+        # Only jobs created at or after checkpoint: ws_job (at +5s)
+        # job1 (at 0s) and job2 (at +1s) are before checkpoint
+        self.assertMatchingJobs(["ws_job"], matches_since_checkpoint)
+
+        # Test: Checkpoint with no matches
+        future_checkpoint = now + timedelta(seconds=100)
+        matches_future = self.repo.find_matching("test", since=future_checkpoint)
+        self.assertMatchingJobs([], matches_future)
+
 
 if __name__ == "__main__":
     unittest.main()

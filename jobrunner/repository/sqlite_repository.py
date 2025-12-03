@@ -385,6 +385,7 @@ class SqliteJobRepository(JobRepository):
         keyword: str,
         workspace: Optional[str] = None,
         skip_reminders: bool = False,
+        since: Optional[datetime] = None,
     ) -> List[Job]:
         """
         Find all jobs matching the given keyword.
@@ -397,6 +398,7 @@ class SqliteJobRepository(JobRepository):
             keyword: Search term to match
             workspace: Optional workspace filter
             skip_reminders: If True, exclude reminder jobs
+            since: Optional checkpoint datetime to filter jobs created after
 
         Returns:
             List of matching Job objects, with inactive jobs first
@@ -419,6 +421,10 @@ class SqliteJobRepository(JobRepository):
 
         if skip_reminders:
             sql += " AND (reminder IS NULL OR reminder = '')"
+
+        if since is not None:
+            sql += " AND create_time >= ?"
+            params.append(since.isoformat())
 
         # Order by: completed jobs first (by stop_time), then active jobs
         # (by create_time), both oldest to newest

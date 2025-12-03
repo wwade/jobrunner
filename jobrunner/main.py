@@ -477,7 +477,8 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         return True
     elif options.find:
         for keyword in options.find:
-            matches = jobs.findJobsMatching(keyword, options.tw)
+            matches = jobs.findJobsMatching(keyword, options.tw,
+                                            useCp=options.since_checkpoint)
             if not matches:
                 sprint("No jobs matching %r" % keyword)
             else:

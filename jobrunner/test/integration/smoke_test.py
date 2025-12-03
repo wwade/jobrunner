@@ -413,6 +413,30 @@ class RunFindTest(TestCase):
             self.assertIn("pattern_a", multiFind)
             self.assertIn("pattern_b", multiFind)
 
+            # Test with checkpoint filtering
+            # Create jobs before checkpoint
+            jobf("echo", "before_checkpoint_1")
+            jobf("echo", "before_checkpoint_2")
+            # Set checkpoint
+            job("--set-checkpoint", ".")
+            # Create jobs after checkpoint
+            jobf("echo", "after_checkpoint_1")
+            jobf("echo", "after_checkpoint_2")
+
+            # Find without checkpoint - should find all
+            allMatches = job("--find", "checkpoint")
+            self.assertIn("before_checkpoint_1", allMatches)
+            self.assertIn("before_checkpoint_2", allMatches)
+            self.assertIn("after_checkpoint_1", allMatches)
+            self.assertIn("after_checkpoint_2", allMatches)
+
+            # Find with checkpoint - should only find jobs after checkpoint
+            afterMatches = job("-p", "--find", "checkpoint")
+            self.assertNotIn("before_checkpoint_1", afterMatches)
+            self.assertNotIn("before_checkpoint_2", afterMatches)
+            self.assertIn("after_checkpoint_1", afterMatches)
+            self.assertIn("after_checkpoint_2", afterMatches)
+
 
 class RunNonExecOptionsTest(TestCase):
     """
