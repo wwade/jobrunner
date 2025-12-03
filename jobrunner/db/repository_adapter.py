@@ -270,7 +270,7 @@ class RepositoryAdapter(JobsBase):
 
         return job_info, fd
 
-    def findJobsMatching(self, keyword, thisWs, skipReminders=False):
+    def findJobsMatching(self, keyword, thisWs, skipReminders=False, useCp=False):
         """
         Find all jobs matching the given keyword.
 
@@ -282,11 +282,18 @@ class RepositoryAdapter(JobsBase):
         # Determine workspace filter
         workspace = utils.workspaceIdentity() if thisWs else None
 
+        # Determine checkpoint filter
+        since = None
+        if useCp:
+            metadata = self._repo.get_metadata()
+            since = metadata.checkpoint
+
         # Query repository
         jobs = self._repo.find_matching(
             keyword=keyword,
             workspace=workspace,
-            skip_reminders=skipReminders
+            skip_reminders=skipReminders,
+            since=since
         )
 
         # Convert to JobInfo objects
