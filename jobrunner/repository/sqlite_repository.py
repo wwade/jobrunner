@@ -399,8 +399,8 @@ class SqliteJobRepository(JobRepository):
             skip_reminders: If True, exclude reminder jobs
 
         Returns:
-            List of matching Job objects, with active jobs first,
-            then inactive jobs in reverse chronological order
+            List of matching Job objects, with inactive jobs first
+            (oldest to newest), then active jobs (oldest to newest)
         """
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -420,14 +420,14 @@ class SqliteJobRepository(JobRepository):
         if skip_reminders:
             sql += " AND (reminder IS NULL OR reminder = '')"
 
-        # Order by: active jobs first (by create_time), then completed jobs
-        # (by stop_time DESC)
+        # Order by: completed jobs first (by stop_time), then active jobs
+        # (by create_time), both oldest to newest
         sql += """
             ORDER BY
-                CASE WHEN status = 'COMPLETED'
-                    THEN 1 ELSE 0 END,
-                CASE WHEN status = 'COMPLETED'
-                    THEN stop_time ELSE create_time END DESC
+                CASE WHEN status = 'completed'
+                    THEN 0 ELSE 1 END,
+                CASE WHEN status = 'completed'
+                    THEN stop_time ELSE create_time END ASC
         """
 
         self._execute(cursor, sql, params)

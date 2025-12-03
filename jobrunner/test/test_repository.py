@@ -299,9 +299,10 @@ class TestSqliteJobRepository(unittest.TestCase):
         matches = self.repo.find_matching("nonexistent_keyword")
         self.assertMatchingJobs([], matches)
 
-        # Test: Ordering - active jobs first, then completed by most recent
+        # Test: Ordering - completed jobs (oldest first), then active jobs (oldest
+        # first)
         matches = self.repo.find_matching("test")
-        self.assertMatchingJobs(["ws_job", "job2", "job1"], matches)
+        self.assertMatchingJobs(["job2", "ws_job", "job1"], matches)
 
 
 if __name__ == "__main__":
