@@ -344,11 +344,7 @@ class JobsBase(object):
 
     def filterJobs(self, db, limit, filterWs=False,
                    filterPane=False, useCp=False):
-        jobList = self.getDbSorted(db, limit, useCp)
-        if filterWs:
-            curWs = utils.workspaceIdentity()
-            if curWs:
-                jobList = [j for j in jobList if curWs == j.workspace]
+        jobList = self.getDbSorted(db, limit, useCp, filterWs)
         if filterPane:
             curPane = os.getenv("TMUX_PANE", None)
             if curPane:
