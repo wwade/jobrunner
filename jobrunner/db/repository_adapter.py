@@ -298,3 +298,70 @@ class RepositoryAdapter(JobsBase):
 
         # Convert to JobInfo objects
         return [job_to_jobinfo(job, parent=self) for job in jobs]
+
+    def getDbSorted(
+        self,
+        db: DatabaseBase,
+        _limit: int | None = None,
+        useCp: bool = False,
+        filterWs: bool = False
+    ) -> list[JobInfo]:
+        """
+        Get sorted list of jobs from database with optional filters.
+
+        This overrides the parent class implementation to use efficient
+        SQL queries with indexed WHERE clauses instead of loading all
+        jobs and filtering in Python.
+
+        Note: Parent class uses @staticmethod but we override as instance
+        method to access self._repo.
+
+        Args:
+            db: Database to query (active or inactive)
+            _limit: Optional limit on number of results
+            useCp: If True, filter by checkpoint time
+            filterWs: If True, filter by current workspace
+
+        Returns:
+            List of JobInfo objects sorted by creation time
+        """
+        from jobrunner import utils
+
+        # Determine workspace filter
+        workspace = None
+        if filterWs:
+            workspace = utils.workspaceIdentity()
+
+        # Determine checkpoint filter
+        since = None
+        if useCp:
+            metadata = self._repo.get_metadata()
+            since = metadata.checkpoint
+
+        # Determine status filter based on which database we're querying
+        # The "active" database contains all non-completed jobs
+        # The "inactive" database contains completed jobs
+        status = None if db.ident == "active" else JobStatus.COMPLETED
+
+        # Use find_all which efficiently filters at the SQL level with indices
+        jobs = self._repo.find_all(
+            status=status,
+            workspace=workspace,
+            since=since,
+            limit=_limit
+        )
+
+        # For active jobs, we need to exclude completed ones
+        # (status=None in find_all means all statuses)
+        if db.ident == "active":
+            jobs = [job for job in jobs if job.status != JobStatus.COMPLETED]
+
+        # Convert to JobInfo objects
+        job_infos = [job_to_jobinfo(job, parent=self) for job in jobs]
+
+        # Already sorted by create_time in SQL query, but ensure ascending order
+        # to match parent behavior (parent does jobList.sort(reverse=False))
+        # The SQL query already orders by create_time ascending, so this is a no-op
+        job_infos.sort(reverse=False)
+
+        return job_infos

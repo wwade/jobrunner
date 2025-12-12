@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from functools import cmp_to_key
 from hashlib import md5
@@ -10,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 from uuid import uuid4
 
 from dateutil import parser
@@ -291,11 +293,11 @@ class JobsBase(object):
                 job.removeLog(self.config.verbose)
                 del self.inactive[job.key]
 
-    @staticmethod
-    def getDbSorted(db: DatabaseBase,
-                    _limit: Optional[int] = None,
+    def getDbSorted(self,
+                    db: DatabaseBase,
+                    _limit: int | None = None,
                     useCp=False,
-                    filterWs=False) -> List[JobInfo]:
+                    filterWs=False) -> list[JobInfo]:
         cpUtc = None
         if useCp:
             cpUtc = db.checkpoint
