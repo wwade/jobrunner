@@ -17,7 +17,6 @@ import tempfile
 import time
 from typing import IO, List, Optional, Tuple
 
-import dateutil.parser
 import dateutil.tz
 import six
 
@@ -30,6 +29,7 @@ from .config import Config
 from .db import JobsBase, NoMatchingJobError
 from .info import JobInfo
 from .plugins import Plugins
+from .sequences import record_sequence, replay_sequence_from_main
 from .service import service
 from .service.registry import registerServices
 from .utils import (
@@ -75,6 +75,18 @@ def impl_main(args=None):
 
     LOG.debug("starting with args %s", options)
     LOG.debug("python: %s", sys.version)
+
+    # Check if this is a sequence replay BEFORE acquiring lock.
+    # Sequence replay spawns multiple subprocess jobs via 'job' command,
+    # and each subprocess will need to acquire the lock independently.
+    # If we held the lock here, the subprocesses would deadlock waiting
+    # for us to release it. By checking early and exiting before the lock,
+    # we allow the replayed jobs to run independently.
+    if options.retry:
+        if jobs.is_sequence(options.retry):
+            replay_sequence_from_main(jobs, options.retry, args, config)
+            sys.exit(0)
+
     with lockedSection(jobs):
         maybeHandleNonExecOptions(options, jobs)
         maybeHandleNonExecWriteOptions(options, jobs)
@@ -136,6 +148,10 @@ def impl_main(args=None):
         job.genPersistKey()
         jobs.active[job.key] = job
 
+        # Record sequence if requested
+        if options.sequence:
+            record_sequence(jobs, job, deps, depSuccess, options.sequence)
+
     # unlocked
     scriptName = os.path.basename(sys.argv[0])
     if scriptName == "job" and not options.foreground:
@@ -161,8 +177,9 @@ def impl_main(args=None):
         if deps:
             try:
                 job.blocked(jobs)
+                # Save all dependencies before processing
+                job.setDependencies(jobs, deps)
                 while deps:
-                    job.setDependencies(jobs, deps)
                     dep = deps.pop(0)
                     LOG.debug("wait for dep %s", dep)
                     jobs.waitFor(dep, options.verbose)
@@ -173,7 +190,12 @@ def impl_main(args=None):
             finally:
                 LOG.debug("unlocked %s", job, exc_info=True)
                 job.unblocked(jobs)
-                job.setDependencies(jobs, None)
+                # Note: Dependencies are NOT cleared here
+                # (no setDependencies(jobs, None)).
+                # They were saved earlier for sequence recording and remain
+                # on the job object for historical reference. This is safe
+                # because jobs are stored in the database with their
+                # dependency information.
         if aborted:
             LOG.debug("aborted %s", job)
             job.stop(jobs, STOP_ABORT)
@@ -353,6 +375,8 @@ def addNonExecOptions(op):
                     help="Get details for job specified by KEY")
     op.add_argument("-F", "--find", metavar="KEYWORD", action="append",
                     help="List jobs matching KEYWORD")
+    op.add_argument("--list-sequences", action="store_true",
+                    help="List all saved sequences")
     op.add_argument("-K", "--last-key", action="store_true",
                     help="Get the latest key")
     op.add_argument("--index", "-n", action="append", type=int,
@@ -376,6 +400,8 @@ def addNonExecOptions(op):
         help="Force job status 'stopped' for the job specified by KEY")
     op.add_argument("--delete", metavar="KEY", action="append",
                     help="Remove inactive job specified by KEY")
+    op.add_argument("--delete-sequence", metavar="NAME", action="append",
+                    help="Delete sequence specified by NAME")
     op.add_argument("--prune", action="store_true",
                     help="Prune inactive jobs and log files")
     op.add_argument(
@@ -488,6 +514,14 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
                     else:
                         sprint(j)
         return True
+    elif options.list_sequences:
+        sequences = jobs.list_sequences()
+        if not sequences:
+            sprint("No sequences found")
+        else:
+            for seq_name in sequences:
+                sprint(seq_name)
+        return True
     elif options.pid:
         for key in options.pid:
             try:
@@ -562,6 +596,14 @@ def handleNonExecWriteOptions(options, jobs: JobsBase):
             sprint("Delete job %r" % j.key)
             j.removeLog(verbose=True)
             del jobs.inactive[j.key]
+        return True
+    elif options.delete_sequence:
+        for seq_name in options.delete_sequence:
+            if not jobs.is_sequence(seq_name):
+                sprint(f"Error: Sequence '{seq_name}' not found")
+            else:
+                jobs.delete_sequence(seq_name)
+                sprint(f"Deleted sequence '{seq_name}'")
         return True
     elif options.set_checkpoint:
         jobs.active.checkpoint = options.set_checkpoint
@@ -692,6 +734,13 @@ def parseArgs(args=None):
         "--key",
         metavar="KEY",
         help="Specify job key to use (must be unique among active jobs)")
+    op.add_argument(
+        "--sequence",
+        "--seq",
+        metavar="NAME",
+        action="store",
+        help="Record this job and its dependencies as a sequence that "
+        "can be replayed later with --retry NAME")
     op.add_argument(
         "-m",
         "--mail",
