@@ -12,6 +12,7 @@ from dateutil.tz import tzutc
 
 from jobrunner.domain import Job, JobStatus
 from jobrunner.repository import SqliteJobRepository
+from jobrunner.sequences import DEP_TYPE_SUCCESS
 
 
 class TestSqliteJobRepository(unittest.TestCase):
@@ -315,6 +316,95 @@ class TestSqliteJobRepository(unittest.TestCase):
         future_checkpoint = now + timedelta(seconds=100)
         matches_future = self.repo.find_matching("test", since=future_checkpoint)
         self.assertMatchingJobs([], matches_future)
+
+
+class TestSqliteJobRepositorySequences(unittest.TestCase):
+    """Test sequence methods in SQLite repository."""
+
+    def setUp(self):
+        """Set up test repository."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, "test.db")
+        self.repo = SqliteJobRepository(self.db_path)
+
+    def tearDown(self):
+        """Clean up test repository."""
+        self.repo.close()
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        os.rmdir(self.temp_dir)
+
+    def test_is_sequence_nonexistent(self):
+        """Test is_sequence returns False for nonexistent sequence."""
+        self.assertFalse(self.repo.is_sequence("nonexistent"))
+
+    def test_add_sequence_step_and_is_sequence(self):
+        """Test adding sequence step and checking existence."""
+        step_num = self.repo.add_sequence_step(
+            name="test_seq",
+            job_key="job1",
+            dependencies=[]
+        )
+
+        self.assertEqual(0, step_num)
+        self.assertTrue(self.repo.is_sequence("test_seq"))
+
+    def test_add_sequence_step_with_dependencies(self):
+        """Test adding sequence step with dependencies."""
+        # Add first step
+        self.repo.add_sequence_step("seq", "job1", [])
+
+        # Add second step with dependencies
+        step_num = self.repo.add_sequence_step(
+            "seq",
+            "job2",
+            [(0, DEP_TYPE_SUCCESS)]
+        )
+
+        self.assertEqual(1, step_num)
+
+        # Verify dependencies
+        steps = self.repo.get_sequence_steps("seq")
+        self.assertEqual(2, len(steps))
+        self.assertEqual([(0, DEP_TYPE_SUCCESS)], steps[1][2])
+
+    def test_get_sequence_steps_order(self):
+        """Test get_sequence_steps returns steps in order."""
+        self.repo.add_sequence_step("seq", "job1", [])
+        self.repo.add_sequence_step("seq", "job2", [])
+        self.repo.add_sequence_step("seq", "job3", [])
+
+        steps = self.repo.get_sequence_steps("seq")
+
+        self.assertEqual(3, len(steps))
+        self.assertEqual(0, steps[0][0])  # step_number
+        self.assertEqual(1, steps[1][0])
+        self.assertEqual(2, steps[2][0])
+        self.assertEqual("job1", steps[0][1])  # job_key
+        self.assertEqual("job2", steps[1][1])
+        self.assertEqual("job3", steps[2][1])
+
+    def test_delete_sequence(self):
+        """Test deleting a sequence."""
+        self.repo.add_sequence_step("seq", "job1", [])
+        self.repo.add_sequence_step("seq", "job2", [])
+
+        self.assertTrue(self.repo.is_sequence("seq"))
+
+        self.repo.delete_sequence("seq")
+
+        self.assertFalse(self.repo.is_sequence("seq"))
+        self.assertEqual([], self.repo.get_sequence_steps("seq"))
+
+    def test_list_sequences(self):
+        """Test listing all sequences."""
+        self.repo.add_sequence_step("seq1", "job1", [])
+        self.repo.add_sequence_step("seq2", "job1", [])
+        self.repo.add_sequence_step("seq1", "job2", [])
+
+        sequences = self.repo.list_sequences()
+
+        self.assertEqual(sorted(["seq1", "seq2"]), sorted(sequences))
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@ while internally using the new SqliteJobRepository and JobService.
 """
 
 # pylint: disable=protected-access
-# pylint: disable=import-outside-toplevel
 # pylint: disable=too-many-return-statements
 
 from __future__ import annotations
@@ -18,11 +17,11 @@ import tempfile
 
 from jobrunner.adapters.job_converter import job_to_jobinfo, jobinfo_to_job
 from jobrunner.config import Config
-from jobrunner.domain import JobStatus
+from jobrunner.domain import Job, JobStatus
 from jobrunner.info import JobInfo
 from jobrunner.repository import SqliteJobRepository
 from jobrunner.service import service
-from jobrunner.utils import dateTimeFromJson, dateTimeToJson
+from jobrunner.utils import dateTimeFromJson, dateTimeToJson, workspaceIdentity
 
 from . import DatabaseBase, JobsBase, getLogParentDir
 
@@ -197,26 +196,6 @@ class RepositoryAdapter(JobsBase):
         self.inactive = FakeDatabase(
             self, config, self._instanceId, JobStatus.COMPLETED)
 
-    @property
-    def active(self):
-        """Override active property to bypass parent assertion."""
-        return self._active
-
-    @active.setter
-    def active(self, value):
-        """Override active setter."""
-        self._active = value
-
-    @property
-    def inactive(self):
-        """Override inactive property to bypass parent assertion."""
-        return self._inactive
-
-    @inactive.setter
-    def inactive(self, value):
-        """Override inactive setter."""
-        self._inactive = value
-
     def countInactive(self):
         """Count inactive (completed) jobs."""
         return self._repo.count(JobStatus.COMPLETED)
@@ -270,6 +249,9 @@ class RepositoryAdapter(JobsBase):
 
         return job_info, fd
 
+    def get(self, key: str) -> Job | None:
+        return self._repo.get(key)
+
     def findJobsMatching(self, keyword, thisWs, skipReminders=False, useCp=False):
         """
         Find all jobs matching the given keyword.
@@ -277,10 +259,8 @@ class RepositoryAdapter(JobsBase):
         Similar to getJobMatch but returns all matching jobs instead of just one.
         Uses efficient SQL query via the repository.
         """
-        from jobrunner import utils
-
         # Determine workspace filter
-        workspace = utils.workspaceIdentity() if thisWs else None
+        workspace = workspaceIdentity() if thisWs else None
 
         # Determine checkpoint filter
         since = None
@@ -325,12 +305,10 @@ class RepositoryAdapter(JobsBase):
         Returns:
             List of JobInfo objects sorted by creation time
         """
-        from jobrunner import utils
-
         # Determine workspace filter
         workspace = None
         if filterWs:
-            workspace = utils.workspaceIdentity()
+            workspace = workspaceIdentity()
 
         # Determine checkpoint filter
         since = None
@@ -365,3 +343,39 @@ class RepositoryAdapter(JobsBase):
         job_infos.sort(reverse=False)
 
         return job_infos
+
+    def add_sequence_step(
+        self,
+        name: str,
+        job_key: str,
+        dependencies: list[tuple[int, str]],
+    ) -> int:
+        return self._repo.add_sequence_step(name, job_key, dependencies)
+
+    def is_sequence(self, name: str) -> bool:
+        """Check if a sequence with the given name exists."""
+        return self._repo.is_sequence(name)
+
+    def list_sequences(self) -> list[str]:
+        """
+        List all saved sequences.
+
+        Returns:
+            List of sequence names
+        """
+        return self._repo.list_sequences()
+
+    def delete_sequence(self, name: str) -> None:
+        self._repo.delete_sequence(name)
+
+    def get_sequence_steps(self, name: str):
+        """
+        Get all steps in a sequence with their dependencies.
+
+        Args:
+            name: Sequence name
+
+        Returns:
+            List of (step_number, job_key, dependencies) tuples
+        """
+        return self._repo.get_sequence_steps(name)

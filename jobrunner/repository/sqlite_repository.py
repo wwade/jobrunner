@@ -12,7 +12,7 @@ import json
 import logging
 import os
 import sqlite3
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from jobrunner.domain import Job, JobStatus
 
@@ -130,6 +130,37 @@ class SqliteJobRepository(JobRepository):
                 value TEXT
             )
         """)
+
+        # Sequence tables for recording and replaying job sequences
+        self._execute(cursor, """
+            CREATE TABLE IF NOT EXISTS sequence_steps (
+                name TEXT NOT NULL,
+                step_number INTEGER NOT NULL,
+                job_key TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (name, step_number)
+            )
+        """)
+
+        self._execute(cursor, """
+            CREATE TABLE IF NOT EXISTS sequence_dependencies (
+                name TEXT NOT NULL,
+                step_number INTEGER NOT NULL,
+                dependency_step INTEGER NOT NULL,
+                dependency_type TEXT NOT NULL,
+                PRIMARY KEY (name, step_number, dependency_step),
+                FOREIGN KEY (name, step_number)
+                    REFERENCES sequence_steps(name, step_number)
+            )
+        """)
+
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_sequence_steps_name "
+                      "ON sequence_steps(name)")
+
+        self._execute(cursor,
+                      "CREATE INDEX IF NOT EXISTS idx_sequence_steps_name_step "
+                      "ON sequence_steps(name, step_number)")
 
         # Initialize metadata if not present
         self._execute(
@@ -550,6 +581,127 @@ class SqliteJobRepository(JobRepository):
         if key in metadata.recent_keys:
             metadata.recent_keys.remove(key)
             self.update_metadata(metadata)
+
+    def is_sequence(self, name: str) -> bool:
+        """Check if a name refers to a sequence."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        self._execute(cursor,
+                      "SELECT 1 FROM sequence_steps WHERE name = ? LIMIT 1",
+                      (name,))
+        return cursor.fetchone() is not None
+
+    def add_sequence_step(
+        self,
+        name: str,
+        job_key: str,
+        dependencies: List[Tuple[int, str]],
+    ) -> int:
+        """
+        Add a step to a sequence.
+
+        Args:
+            name: Sequence name
+            job_key: Key of the job for this step
+            dependencies: List of (step_number, dep_type) tuples where
+                         dep_type is 'success' or 'completion'
+
+        Returns:
+            The step number assigned to this step
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        # Get next step number for this sequence
+        self._execute(cursor,
+                      "SELECT MAX(step_number) FROM sequence_steps "
+                      "WHERE name = ?",
+                      (name,))
+        row = cursor.fetchone()
+        next_step = 0 if row[0] is None else row[0] + 1
+
+        # Insert step
+        created_at = datetime.now().isoformat()
+        self._execute(cursor,
+                      "INSERT INTO sequence_steps "
+                      "(name, step_number, job_key, created_at) "
+                      "VALUES (?, ?, ?, ?)",
+                      (name, next_step, job_key, created_at))
+
+        # Insert dependencies
+        for dep_step, dep_type in dependencies:
+            self._execute(cursor,
+                          "INSERT INTO sequence_dependencies "
+                          "(name, step_number, dependency_step, "
+                          "dependency_type) "
+                          "VALUES (?, ?, ?, ?)",
+                          (name, next_step, dep_step, dep_type))
+
+        conn.commit()
+        return next_step
+
+    def get_sequence_steps(
+        self,
+        name: str
+    ) -> List[Tuple[int, str, List[Tuple[int, str]]]]:
+        """
+        Get all steps in a sequence with their dependencies.
+
+        Args:
+            name: Sequence name
+
+        Returns:
+            List of (step_number, job_key, dependencies) tuples where
+            dependencies is a list of (dependency_step, dependency_type)
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        # Get all steps
+        self._execute(cursor,
+                      "SELECT step_number, job_key "
+                      "FROM sequence_steps WHERE name = ? "
+                      "ORDER BY step_number",
+                      (name,))
+        steps = cursor.fetchall()
+
+        result = []
+        for step_num, job_key in steps:
+            # Get dependencies for this step
+            self._execute(cursor,
+                          "SELECT dependency_step, dependency_type "
+                          "FROM sequence_dependencies "
+                          "WHERE name = ? AND step_number = ?",
+                          (name, step_num))
+            deps = [(row[0], row[1]) for row in cursor.fetchall()]
+            result.append((step_num, job_key, deps))
+
+        return result
+
+    def list_sequences(self) -> List[str]:
+        """List all sequence names."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        self._execute(cursor,
+                      "SELECT DISTINCT name FROM sequence_steps "
+                      "ORDER BY name")
+        return [row[0] for row in cursor.fetchall()]
+
+    def delete_sequence(self, name: str) -> None:
+        """Delete a sequence and all its steps."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        self._execute(cursor,
+                      "DELETE FROM sequence_dependencies WHERE name = ?",
+                      (name,))
+        self._execute(cursor,
+                      "DELETE FROM sequence_steps WHERE name = ?",
+                      (name,))
+
+        conn.commit()
 
     def close(self) -> None:
         """Close database connection."""

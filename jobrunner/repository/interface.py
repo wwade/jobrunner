@@ -184,5 +184,35 @@ class JobRepository(ABC):
         """
 
     @abstractmethod
+    def is_sequence(self, name: str) -> bool:
+        """
+        Check if a sequence exists.
+
+        Args:
+            name: The sequence name
+
+        Returns:
+            True if sequence exists, False otherwise
+        """
+
+    @abstractmethod
+    def list_sequences(self) -> list[str]:
+        """
+        List all sequence names.
+
+        Returns:
+            Sorted list of sequence names
+        """
+
+    @abstractmethod
+    def delete_sequence(self, name: str) -> None:
+        """
+        Delete a sequence and all its steps.
+
+        Args:
+            name: The sequence name to delete
+        """
+
+    @abstractmethod
     def close(self) -> None:
         """Close repository and release resources."""

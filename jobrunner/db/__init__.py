@@ -20,6 +20,7 @@ from dateutil.tz import tzlocal, tzutc
 
 from jobrunner import utils
 from jobrunner.config import Config
+from jobrunner.domain.job import Job
 
 from ..info import JobInfo, decodeJobInfo, encodeJobInfo
 from ..service import service
@@ -293,6 +294,10 @@ class JobsBase(object):
                 job.removeLog(self.config.verbose)
                 del self.inactive[job.key]
 
+    def get(self, key: str) -> Job | None:
+        _ = key
+        raise NotImplementedError
+
     def getDbSorted(self,
                     db: DatabaseBase,
                     _limit: int | None = None,
@@ -322,6 +327,25 @@ class JobsBase(object):
                 break
         jobList.sort(reverse=False)
         return jobList
+
+    def is_sequence(self, name: str) -> bool:
+        _ = name
+        raise NotImplementedError
+
+    def add_sequence_step(
+        self,
+        name: str,
+        job_key: str,
+        dependencies: list[tuple[int, str]],
+    ) -> int:
+        raise NotImplementedError
+
+    def list_sequences(self) -> list[str]:
+        raise NotImplementedError
+
+    def delete_sequence(self, name: str) -> None:
+        _ = name
+        raise NotImplementedError
 
     def walkDepTree(self, func, db, depends, depth, **kwargs):
         for dep in depends:
