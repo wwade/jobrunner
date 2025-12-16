@@ -93,7 +93,6 @@ class SqliteJobRepository(JobRepository):
                 user TEXT,
                 env_json TEXT,
                 depends_on_json TEXT,
-                all_deps_json TEXT,
                 logfile TEXT,
                 auto_job INTEGER DEFAULT 0,
                 mail_job INTEGER DEFAULT 0,
@@ -215,7 +214,6 @@ class SqliteJobRepository(JobRepository):
             job.user,
             json.dumps(job.env) if job.env else "{}",
             json.dumps(job.depends_on) if job.depends_on else "[]",
-            json.dumps(list(job.all_deps)) if job.all_deps else "[]",
             job.logfile,
             int(job.auto_job),
             int(job.mail_job),
@@ -226,6 +224,11 @@ class SqliteJobRepository(JobRepository):
 
     def _row_to_job(self, row: sqlite3.Row) -> Job:
         """Convert database row to Job object."""
+        # Parse depends_on and derive all_deps from it
+        depends_on = (json.loads(row["depends_on_json"])
+                      if row["depends_on_json"] else [])
+        all_deps = set(depends_on) if depends_on else set()
+
         return Job(
             key=row["key"],
             uidx=row["uidx"],
@@ -249,10 +252,8 @@ class SqliteJobRepository(JobRepository):
             host=row["host"],
             user=row["user"],
             env=json.loads(row["env_json"]) if row["env_json"] else {},
-            depends_on=json.loads(row["depends_on_json"])
-            if row["depends_on_json"] else [],
-            all_deps=set(json.loads(row["all_deps_json"]))
-            if row["all_deps_json"] else set(),
+            depends_on=depends_on,
+            all_deps=all_deps,
             logfile=row["logfile"],
             auto_job=bool(row["auto_job"]),
             mail_job=bool(row["mail_job"]),
@@ -271,10 +272,10 @@ class SqliteJobRepository(JobRepository):
                 key, uidx, prog, args_json, cmd_json, reminder, pwd,
                 create_time, start_time, stop_time, status, rc, pid, blocked,
                 workspace, project, host, user, env_json, depends_on_json,
-                all_deps_json, logfile, auto_job, mail_job, isolate,
+                logfile, auto_job, mail_job, isolate,
                 persist_key, persist_key_generated
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?, ?, ?)
+                      ?, ?, ?, ?, ?, ?, ?)
         """, self._job_to_row(job))
 
         conn.commit()

@@ -74,10 +74,12 @@ make format       # Format code (./format.sh)
 - `chatmail` - Chat notification utility (jobrunner/mail/chat.py:main)
 
 **Database Layer:**
-- `jobrunner/db/` - Database abstraction with SQLite implementation
-  - `sqlite_db.py` - SQLite3-based key-value store for job metadata
+- `jobrunner/repository/` - Repository pattern implementation for job persistence
+  - `sqlite_repository.py` - SQLite3-based relational storage for jobs
   - Jobs are stored in SQLite database in `~/.local/share/job/` (Linux) or platform-specific data directory
-  - Database schema uses two tables: one for jobs, one for metadata
+  - Database schema has four tables: jobs, metadata, sequence_steps, sequence_dependencies
+  - Job dependencies stored in `depends_on_json` column only (derived `all_deps` field is not persisted)
+- Legacy `jobrunner/db/` - Old database abstraction (being phased out)
 
 **Plugin System:**
 - `jobrunner/plugins.py` - Plugin manager that discovers and loads plugins
@@ -97,9 +99,11 @@ make format       # Format code (./format.sh)
 - Supports mail notifications, chat integration (Google Chat), and UI preferences
 
 **Job Information:**
-- `jobrunner/info.py:JobInfo` - Core data structure representing a job
+- `jobrunner/domain/job.py:Job` - Pure domain model representing a job (new architecture)
+- `jobrunner/info.py:JobInfo` - Legacy job data structure (being phased out)
 - Tracks: command, status, dependencies, timing, output location, working directory, isolation mode
 - Jobs identified by numeric ID or pattern matching (command name, regex)
+- Dependencies: `depends_on` (list) stores all dependency keys; `all_deps` (set) is derived from it
 
 ### Key Workflows
 
