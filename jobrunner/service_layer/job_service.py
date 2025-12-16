@@ -305,6 +305,7 @@ class JobService:
                 raise ValueError(f"Job {key} not found")
 
             job.depends_on = depends_on
+            # all_deps is kept in sync with depends_on (not stored separately in DB)
             job.all_deps = set(depends_on)
 
             self.repo.save(job)
