@@ -249,7 +249,7 @@ class JobsBase(object):
 
     @property
     def active(self) -> DatabaseBase:
-        assert self._active is not None
+        assert self._active
         return self._active
 
     @active.setter
@@ -258,7 +258,7 @@ class JobsBase(object):
 
     @property
     def inactive(self) -> DatabaseBase:
-        assert self._inactive is not None
+        assert self._inactive
         return self._inactive
 
     @inactive.setter
@@ -728,14 +728,16 @@ class JobsBase(object):
         unow = utcNow()
         perWs = {}
         remind = {}
-        for j in self.active.values():
+        for k in self.active.keys():
+            j = self.active[k]
             if not j.reminder:
                 continue
             if not j.startTime:
                 sprint("not started yet", str(j), j.workspace)
                 continue
             remind.setdefault(j.workspace, []).append(j)
-        for j in self.inactive.values():
+        for k in self.inactive.keys():
+            j = self.inactive[k]
             if not j.stopTime or j.autoJob:
                 continue
             if j.rc in utils.SPECIAL_STATUS:
