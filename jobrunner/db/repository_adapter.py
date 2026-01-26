@@ -49,6 +49,7 @@ class FakeDatabase(DatabaseBase):
         self.ident = (
             "active" if status_filter != JobStatus.COMPLETED else "inactive")
         self._db_dict = {}  # Used for special keys like metadata
+        self._job_cache = {}  # Cache JobInfo objects to avoid repeated queries
 
     @property
     def db(self):
@@ -56,19 +57,43 @@ class FakeDatabase(DatabaseBase):
         return self
 
     def keys(self):
-        """Return all job keys matching the status filter."""
+        """Return all job keys matching the status filter.
+
+        Bulk-fetches all jobs and populates the cache to avoid N+1 queries
+        when callers iterate with keys() then access via __getitem__.
+        """
         repo: SqliteJobRepository = self._parent._repo
+
+        # Bulk fetch all jobs (not just keys) to populate cache
         if self._status_filter == JobStatus.COMPLETED:
             jobs = repo.find_completed()
         else:
             jobs = repo.find_active()
-        # Return only job keys, not special metadata keys
-        return [job.key for job in jobs]
+
+        # Populate cache and collect keys
+        keys = []
+        for job in jobs:
+            job_info = job_to_jobinfo(job, parent=self._parent)
+            self._job_cache[job_info.key] = job_info  # Populate cache
+            keys.append(job_info.key)
+
+        return keys
 
     def __contains__(self, key):
         """Check if key exists in this database."""
         if key in self._db_dict:
             return True
+
+        # Check cache first to avoid query
+        if key in self._job_cache:
+            # Job is completed if it has a stop time
+            job_info = self._job_cache[key]
+            is_completed = job_info._stop is not None
+            if self._status_filter == JobStatus.COMPLETED:
+                return is_completed
+            else:
+                return not is_completed
+
         repo: SqliteJobRepository = self._parent._repo
         job = repo.get(key)
         if job is None:
@@ -79,9 +104,14 @@ class FakeDatabase(DatabaseBase):
             return job.status != JobStatus.COMPLETED
 
     def __getitem__(self, key):
+        # pylint: disable=too-many-branches
         """Get item by key."""
         if key in self._db_dict:
             return self._db_dict[key]
+
+        # Check cache first
+        if key in self._job_cache:
+            return self._job_cache[key]
 
         # Handle special metadata keys
         if key in self.special:
@@ -112,6 +142,7 @@ class FakeDatabase(DatabaseBase):
             raise KeyError(key)
 
         jobinfo = job_to_jobinfo(job, parent=self._parent)
+        self._job_cache[key] = jobinfo  # Cache the result
         return jobinfo
 
     def __setitem__(self, key, value):
@@ -171,6 +202,20 @@ class FakeDatabase(DatabaseBase):
         job_count = len(self.keys())
         special_count = len(self.special)
         return job_count + (special_count - 1)
+
+    def values(self):
+        """Return all JobInfo objects (bulk fetch to avoid N+1 queries)."""
+        repo: SqliteJobRepository = self._parent._repo
+        if self._status_filter == JobStatus.COMPLETED:
+            jobs = repo.find_completed()
+        else:
+            jobs = repo.find_active()
+        job_infos = []
+        for job in jobs:
+            job_info = job_to_jobinfo(job, parent=self._parent)
+            self._job_cache[job_info.key] = job_info  # Populate cache
+            job_infos.append(job_info)
+        return job_infos
 
 
 class RepositoryAdapter(JobsBase):
@@ -334,8 +379,12 @@ class RepositoryAdapter(JobsBase):
         if db.ident == "active":
             jobs = [job for job in jobs if job.status != JobStatus.COMPLETED]
 
-        # Convert to JobInfo objects
-        job_infos = [job_to_jobinfo(job, parent=self) for job in jobs]
+        # Convert to JobInfo objects and populate cache
+        job_infos = []
+        for job in jobs:
+            job_info = job_to_jobinfo(job, parent=self)
+            db._job_cache[job_info.key] = job_info  # Populate cache
+            job_infos.append(job_info)
 
         # Already sorted by create_time in SQL query, but ensure ascending order
         # to match parent behavior (parent does jobList.sort(reverse=False))
