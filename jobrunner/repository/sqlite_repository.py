@@ -24,7 +24,7 @@ LOG = logging.getLogger(__name__)
 SCHEMA_VERSION = "2"
 
 
-class SqliteJobRepository(JobRepository):
+class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-methods
     """
     SQLite-based job repository with relational schema.
 
@@ -297,6 +297,17 @@ class SqliteJobRepository(JobRepository):
 
         return self._row_to_job(row)
 
+    def get_many(self, keys: List[str]) -> dict[str, Job]:
+        """Bulk fetch multiple jobs by keys in a single query."""
+        if not keys:
+            return {}
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        placeholders = ",".join("?" * len(keys))
+        query = f"SELECT * FROM jobs WHERE key IN ({placeholders})"
+        self._execute(cursor, query, keys)
+        return {row[0]: self._row_to_job(row) for row in cursor.fetchall()}
+
     def delete(self, key: str) -> None:
         """Delete a job by key."""
         conn = self._get_conn()
@@ -392,6 +403,26 @@ class SqliteJobRepository(JobRepository):
 
         self._execute(cursor, query, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
+
+    def get_keys(
+        self,
+        status: Optional[JobStatus] = None,
+        exclude_completed: bool = False,
+    ) -> List[str]:
+        """Get job keys efficiently without loading full job objects."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        query = "SELECT key FROM jobs WHERE 1=1"
+        params = []
+        if status is not None:
+            query += " AND status = ?"
+            params.append(status.value)
+        elif exclude_completed:
+            query += " AND status != ?"
+            params.append(JobStatus.COMPLETED.value)
+        query += " ORDER BY create_time"
+        self._execute(cursor, query, params)
+        return [row[0] for row in cursor.fetchall()]
 
     def search_by_command(
         self,

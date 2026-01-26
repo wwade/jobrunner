@@ -58,17 +58,21 @@ class FakeDatabase(DatabaseBase):
     def keys(self):
         """Return all job keys matching the status filter."""
         repo: SqliteJobRepository = self._parent._repo
+
+        # Fetch all jobs
         if self._status_filter == JobStatus.COMPLETED:
             jobs = repo.find_completed()
         else:
             jobs = repo.find_active()
-        # Return only job keys, not special metadata keys
+
+        # Return only job keys
         return [job.key for job in jobs]
 
     def __contains__(self, key):
         """Check if key exists in this database."""
         if key in self._db_dict:
             return True
+
         repo: SqliteJobRepository = self._parent._repo
         job = repo.get(key)
         if job is None:
@@ -79,6 +83,7 @@ class FakeDatabase(DatabaseBase):
             return job.status != JobStatus.COMPLETED
 
     def __getitem__(self, key):
+        # pylint: disable=too-many-branches
         """Get item by key."""
         if key in self._db_dict:
             return self._db_dict[key]
@@ -171,6 +176,15 @@ class FakeDatabase(DatabaseBase):
         job_count = len(self.keys())
         special_count = len(self.special)
         return job_count + (special_count - 1)
+
+    def values(self):
+        """Return all JobInfo objects (bulk fetch to avoid N+1 queries)."""
+        repo: SqliteJobRepository = self._parent._repo
+        if self._status_filter == JobStatus.COMPLETED:
+            jobs = repo.find_completed()
+        else:
+            jobs = repo.find_active()
+        return [job_to_jobinfo(job, parent=self._parent) for job in jobs]
 
 
 class RepositoryAdapter(JobsBase):
