@@ -206,14 +206,12 @@ def impl_main(args=None):
             jobs.waitInactive(k, options.verbose)
             j = jobs.inactive[k]
             if j.rc != 0:
-                out = "Dependent job failed: {}\n".format(j)
+                out = "dependent job failed: {}\n".format(j)
                 out += "{}\n".format(j.detail("vvv"))
                 LOG.debug("out %s", out)
                 os.write(fd, out.encode("utf-8"))
                 job.stop(jobs, STOP_DEPFAIL)
-                sprint("\nDependent job failed: %s" % j)
-                sprint("key: %s" % job.key)
-                sprint("return code: %d" % j.rc)
+                sprint(f"[{job.key}] dependent job failed: {j}")
                 sys.exit(j.rc)
 
         job.start(jobs)
@@ -252,9 +250,7 @@ def waitForDep(depWait, options, jobs):
 
         j = jobs.inactive[k]
         if j.rc != 0:
-            sprint("\nDependent job failed: %s" % j)
-            sprint("key: %s" % j.key)
-            sprint("return code: %d" % j.rc)
+            sprint(f"[{j.key}] dependent job failed: {j}")
             return j.rc
     return 0
 
@@ -303,10 +299,7 @@ def postCommand(cmd: List[str]) -> List[str]:
 
 
 def finish(job, rc):
-    LOG.debug("finish %s", job)
-    doMsg("key:", job.key)
-    LOG.debug("first doMsg is OK %s", job)
-    doMsg("return code:", rc)
+    doMsg(f"[{job.key}] return code: {rc}")
     robotInfo("finish", {"key": job.key}, {"rc": rc})
     if rc != 0 and quiet():
         LOG.debug("calling showMsgs for job %s", job)
@@ -911,7 +904,7 @@ def runJob(
 ) -> None:
     # pylint: disable=too-many-statements
     LOG.info("execute: %s", job.cmdStr)
-    doMsg("execute:", job.cmdStr)
+    doMsg(f"[{job.key}] + {job.cmdStr}")
     robotInfo("execute", {"key": job.key}, {"command": job.cmdStr})
     fpIn = encoding_open(options.input, "r")
     rc = -1
