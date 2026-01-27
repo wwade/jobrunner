@@ -1,6 +1,7 @@
 """Simple startup timing profiler for jobrunner."""
 # pylint: disable=global-statement
 from contextlib import contextmanager
+from functools import wraps
 import os
 import sys
 import time
@@ -69,3 +70,23 @@ def timed_section(label: str):
         yield
     finally:
         checkpoint(f"{label} - end")
+
+
+def timed_function(func):
+    """Decorator to time a function call."""
+    if not _ENABLED:
+        # When profiling is disabled, return the function unchanged
+        return func
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Extract class name if this is a method
+        class_name = ""
+        if args and hasattr(args[0], "__class__"):
+            class_name = f"{args[0].__class__.__name__}."
+
+        label = f"{class_name}{func.__name__}"
+        with timed_section(label):
+            return func(*args, **kwargs)
+
+    return wrapper

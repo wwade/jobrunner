@@ -14,6 +14,7 @@ import os
 import sqlite3
 from typing import List, Optional, Tuple
 
+from jobrunner import timing
 from jobrunner.domain import Job, JobStatus
 
 from .interface import JobRepository, Metadata
@@ -63,7 +64,8 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         if self._debug_sql:
             LOG.debug("query=%r params=%r", query.strip(), params)
 
-        return cursor.execute(query, params) if params else cursor.execute(query)
+        with timing.timed_section("sql.execute"):
+            return cursor.execute(query, params) if params else cursor.execute(query)
 
     def _init_schema(self):
         """Create database schema if it doesn't exist."""
@@ -277,6 +279,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             persist_key_generated=row["persist_key_generated"],
         )
 
+    @timing.timed_function
     def save(self, job: Job) -> None:
         """Save or update a job."""
         conn = self._get_conn()
@@ -299,6 +302,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         if job.status == JobStatus.COMPLETED and not job.auto_job:
             self._add_to_recent(job.key)
 
+    @timing.timed_function
     def get(self, key: str) -> Optional[Job]:
         """Get a job by key."""
         conn = self._get_conn()
@@ -312,6 +316,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
 
         return self._row_to_job(row)
 
+    @timing.timed_function
     def get_many(self, keys: List[str]) -> dict[str, Job]:
         """Bulk fetch multiple jobs by keys in a single query."""
         if not keys:
@@ -323,6 +328,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, query, keys)
         return {row[0]: self._row_to_job(row) for row in cursor.fetchall()}
 
+    @timing.timed_function
     def delete(self, key: str) -> None:
         """Delete a job by key."""
         conn = self._get_conn()
@@ -334,6 +340,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         # Remove from recent keys
         self._remove_from_recent(key)
 
+    @timing.timed_function
     def exists(self, key: str) -> bool:
         """Check if a job exists."""
         conn = self._get_conn()
@@ -342,6 +349,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, "SELECT 1 FROM jobs WHERE key = ? LIMIT 1", (key,))
         return cursor.fetchone() is not None
 
+    @timing.timed_function
     def find_all(
         self,
         status: Optional[JobStatus] = None,
@@ -377,6 +385,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, query, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
+    @timing.timed_function
     def find_active(self, workspace: Optional[str] = None) -> List[Job]:
         """Get all non-completed jobs."""
         conn = self._get_conn()
@@ -399,6 +408,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, query, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
+    @timing.timed_function
     def find_completed(
         self,
         workspace: Optional[str] = None,
@@ -424,6 +434,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, query, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
+    @timing.timed_function
     def get_keys(
         self,
         status: Optional[JobStatus] = None,
@@ -449,6 +460,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, query, params)
         return [row[0] for row in cursor.fetchall()]
 
+    @timing.timed_function
     def search_by_command(
         self,
         query: str,
@@ -468,6 +480,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, sql, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
+    @timing.timed_function
     def find_matching(
         self,
         keyword: str,
@@ -527,6 +540,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self._execute(cursor, sql, params)
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
+    @timing.timed_function
     def get_metadata(self) -> Metadata:
         """Get repository metadata."""
         conn = self._get_conn()
@@ -560,6 +574,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             recent_keys=recent_keys,
         )
 
+    @timing.timed_function
     def update_metadata(self, metadata: Metadata) -> None:
         """Update repository metadata."""
         conn = self._get_conn()
@@ -580,6 +595,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
 
         conn.commit()
 
+    @timing.timed_function
     def next_uidx(self) -> int:
         """Get next unique index and increment counter."""
         conn = self._get_conn()
@@ -598,6 +614,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn.commit()
         return current
 
+    @timing.timed_function
     def count(self, status: Optional[JobStatus] = None) -> int:
         """Count jobs."""
         conn = self._get_conn()
@@ -639,6 +656,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             metadata.recent_keys.remove(key)
             self.update_metadata(metadata)
 
+    @timing.timed_function
     def is_sequence(self, name: str) -> bool:
         """Check if a name refers to a sequence."""
         conn = self._get_conn()
@@ -649,6 +667,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
                       (name,))
         return cursor.fetchone() is not None
 
+    @timing.timed_function
     def add_sequence_step(
         self,
         name: str,
@@ -698,6 +717,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn.commit()
         return next_step
 
+    @timing.timed_function
     def get_sequence_steps(
         self,
         name: str
@@ -736,6 +756,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
 
         return result
 
+    @timing.timed_function
     def list_sequences(self) -> List[str]:
         """List all sequence names."""
         conn = self._get_conn()
@@ -746,6 +767,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
                       "ORDER BY name")
         return [row[0] for row in cursor.fetchall()]
 
+    @timing.timed_function
     def delete_sequence(self, name: str) -> None:
         """Delete a sequence and all its steps."""
         conn = self._get_conn()
