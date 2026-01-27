@@ -79,6 +79,7 @@ make format       # Format code (./format.sh)
   - Jobs are stored in SQLite database in `~/.local/share/job/` (Linux) or platform-specific data directory
   - Database schema has four tables: jobs, metadata, sequence_steps, sequence_dependencies
   - Job dependencies stored in `depends_on_json` column only (derived `all_deps` field is not persisted)
+  - Recent optimizations: schema init fast path, query optimization with IN clauses, --list-keys optimization
 - Legacy `jobrunner/db/` - Old database abstraction (being phased out)
 
 **Plugin System:**
@@ -115,10 +116,24 @@ make format       # Format code (./format.sh)
 5. Command executed in subprocess with output redirected to log file
 6. Job status tracked in database
 
+**Finding Jobs:**
+- `-F <KEYWORD>`, `--find <KEYWORD>` - Find all jobs matching the keyword
+- Returns both active and inactive jobs, with active jobs listed first
+- Can be combined with `-p` flag to filter by checkpoint (show only jobs after checkpoint)
+- Similar to `-s` (which returns a single job), but returns all matches in list order
+
 **Job Dependencies:**
 - `-b<job>` - Run after job completes (any exit code)
 - `-B<job>` - Run after job succeeds (exit code 0)
 - `.` is an alias for the most recent job
+
+**Job Sequences:**
+- `--retry <KEY>` - Record a job and its dependencies as a replayable sequence
+- `--list-sequences` - List all saved sequences
+- `--delete-sequence <NAME>` - Delete a saved sequence
+- Sequences allow recording a chain of jobs with their dependencies and replaying them later
+- Sequence names can contain letters, numbers, underscores, hyphens, and dots (max 255 chars)
+- When replaying a sequence, jobs are executed in dependency order
 
 **Notifications:**
 - Mail program specified in config (standard `mail` or `chatmail`)
@@ -185,6 +200,11 @@ class TestSqliteJobRepository(unittest.TestCase):
 **Logging:**
 - Use standard Python logging via `jobrunner.logging`
 - Debug logs go to `~/.local/share/job/jobrunner-debug`
+
+**Profiling:**
+- Set `JOBRUNNER_PROFILE=1` environment variable to enable performance profiling
+- Outputs timing checkpoints to measure startup and query performance
+- Useful for identifying performance bottlenecks in database operations
 
 **Database Access:**
 - Always access via service registry: `service().db.jobs(config, plugins)`
