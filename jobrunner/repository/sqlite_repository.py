@@ -70,6 +70,21 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
+        # Fast path: Check if schema already exists with correct version
+        # This avoids running all the CREATE statements on every startup
+        try:
+            self._execute(
+                cursor,
+                "SELECT value FROM metadata WHERE key = 'schema_version'")
+            row = cursor.fetchone()
+            if row and row[0] == SCHEMA_VERSION:
+                # Schema exists and is current version, skip initialization
+                return
+        except sqlite3.OperationalError:
+            # metadata table doesn't exist yet, need full initialization
+            pass
+
+        # Slow path: Create schema (only runs on first use or version upgrade)
         # Main jobs table
         self._execute(cursor, """
             CREATE TABLE IF NOT EXISTS jobs (
@@ -367,8 +382,13 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        query = "SELECT * FROM jobs WHERE status != ?"
-        params = [JobStatus.COMPLETED.value]
+        # Use IN instead of != for better index usage
+        query = "SELECT * FROM jobs WHERE status IN (?, ?, ?)"
+        params = [
+            JobStatus.PENDING.value,
+            JobStatus.BLOCKED.value,
+            JobStatus.RUNNING.value,
+        ]
 
         if workspace is not None:
             query += " AND workspace = ?"
@@ -418,8 +438,13 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             query += " AND status = ?"
             params.append(status.value)
         elif exclude_completed:
-            query += " AND status != ?"
-            params.append(JobStatus.COMPLETED.value)
+            # Use IN instead of != for better index usage
+            query += " AND status IN (?, ?, ?)"
+            params.extend([
+                JobStatus.PENDING.value,
+                JobStatus.BLOCKED.value,
+                JobStatus.RUNNING.value,
+            ])
         query += " ORDER BY create_time"
         self._execute(cursor, query, params)
         return [row[0] for row in cursor.fetchall()]
