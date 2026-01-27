@@ -22,6 +22,7 @@ import six
 
 import jobrunner.logging
 
+from . import timing
 from .argparse import addArgumentParserBaseFlags, baseParsedArgsToArgList
 from .binutils import binDescriptionWithStandardFooter
 from .compat import encoding_open, metadata
@@ -55,23 +56,38 @@ _DEBUG_LOG_FILE_NAME = "jobrunner-debug"
 LOG = jobrunner.logging.getLogger(__name__)
 
 
-def impl_main(args=None):
+def impl_main(args=None, _main_start=None):
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
+    if _main_start is not None:
+        timing.start_profiling(_main_start)
+    else:
+        timing.start_profiling()
+
+    timing.checkpoint("before plugins init")
     plugins = Plugins()
     MOD_STATE.plugins = plugins
+    timing.checkpoint("after plugins init")
 
     registerServices()
+    timing.checkpoint("after registerServices")
 
     options = parseArgs(args)
+    timing.checkpoint("after parseArgs")
+
     config = Config(options)
+    timing.checkpoint("after Config")
+
     jobrunner.logging.setup(
         config.logDir,
         _DEBUG_LOG_FILE_NAME,
         debug=options.debug)
+    timing.flush_buffered_checkpoints()
+    timing.checkpoint("after logging setup")
 
     jobs: JobsBase = service().db.jobs(config, plugins)
+    timing.checkpoint("after db.jobs init")
 
     LOG.debug("starting with args %s", options)
     LOG.debug("python: %s", sys.version)
@@ -87,7 +103,9 @@ def impl_main(args=None):
             replay_sequence_from_main(jobs, options.retry, args, config)
             sys.exit(0)
 
+    timing.checkpoint("before lock acquisition")
     with lockedSection(jobs):
+        timing.checkpoint("after lock acquisition")
         maybeHandleNonExecOptions(options, jobs)
         maybeHandleNonExecWriteOptions(options, jobs)
 
@@ -230,8 +248,9 @@ def impl_main(args=None):
 
 
 def main(args=None):
+    _main_start = time.perf_counter()
     try:
-        impl_main(args=args)
+        impl_main(args=args, _main_start=_main_start)
     except NoMatchingJobError as error:
         print("Error:", error, file=sys.stderr)
         sys.exit(1)
@@ -443,6 +462,7 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
             useCp=options.since_checkpoint,
             includeReminders=False,
             keysOnly=True)
+        timing.checkpoint("after listActive query")
         return True
     elif options.dot or options.png or options.svg:
         dot = jobs.makeDot(
