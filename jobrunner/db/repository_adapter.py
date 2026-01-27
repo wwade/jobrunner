@@ -59,14 +59,11 @@ class FakeDatabase(DatabaseBase):
         """Return all job keys matching the status filter."""
         repo: SqliteJobRepository = self._parent._repo
 
-        # Fetch all jobs
+        # Use efficient get_keys() that only fetches key column
         if self._status_filter == JobStatus.COMPLETED:
-            jobs = repo.find_completed()
+            return repo.get_keys(status=JobStatus.COMPLETED)
         else:
-            jobs = repo.find_active()
-
-        # Return only job keys
-        return [job.key for job in jobs]
+            return repo.get_keys(exclude_completed=True)
 
     def __contains__(self, key):
         """Check if key exists in this database."""
