@@ -389,7 +389,29 @@ class JobsBase(object):
     def listDb(self, db, limit, filterWs=False, filterPane=False, useCp=False,
                includeReminders=False, keysOnly=False):
         # pylint: disable=too-many-branches
+        # Optimize for keys-only listing when no filtering is needed
+        # Only use fast path when we don't need to filter by workspace, pane, or checkpoint
+        if keysOnly and not filterPane and not filterWs and not useCp:
+            # Use efficient path that only fetches keys, not full job objects
+            keys = db.keys()
+            if not keys:
+                sprint("(None)")
+                return
+            for key in keys:
+                sprint(key)
+            return
+
         jobList = self.filterJobs(db, limit, filterWs, filterPane, useCp)
+
+        # Skip dependency tree operations when only listing keys
+        if keysOnly:
+            for job in jobList:
+                if not includeReminders and job.reminder:
+                    continue
+                sprint(job.key)
+            if not jobList:
+                sprint("(None)")
+            return
 
         # Pre-fetch all jobs to avoid N+1 queries when walking dependency trees
         # This creates a local cache for this operation only
@@ -409,8 +431,6 @@ class JobsBase(object):
                 continue
             if self.config.verbose:
                 sprint(job.detail(self.config.verbose[1:]))
-            elif keysOnly:
-                sprint(job.key)
             else:
                 if db is self.active:
                     sprint(job)
