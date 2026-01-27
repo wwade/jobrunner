@@ -2,13 +2,13 @@ import os
 
 
 def addArgumentParserBaseFlags(parser, logfileName):
-    '''
+    """
     Creates a Base argument parser, which should be used for all
     scripts included with jobrunner.
     Provides common flags for config file overrides, etc.
 
     Provides ALL flags required by the Config class.
-    '''
+    """
     parser.add_argument(
         "-V", "--version",
         help="Display version info",
@@ -29,7 +29,7 @@ def addArgumentParserBaseFlags(parser, logfileName):
         help="Specify state directory (default='%(default)s')",
         default=os.getenv("JOBRUNNER_STATE_DIR", "~/.local/share/jobDb"))
     parser.add_argument("--rc-file", dest="rcFile",
-                        help="Specify path to rc-file (default=\"%(default)s\")",
+                        help='Specify path to rc-file (default="%(default)s")',
                         default="~/.config/jobrc")
     parser.add_argument(
         "--debug",

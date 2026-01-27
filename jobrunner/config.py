@@ -84,7 +84,7 @@ def _getEnumConfig(cfgParser, section, option, enum):
         cfgParser, section, option, enum.defaultVal)
     if optionVal not in list(enum.values()):
         raise ConfigError(
-            "RC file has invalid \"{section}.{option}\" setting {optionVal}.  Valid "
+            'RC file has invalid "{section}.{option}" setting {optionVal}.  Valid '
             "options: {allowedVals}".format(
                 section=section,
                 option=option,
@@ -114,7 +114,7 @@ def _getBoolConfig(cfgParser, section, option, default):
         return False
     else:
         raise ConfigError(
-            "RC file has invalid \"{section}.{option}\" setting {optionVal}.  Valid "
+            'RC file has invalid "{section}.{option}" setting {optionVal}.  Valid '
             "options: true, false".format(
                 section=section,
                 option=option,
@@ -154,7 +154,7 @@ class Config(object):
                 if unknownOptions:
                     raise ConfigError(
                         "RC file has unknown configuration options in "
-                        "section \"{}\": {}".format(
+                        'section "{}": {}'.format(
                             section, ", ".join(sorted(unknownOptions))))
 
     def __init__(self, options):

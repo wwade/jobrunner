@@ -17,5 +17,5 @@ def main():
             sys.exit(exitCode)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

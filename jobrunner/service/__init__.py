@@ -6,12 +6,12 @@ class _Registry(object):
         self._services = {}
 
     def register(self, identifier, obj):
-        if '.' not in identifier:
+        if "." not in identifier:
             assert (identifier not in self._services
                     or self._services[identifier] == obj)
             self._services[identifier] = obj
         else:
-            scope, key = identifier.split('.', 1)
+            scope, key = identifier.split(".", 1)
             if scope not in self._services:
                 self._services[scope] = _Registry()
             self._services[scope].register(key, obj)
