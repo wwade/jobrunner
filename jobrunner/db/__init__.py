@@ -390,7 +390,8 @@ class JobsBase(object):
                includeReminders=False, keysOnly=False):
         # pylint: disable=too-many-branches
         # Optimize for keys-only listing when no filtering is needed
-        # Only use fast path when we don't need to filter by workspace, pane, or checkpoint
+        # Only use fast path when we don't need to filter by workspace, pane, or
+        # checkpoint
         if keysOnly and not filterPane and not filterWs and not useCp:
             # Use efficient path that only fetches keys, not full job objects
             keys = db.keys()
