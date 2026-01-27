@@ -249,7 +249,7 @@ class JobsBase(object):
 
     @property
     def active(self) -> DatabaseBase:
-        assert self._active
+        assert self._active is not None
         return self._active
 
     @active.setter
@@ -258,7 +258,7 @@ class JobsBase(object):
 
     @property
     def inactive(self) -> DatabaseBase:
-        assert self._inactive
+        assert self._inactive is not None
         return self._inactive
 
     @inactive.setter
@@ -347,14 +347,23 @@ class JobsBase(object):
         _ = name
         raise NotImplementedError
 
-    def walkDepTree(self, func, db, depends, depth, **kwargs):
+    def walkDepTree(self, func, db, depends, depth, job_cache=None, **kwargs):
+        # If job_cache is provided, use it for lookups to avoid N+1 queries
+        # Otherwise fall back to db lookups (slower)
         for dep in depends:
-            if dep in db:
+            if job_cache is not None:
+                if dep not in job_cache:
+                    continue
+                j = job_cache[dep]
+            elif dep in db:
                 j = db[dep]
-                if not func(j, depth, **kwargs):
-                    return False
-                if j.depends:
-                    self.walkDepTree(func, db, j.depends, depth + 1, **kwargs)
+            else:
+                continue
+            if not func(j, depth, **kwargs):
+                return False
+            if j.depends:
+                self.walkDepTree(func, db, j.depends, depth + 1,
+                                 job_cache=job_cache, **kwargs)
         return True
 
     @staticmethod
@@ -363,8 +372,8 @@ class JobsBase(object):
         sprint(fmt % "", job)
         return True
 
-    def printDepTree(self, db, depends):
-        self.walkDepTree(self.printDepJob, db, depends, 1)
+    def printDepTree(self, db, depends, job_cache=None):
+        self.walkDepTree(self.printDepJob, db, depends, 1, job_cache=job_cache)
 
     def filterJobs(self, db, limit, filterWs=False,
                    filterPane=False, useCp=False):
@@ -381,13 +390,18 @@ class JobsBase(object):
                includeReminders=False, keysOnly=False):
         # pylint: disable=too-many-branches
         jobList = self.filterJobs(db, limit, filterWs, filterPane, useCp)
+
+        # Pre-fetch all jobs to avoid N+1 queries when walking dependency trees
+        # This creates a local cache for this operation only
+        job_cache = {job.key: job for job in db.values()}
+
         hasDeps = False
         for job in jobList:
             if not includeReminders and job.reminder:
                 continue
             if job.depends:
                 hasDeps = self.walkDepTree(
-                    lambda j, d: d == 1, db, job.depends, 1)
+                    lambda j, d: d == 1, db, job.depends, 1, job_cache=job_cache)
         if hasDeps:
             sprint(utils.SPACER)
         for job in jobList:
@@ -401,7 +415,7 @@ class JobsBase(object):
                 if db is self.active:
                     sprint(job)
                     if job.depends:
-                        self.printDepTree(db, job.depends)
+                        self.printDepTree(db, job.depends, job_cache=job_cache)
                     if hasDeps:
                         sprint(utils.SPACER)
                 else:
@@ -528,8 +542,7 @@ class JobsBase(object):
             # Search in active jobs
             candidates = []
             curWs = utils.workspaceIdentity()
-            for k in self.active.keys():
-                j = self.active[k]
+            for j in self.active.values():
                 if j.mailJob:
                     continue
                 if skipReminders and j.reminder:
@@ -728,16 +741,14 @@ class JobsBase(object):
         unow = utcNow()
         perWs = {}
         remind = {}
-        for k in self.active.keys():
-            j = self.active[k]
+        for j in self.active.values():
             if not j.reminder:
                 continue
             if not j.startTime:
                 sprint("not started yet", str(j), j.workspace)
                 continue
             remind.setdefault(j.workspace, []).append(j)
-        for k in self.inactive.keys():
-            j = self.inactive[k]
+        for j in self.inactive.values():
             if not j.stopTime or j.autoJob:
                 continue
             if j.rc in utils.SPECIAL_STATUS:
