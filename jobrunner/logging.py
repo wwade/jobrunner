@@ -16,7 +16,12 @@ def setup(logDir, debugLogFileName, debug=False):
         "[%(asctime)s] %(message)s"
     )
     if debug:
-        logFileName = os.path.join(logDir, debugLogFileName)
+        if isinstance(debug, str):
+            # debug is a file path
+            logFileName = os.path.expanduser(debug)
+        else:
+            # debug is True, use default log file
+            logFileName = os.path.join(logDir, debugLogFileName)
         logging.basicConfig(filename=logFileName, level=logging.DEBUG, format=fmt)
     else:
         logging.basicConfig(stream=sys.stderr, level=logging.ERROR, format=fmt)
