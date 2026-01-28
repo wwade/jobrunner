@@ -39,8 +39,14 @@ def addArgumentParserBaseFlags(parser, logfileName):
     )
     parser.add_argument(
         "--debug",
-        action="store_true",
-        help="enable debug output to <state-dir>/log/%s.log" % logfileName,
+        nargs="?",
+        const=True,
+        default=False,
+        metavar="FILE",
+        help=(
+            "enable debug output; optionally specify output file "
+            f"(default: <state-dir>/log/{logfileName}.log)"
+        ),
     )
     parser.add_argument(
         "--debugLocking",
@@ -60,7 +66,10 @@ def baseParsedArgsToArgList(argv, args):
     if "--rc-file" in argv:
         argList.extend(["--rc-file", args.rcFile])
     if args.debug:
-        argList.append("--debug")
+        if isinstance(args.debug, str):
+            argList.extend(["--debug", args.debug])
+        else:
+            argList.append("--debug")
     if args.debugLevel:
         argList.append("--debugLocking")
 

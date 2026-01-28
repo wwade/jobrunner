@@ -199,7 +199,10 @@ class TestSqliteJobRepository(unittest.TestCase):
 
 **Logging:**
 - Use standard Python logging via `jobrunner.logging`
-- Debug logs go to `~/.local/share/job/jobrunner-debug`
+- Enable debug logging with `--debug` flag:
+  - `--debug` (default): logs to `<state-dir>/log/jobrunner-debug`
+  - `--debug /dev/stderr`: logs to stderr for terminal viewing
+  - `--debug /path/to/file.log`: logs to custom file
 
 **Profiling:**
 - Set `JOBRUNNER_PROFILE=1` environment variable to enable performance profiling
@@ -209,7 +212,7 @@ class TestSqliteJobRepository(unittest.TestCase):
   - **SQL execution timing**: Individual SQL query execution time
 - Output locations:
   - Early startup: stderr (before logging is initialized)
-  - After logging setup: `~/.local/share/jobDb/log/jobrunner-debug` (requires `--debug` flag)
+  - After logging setup: configured debug log location (use `--debug /dev/stderr` to see profiling output in terminal)
 - Format: `TIMING: {label}: +{delta}ms (total: {total}ms)` where delta is time since last checkpoint
 - Useful for:
   - Identifying performance bottlenecks in database operations
