@@ -1,5 +1,4 @@
 import collections
-from contextlib import contextmanager
 import datetime
 import errno
 import fcntl
@@ -10,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from typing import Optional
 
 import chardet
@@ -81,6 +81,7 @@ def locked(func):
         if not isLocked:
             self.unlock()
         return ret
+
     return _locked
 
 
@@ -112,6 +113,7 @@ def unlocked(func):
     def _unlocked(self, *args, **kwargs):
         with maybeUnlock(self):
             return func(self, *args, **kwargs)
+
     return _unlocked
 
 
@@ -126,9 +128,11 @@ class FileLock(object):
 
     def __del__(self):
         if self._fp:
-            sprint(os.getpid(),
-                   "WARNING: termination without unlocking",
-                   file=sys.stderr)
+            sprint(
+                os.getpid(),
+                "WARNING: termination without unlocking",
+                file=sys.stderr,
+            )
             self.unlock()
 
     def isLocked(self):
@@ -188,10 +192,12 @@ def workspaceProject() -> Optional[str]:
 
 
 def _getAllowed():
-    allowed = (list(range(ord("a"), ord("z") + 1)) +
-               list(range(ord("A"), ord("Z") + 1)) +
-               list(range(ord("0"), ord("9") + 1)) +
-               [ord(char) for char in ["_", "#"]])
+    allowed = (
+        list(range(ord("a"), ord("z") + 1))
+        + list(range(ord("A"), ord("Z") + 1))
+        + list(range(ord("0"), ord("9") + 1))
+        + [ord(char) for char in ["_", "#"]]
+    )
     ret = [chr(char) for char in allowed]
     return ret
 
@@ -360,8 +366,10 @@ def autoDecode(byteArray: bytes) -> str:
 
     encoding = detected["encoding"]
     if detected["confidence"] < 0.8:  # very arbitrary
-        LOG.debug("char encoding below confidence level 0.8 (%r). "
-                  "Fall back to UTF-8.", detected)
+        LOG.debug(
+            "char encoding below confidence level 0.8 (%r). Fall back to UTF-8.",
+            detected,
+        )
         encoding = "utf-8"
 
     return byteArray.decode(encoding)

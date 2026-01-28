@@ -1,10 +1,11 @@
 """Simple startup timing profiler for jobrunner."""
+
 # pylint: disable=global-statement
-from contextlib import contextmanager
-from functools import wraps
 import os
 import sys
 import time
+from contextlib import contextmanager
+from functools import wraps
 from typing import List, Optional, Tuple
 
 import jobrunner.logging
@@ -46,8 +47,10 @@ def checkpoint(label: str) -> None:
         LOG.debug("TIMING: %s: +%.1fms (total: %.1fms)", label, delta, total)
     else:
         _buffered_checkpoints.append((label, delta, total))
-        print(f"TIMING: {label}: +{delta:.1f}ms (total: {total:.1f}ms)",
-              file=sys.stderr)
+        print(
+            f"TIMING: {label}: +{delta:.1f}ms (total: {total:.1f}ms)",
+            file=sys.stderr,
+        )
 
     _last_checkpoint = now
 

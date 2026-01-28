@@ -39,16 +39,12 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "autopep8==2.3.2",
-    "flake8==7.3.0",
-    "isort==5.13.2",
+    "ruff (>=0.14.14,<0.15.0)",
     "mock==5.2.0",
     "pexpect==4.9.0",
     "pytest==8.4.2",
-    "pylint==3.3.9",
     "pytest-retry==1.7.0",
     "dill==0.4.1",
-    "flake8-pyproject==1.2.4",
 ]
 
 [project.urls]
@@ -74,14 +70,34 @@ style = "semver"
 [tool.setuptools_scm]
 # Enable setuptools-scm for dynamic versioning
 
-[tool.autopep8]
-max-line-length = 85
+[tool.ruff]
+line-length = 85
+target-version = "py39"
 
-[tool.pycodestyle]
-max-line-length = 85
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "PL",   # pylint
+]
+ignore = [
+    "PLR0913",  # too-many-arguments
+    "PLR2004",  # magic-value-comparison
+    "PLW0603",  # global-statement
+    "PLR0912",  # too-many-branches
+    "PLR0915",  # too-many-statements
+    "PLR0911",  # too-many-return-statements
+    "PLW2901",  # redefined-loop-name
+]
 
-[tool.flake8]
-max-line-length = 85
+[tool.ruff.lint.per-file-ignores]
+"jobrunner/compat.py" = ["E", "W", "F"]  # Exempt compat.py like before
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.pytest.ini_options]
 testpaths = ["jobrunner"]

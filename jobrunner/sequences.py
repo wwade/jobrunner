@@ -53,7 +53,7 @@ def build_dependency_chain(
     job: JobInfo,
     all_jobs: Dict[str, JobInfo],
     visited: Set[str],
-    chain: List[JobInfo]
+    chain: List[JobInfo],
 ) -> None:
     """
     Recursively build the full dependency chain for a job.
@@ -85,7 +85,7 @@ def record_sequence(
     current_job: JobInfo,
     all_deps: List[JobInfo],
     success_deps: List[JobInfo],
-    sequence_name: str
+    sequence_name: str,
 ) -> None:
     """
     Record a sequence including the current job and all its dependencies.
@@ -147,9 +147,7 @@ def record_sequence(
 
         # Get its dependencies
         dep_depends = (
-            list(dep_job_domain.depends_on)
-            if dep_job_domain.depends_on
-            else []
+            list(dep_job_domain.depends_on) if dep_job_domain.depends_on else []
         )
         job_deps_map[dep_key] = (dep_job_info, dep_depends)
 
@@ -195,22 +193,20 @@ def record_sequence(
                 # This dependency is within our sequence
                 dep_step = job_to_step[dep_key]
                 dep_type = (
-                    DEP_TYPE_SUCCESS if dep_key in success_dep_keys
+                    DEP_TYPE_SUCCESS
+                    if dep_key in success_dep_keys
                     else DEP_TYPE_COMPLETION
                 )
                 dependencies.append((dep_step, dep_type))
 
         # Add this step to the sequence
         jobs_db.add_sequence_step(
-            name=sequence_name,
-            job_key=job.key,
-            dependencies=dependencies
+            name=sequence_name, job_key=job.key, dependencies=dependencies
         )
 
 
 def get_sequence_replay_plan(
-    jobs_db,
-    sequence_name: str
+    jobs_db, sequence_name: str
 ) -> List[Tuple[str, List[str], List[str]]]:
     """
     Get a plan for replaying a sequence.
@@ -305,7 +301,8 @@ def replay_sequence_from_main(jobs_db, sequence_name: str, _argv, _config):
             if dep_step not in step_to_new_key:
                 sprint(
                     f"Error: Step {step_num} depends on step {dep_step} "
-                    f"which hasn't been created yet")
+                    f"which hasn't been created yet"
+                )
                 sys.exit(1)
 
             dep_key = step_to_new_key[dep_step]
@@ -316,8 +313,7 @@ def replay_sequence_from_main(jobs_db, sequence_name: str, _argv, _config):
 
         # Execute the job command
         sprint(f"  Step {step_num}: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=False, text=True,
-                                check=False)
+        result = subprocess.run(cmd, capture_output=False, text=True, check=False)
 
         if result.returncode != 0:
             sprint(f"Error running step {step_num}")

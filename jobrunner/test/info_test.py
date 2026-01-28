@@ -1,9 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
 import json
-from logging import getLogger
 import os
 import unittest
+from logging import getLogger
 
 import mock
 import six
@@ -50,13 +50,15 @@ class TestJobInfoJson(unittest.TestCase):
     def cmpObj(self, objA, objB):
         print(objA.detail(3 * ["v"]))
         print(objB.detail(3 * ["v"]))
-        six.assertCountEqual(self, list(objA.__dict__.keys()),
-                             list(objA.__dict__.keys()))
+        six.assertCountEqual(
+            self, list(objA.__dict__.keys()), list(objA.__dict__.keys())
+        )
         for key in objA.__dict__:
             if key == "_parent":
                 continue
-            self.assertDictEqual({key: objA.__dict__[key]},
-                                 {key: objB.__dict__[key]})
+            self.assertDictEqual(
+                {key: objA.__dict__[key]}, {key: objB.__dict__[key]}
+            )
 
     def testStarted(self):
         job = newJob(12, ["ls", "/tmp"])
@@ -88,8 +90,7 @@ class TestReminder(unittest.TestCase):
         job.stop(job.parent, utils.STOP_DONE)
         out2 = job.detail("vvv")
         six.assertRegex(self, out2, r"\nReminder\s+This is a reminder\n")
-        six.assertRegex(self,
-                        out2, r"\nState\s+Finished \(Completed Reminder\)\n")
+        six.assertRegex(self, out2, r"\nState\s+Finished \(Completed Reminder\)\n")
         print(out2)
 
 
@@ -97,7 +98,7 @@ class TestJobProperties(unittest.TestCase):
     def testEnv(self):
         job = newJob(14, ["ls", "/tmp"])
         job.start(job.parent)
-        env = {"XY": u"1", "VAL_WITH_NEWLINE": "first\nsecond"}
+        env = {"XY": "1", "VAL_WITH_NEWLINE": "first\nsecond"}
         setJobEnv(job, env)
         out = job.getEnvironment()
         self.assertIn("XY=1\n", out)
@@ -131,21 +132,21 @@ class TestInfoHelpers(unittest.TestCase):
         self._assertCmd(info.cmdString(cmd), "ls -l 'some file'")
         cmd = ["ls", "-l", "some\tfile"]
         self._assertCmd(info.cmdString(cmd), "ls -l 'some\tfile'")
-        cmd = [u"ls", u"-l", u"some\tfile"]
+        cmd = ["ls", "-l", "some\tfile"]
         self._assertCmd(info.cmdString(cmd), "ls -l 'some\tfile'")
         cmd = ["ls", "-l", "some;file"]
         self._assertCmd(info.cmdString(cmd), "ls -l 'some;file'")
 
     def testCmdStringBang(self):
-        cmd = [u"ls", u"-l", u"!something"]
+        cmd = ["ls", "-l", "!something"]
         self._assertCmd(info.cmdString(cmd), "ls -l '!something'")
 
     def testCmdStringEncodingError(self):
-        cmd = [u"foo", u"bar\xa0", u"zoo"]
+        cmd = ["foo", "bar\xa0", "zoo"]
         self._assertCmd(info.cmdString(cmd), "foo 'bar<A0>' zoo")
 
     def testEscEncUnicode(self):
-        value = u"abc"
+        value = "abc"
         exp = "abc"
         out = info.JobInfo.escEnv(value)
         assert exp == out

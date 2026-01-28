@@ -22,13 +22,14 @@ All of these functions are optional. If the plugin cannot provide a sensible val
 for the current execution then it should raise NotImplementedError so that the next
 plugin at a possibly lower priority will get called instead.
 """
+
 import importlib
 import logging
-from operator import attrgetter
 import pkgutil
 import socket
-from typing import Tuple
 import warnings
+from operator import attrgetter
+from typing import Tuple
 
 import jobrunner.plugin
 
@@ -48,14 +49,14 @@ class Plugins(object):
         plugins = {plug.load() for plug in get_plugins("wwade.jobrunner")}
         deprecatedPlugins = {
             importlib.import_module("jobrunner.plugin.{}".format(name))
-            for _, name, _
-            in pkgutil.iter_modules(jobrunner.plugin.__path__)
+            for _, name, _ in pkgutil.iter_modules(jobrunner.plugin.__path__)
         }
         if deprecatedPlugins:
-            warnings.warn("Found old-style plugins in jobrunner.plugin: %r. "
-                          "Convert to entry_point 'wwade.jobrunner'" % list(
-                              deprecatedPlugins),
-                          DeprecationWarning)
+            warnings.warn(
+                "Found old-style plugins in jobrunner.plugin: %r. "
+                "Convert to entry_point 'wwade.jobrunner'" % list(deprecatedPlugins),
+                DeprecationWarning,
+            )
         plugins |= deprecatedPlugins
         self.plugins = list(sorted(plugins, key=attrgetter("__name__")))
         logger.debug("all plugins: %r", [p.__name__ for p in self.plugins])
@@ -101,7 +102,7 @@ class Plugins(object):
         If the current context has a notion of a "project name", return the project
         name as well as a bool True to indicate that the plugin is authoritative.
         """
-        for (ret, ok) in self._pluginCalls("workspaceProject"):
+        for ret, ok in self._pluginCalls("workspaceProject"):
             if ok:
                 return ret, ok
         return "", False

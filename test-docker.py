@@ -2,13 +2,13 @@
 
 import argparse
 import contextlib
-from dataclasses import dataclass
 import os
 import os.path
 import re
-from shlex import quote
 import subprocess
 import sys
+from dataclasses import dataclass
+from shlex import quote
 from typing import Iterable, List, Tuple
 
 
@@ -85,7 +85,6 @@ def mountsForContainer(version: VerInfo, pipConf: str) -> List[Tuple[str, str]]:
 
 
 def execVersion(version: VerInfo, pipConf: str, upgrade: bool, cmd: Iterable[str]):
-
     with open("Pipfile", encoding="utf-8") as f:
         pipfile = f.read()
     pipfile = re.sub(
@@ -124,8 +123,7 @@ def pipfileForVersion(keepModifiedPipfile: bool):
         yield
     finally:
         if not keepModifiedPipfile:
-            subprocess.check_output(["git", "checkout",
-                                     "Pipfile", "Pipfile.lock"])
+            subprocess.check_output(["git", "checkout", "Pipfile", "Pipfile.lock"])
 
 
 def main() -> None:
@@ -135,8 +133,7 @@ def main() -> None:
         metavar="VERSION",
         choices=sorted([v.version for v in VERSIONS]),
         nargs="*",
-        help="specify version(s) to test, select from %(choices)s. "
-        "Default is all.",
+        help="specify version(s) to test, select from %(choices)s. Default is all.",
     )
     ap.add_argument("-U", "--upgrade", action="store_true")
     ap.add_argument("-i", "--ignore-unclean", action="store_true")

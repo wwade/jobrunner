@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
-from contextlib import contextmanager
 import os
 import sys
+from contextlib import contextmanager
 
 from six.moves import StringIO
 
@@ -22,13 +22,13 @@ def resetEnv():
 
 @contextmanager
 def capturedOutput():
-    ''' Used to capture stdout or stderr.
+    """Used to capture stdout or stderr.
     eg.
     with capturedOutput() as (out, err):
         print("foo")
 
     self.assertEqual(out.getvalue(), "foo")
-    '''
+    """
     newOut, newErr = StringIO(), StringIO()
     oldOut, oldErr = sys.stdout, sys.stderr
     try:

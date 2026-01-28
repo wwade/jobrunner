@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
-from functools import cmp_to_key
-from hashlib import md5
 import json
 import logging
 import os
@@ -12,6 +9,9 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime
+from functools import cmp_to_key
+from hashlib import md5
 from typing import Optional, Tuple
 from uuid import uuid4
 
@@ -94,6 +94,7 @@ class DatabaseBase(DatabaseMeta):
         curCount += inc
         curCount = max(curCount, 0)
         self.db[self.ITEMCOUNT] = str(curCount)
+
     count = property(getCount, setCount)
 
     def getCheckpoint(self):
@@ -117,8 +118,7 @@ class DatabaseBase(DatabaseMeta):
             else:
                 checkpoint = val
         else:
-            raise ValueError(
-                "Expecting either a string or a datetime.datetime")
+            raise ValueError("Expecting either a string or a datetime.datetime")
         utc = checkpoint.astimezone(tzutc())
         self.db[self.CHECKPOINT] = json.dumps(dateTimeToJson(utc))
 
@@ -129,6 +129,7 @@ class DatabaseBase(DatabaseMeta):
 
     def lastKeySet(self, key):
         self.db[self.LASTKEY] = key
+
     lastKey = property(lastKeyGet, lastKeySet)
 
     def lastJobGet(self):
@@ -136,6 +137,7 @@ class DatabaseBase(DatabaseMeta):
 
     def lastJobSet(self, key):
         self.db[self.LASTJOB] = key
+
     lastJob = property(lastJobGet, lastJobSet)
 
     def keys(self):
@@ -158,6 +160,7 @@ class DatabaseBase(DatabaseMeta):
         if len(recent) > NUM_RECENT:
             recent = recent[:NUM_RECENT]
         self.db[self.RECENT] = json.dumps(recent)
+
     recent = property(recentGet, recentSet)
 
     def recentDel(self, key):
@@ -197,7 +200,11 @@ class DatabaseBase(DatabaseMeta):
 
     def __str__(self):
         return "%s DB %d %r ver %s" % (
-            self.__class__.__name__, self.count, self.ident, self.db[self.SV])
+            self.__class__.__name__,
+            self.count,
+            self.ident,
+            self.db[self.SV],
+        )
 
     def uidx(self):
         if self.IDX in self.db:
@@ -224,9 +231,7 @@ def reminderWatchFull(activeReminder):
             wsVal = remindJob.wsBasename()
             if wsVal:
                 workspace = "%s: " % wsVal
-            reminderList.append(
-                "[%s%s]" %
-                (workspace, remindJob.cmdStr))
+            reminderList.append("[%s%s]" % (workspace, remindJob.cmdStr))
         reminders = " " + " ".join(reminderList)
     return reminders
 
@@ -283,7 +288,8 @@ class JobsBase(object):
         for jobKey in db.keys():
             job = db[jobKey]
             assert job.key == jobKey, 'job key mismatch "{}" for job {}'.format(
-                jobKey, job)
+                jobKey, job
+            )
             allJobs.append(job)
         allJobs.sort()
         limit = PRUNE_NUM if exceptNum is None else exceptNum
@@ -298,11 +304,13 @@ class JobsBase(object):
         _ = key
         raise NotImplementedError
 
-    def getDbSorted(self,
-                    db: DatabaseBase,
-                    _limit: int | None = None,
-                    useCp=False,
-                    filterWs=False) -> list[JobInfo]:
+    def getDbSorted(
+        self,
+        db: DatabaseBase,
+        _limit: int | None = None,
+        useCp=False,
+        filterWs=False,
+    ) -> list[JobInfo]:
         cpUtc = None
         if useCp:
             cpUtc = db.checkpoint
@@ -362,8 +370,9 @@ class JobsBase(object):
             if not func(j, depth, **kwargs):
                 return False
             if j.depends:
-                self.walkDepTree(func, db, j.depends, depth + 1,
-                                 job_cache=job_cache, **kwargs)
+                self.walkDepTree(
+                    func, db, j.depends, depth + 1, job_cache=job_cache, **kwargs
+                )
         return True
 
     @staticmethod
@@ -375,19 +384,24 @@ class JobsBase(object):
     def printDepTree(self, db, depends, job_cache=None):
         self.walkDepTree(self.printDepJob, db, depends, 1, job_cache=job_cache)
 
-    def filterJobs(self, db, limit, filterWs=False,
-                   filterPane=False, useCp=False):
+    def filterJobs(self, db, limit, filterWs=False, filterPane=False, useCp=False):
         jobList = self.getDbSorted(db, limit, useCp, filterWs)
         if filterPane:
             curPane = os.getenv("TMUX_PANE", None)
             if curPane:
-                jobList = [
-                    j for j in jobList if j.matchEnv(
-                        "TMUX_PANE", curPane)]
+                jobList = [j for j in jobList if j.matchEnv("TMUX_PANE", curPane)]
         return jobList
 
-    def listDb(self, db, limit, filterWs=False, filterPane=False, useCp=False,
-               includeReminders=False, keysOnly=False):
+    def listDb(
+        self,
+        db,
+        limit,
+        filterWs=False,
+        filterPane=False,
+        useCp=False,
+        includeReminders=False,
+        keysOnly=False,
+    ):
         # pylint: disable=too-many-branches
         # Optimize for keys-only listing when no filtering is needed
         # Only use fast path when we don't need to filter by workspace, pane, or
@@ -424,7 +438,8 @@ class JobsBase(object):
                 continue
             if job.depends:
                 hasDeps = self.walkDepTree(
-                    lambda j, d: d == 1, db, job.depends, 1, job_cache=job_cache)
+                    lambda j, d: d == 1, db, job.depends, 1, job_cache=job_cache
+                )
         if hasDeps:
             sprint(utils.SPACER)
         for job in jobList:
@@ -432,15 +447,14 @@ class JobsBase(object):
                 continue
             if self.config.verbose:
                 sprint(job.detail(self.config.verbose[1:]))
+            elif db is self.active:
+                sprint(job)
+                if job.depends:
+                    self.printDepTree(db, job.depends, job_cache=job_cache)
+                if hasDeps:
+                    sprint(utils.SPACER)
             else:
-                if db is self.active:
-                    sprint(job)
-                    if job.depends:
-                        self.printDepTree(db, job.depends, job_cache=job_cache)
-                    if hasDeps:
-                        sprint(utils.SPACER)
-                else:
-                    sprint(job)
+                sprint(job)
         if not jobList:
             sprint("(None)")
 
@@ -464,11 +478,13 @@ class JobsBase(object):
             ret += attrList
         return ret
 
-    def makeDot(self, active, inactive, filterWs=False,
-                filterPane=False, useCp=False):
+    def makeDot(
+        self, active, inactive, filterWs=False, filterPane=False, useCp=False
+    ):
         # pylint: disable=too-many-locals
-        jobList = self.filterJobs(active, limit=None, filterWs=filterWs,
-                                  filterPane=filterPane, useCp=useCp)
+        jobList = self.filterJobs(
+            active, limit=None, filterWs=filterWs, filterPane=filterPane, useCp=useCp
+        )
         dot = ""
         if not jobList:
             dot += 'digraph active { "(None)"; }'
@@ -489,8 +505,7 @@ class JobsBase(object):
                     dot += " %s -> %s;\n" % (jobStr, depStr)
             else:
                 printedSingles.add(job.key)
-                jobStr = self.dotStrForKey(
-                    job.key, active, inactive, attrs=True)
+                jobStr = self.dotStrForKey(job.key, active, inactive, attrs=True)
                 dot += " %s;\n" % jobStr
         for key in needsPrinting - printedSingles:
             jobStr = self.dotStrForKey(key, active, inactive, attrs=True)
@@ -509,15 +524,13 @@ class JobsBase(object):
             filterPane=pane,
             useCp=useCp,
             includeReminders=includeReminders,
-            keysOnly=keysOnly)
+            keysOnly=keysOnly,
+        )
 
     def listInactive(self, thisWs, pane, useCp, limit: Optional[int] = 5):
         self.listDb(
-            self.inactive,
-            limit,
-            filterWs=thisWs,
-            filterPane=pane,
-            useCp=useCp)
+            self.inactive, limit, filterWs=thisWs, filterPane=pane, useCp=useCp
+        )
 
     @staticmethod
     def filterJobsWith(job, startTime=True, skipReminders=False):
@@ -540,15 +553,18 @@ class JobsBase(object):
 
         if key is None:
             jobList = [
-                x for x in self.getDbSorted(self.active, None, filterWs=thisWs)
-                if self.filterJobsWith(x, skipReminders=skipReminders)]
+                x
+                for x in self.getDbSorted(self.active, None, filterWs=thisWs)
+                if self.filterJobsWith(x, skipReminders=skipReminders)
+            ]
             if not jobList:
                 jobList = [
-                    x for x in self.getDbSorted(self.inactive, None, filterWs=thisWs)
-                    if self.filterJobsWith(x, skipReminders=skipReminders)]
+                    x
+                    for x in self.getDbSorted(self.inactive, None, filterWs=thisWs)
+                    if self.filterJobsWith(x, skipReminders=skipReminders)
+                ]
             if not jobList:
-                jobList = self.getDbSorted(
-                    self.inactive, None, filterWs=thisWs)
+                jobList = self.getDbSorted(self.inactive, None, filterWs=thisWs)
             try:
                 return jobList[-1]
             except IndexError as err:
@@ -625,11 +641,7 @@ class JobsBase(object):
                 sys.stdout.flush()
 
     def waitFor(self, job, verbose):
-        self._wait(
-            lambda: job.key not in self.active.db,
-            "job '%s'" %
-            job,
-            verbose)
+        self._wait(lambda: job.key not in self.active.db, "job '%s'" % job, verbose)
 
     def inactiveKey(self, key):
         if key not in self.inactive:
@@ -638,8 +650,7 @@ class JobsBase(object):
         return isinstance(j, JobInfo)
 
     def waitInactive(self, key, verbose):
-        self._wait(lambda: self.inactiveKey(key), 'inactive key "%s"' % key,
-                   verbose)
+        self._wait(lambda: self.inactiveKey(key), 'inactive key "%s"' % key, verbose)
 
     def showJobList(self, joblist, tag, clearLen):
         timestr = datetime.now().strftime(utils.DATETIME_FMT)
@@ -691,6 +702,7 @@ class JobsBase(object):
         # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         def _nonReminder(job):
             return job.reminder is None
+
         curJobList = self.getDbSorted(self.active, None, False)
         curJobs = [j.key for j in filter(_nonReminder, curJobList)]
         first = True
@@ -734,11 +746,20 @@ class JobsBase(object):
 
                 reminderFunc = (
                     reminderWatchSummary
-                    if self.config.uiWatchReminderSummary else reminderWatchFull)
+                    if self.config.uiWatchReminderSummary
+                    else reminderWatchFull
+                )
                 reminders = reminderFunc(activeReminder)
 
-                outStr = (timestr + " " + jobInfo + " running" + reminders +
-                          ", " + resource)
+                outStr = (
+                    timestr
+                    + " "
+                    + jobInfo
+                    + " running"
+                    + reminders
+                    + ", "
+                    + resource
+                )
                 if timeNow <= blinkEnd:
                     if blinkState:
                         outStr = "\033[45m" + outStr + "\033[0m"
@@ -785,9 +806,11 @@ class JobsBase(object):
             else:
                 # today only
                 localTime = j.localTime(j.stopTime)
-                if (tnow.year != localTime.year or
-                        tnow.month != localTime.month or
-                        tnow.day != localTime.day):
+                if (
+                    tnow.year != localTime.year
+                    or tnow.month != localTime.month
+                    or tnow.day != localTime.day
+                ):
                     continue
             today.append(j)
         today.sort()
@@ -796,14 +819,13 @@ class JobsBase(object):
 
             def _isPass(rc):
                 return rc == 0 or rc in utils.SPECIAL_STATUS
+
             key = "pass" if _isPass(j.rc) else "fail"
             if wkspace in perWs and key in perWs[wkspace]:
                 continue
             perWs.setdefault(wkspace, {})[key] = j
             age = int((unow - j.stopTime).total_seconds())
-            perWs[wkspace]["age"] = min(
-                age, perWs[wkspace].get(
-                    "age", float("inf")))
+            perWs[wkspace]["age"] = min(age, perWs[wkspace].get("age", float("inf")))
 
         def _byAge(refA, refB):
             if refA not in perWs and refB not in perWs:
@@ -814,6 +836,7 @@ class JobsBase(object):
                 return 1
             else:
                 return cmp_(perWs[refA]["age"], perWs[refB]["age"])
+
         sprint("-" * 75)
         wsList = list(set(perWs.keys()).union(set(remind.keys())))
         for wkspace in sorted(wsList, key=cmp_to_key(_byAge)):
@@ -825,9 +848,7 @@ class JobsBase(object):
                 if wkspace in perWs and res in perWs[wkspace]:
                     j = perWs[wkspace][res]
                     diffTime = humanTimeDeltaSecs(unow, j.stopTime)
-                    sprint(
-                        "  last %s, \033[97m%s\033[0m ago" %
-                        (res, diffTime))
+                    sprint("  last %s, \033[97m%s\033[0m ago" % (res, diffTime))
                     sprint("    " + str(j))
             if wkspace in remind:
                 sprint("  reminders:")
@@ -849,8 +870,9 @@ class JobsBase(object):
     def uidx(self):
         return self.active.uidx()
 
-    def new(self, cmd, isolate,
-            autoJob=False, key=None, reminder=None) -> Tuple[JobInfo, int]:
+    def new(
+        self, cmd, isolate, autoJob=False, key=None, reminder=None
+    ) -> Tuple[JobInfo, int]:
         if key and key in self.active.db:
             raise Exception("Active key conflict for key %r" % key)
         job = service().db.jobInfo(self.uidx(), key)

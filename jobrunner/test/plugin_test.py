@@ -85,12 +85,14 @@ class PluginMMMLowPrio(Plugin):
             "low",
             "[no-prio][low-prio]",
         ),
-    ]
+    ],
 )
 def testPluginPriorities(plugins, workspaceProject, resources):
-    with mock.patch("jobrunner.plugins.get_plugins") as gp, \
-            mock.patch("importlib.import_module") as im, \
-            mock.patch.object(jobrunner.plugins, "gethostname", return_value="xxx"):
+    with (
+        mock.patch("jobrunner.plugins.get_plugins") as gp,
+        mock.patch("importlib.import_module") as im,
+        mock.patch.object(jobrunner.plugins, "gethostname", return_value="xxx"),
+    ):
         im.return_value = []
         gp.return_value = plugins
 

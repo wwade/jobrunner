@@ -46,8 +46,7 @@ class FakeDatabase(DatabaseBase):
         """
         super().__init__(parent, config, instanceId)
         self._status_filter = status_filter
-        self.ident = (
-            "active" if status_filter != JobStatus.COMPLETED else "inactive")
+        self.ident = "active" if status_filter != JobStatus.COMPLETED else "inactive"
         self._db_dict = {}  # Used for special keys like metadata
 
     @property
@@ -122,8 +121,13 @@ class FakeDatabase(DatabaseBase):
         if key in self.special:
             self._db_dict[key] = value
             # Update metadata in repository
-            if key in (self.SV, self.LASTKEY, self.LASTJOB,
-                       self.CHECKPOINT, self.RECENT):
+            if key in (
+                self.SV,
+                self.LASTKEY,
+                self.LASTJOB,
+                self.CHECKPOINT,
+                self.RECENT,
+            ):
                 self._update_metadata_from_dict()
             return
 
@@ -153,7 +157,8 @@ class FakeDatabase(DatabaseBase):
             metadata.last_job = self._db_dict[self.LASTJOB]
         if self.CHECKPOINT in self._db_dict:
             metadata.checkpoint = dateTimeFromJson(
-                json.loads(self._db_dict[self.CHECKPOINT]))
+                json.loads(self._db_dict[self.CHECKPOINT])
+            )
         if self.RECENT in self._db_dict:
             metadata.recent_keys = json.loads(self._db_dict[self.RECENT])
 
@@ -203,9 +208,11 @@ class RepositoryAdapter(JobsBase):
         # Create fake active/inactive databases
         # Override properties to prevent parent class assertions from failing
         self.active = FakeDatabase(
-            self, config, self._instanceId, None)  # None = non-completed
+            self, config, self._instanceId, None
+        )  # None = non-completed
         self.inactive = FakeDatabase(
-            self, config, self._instanceId, JobStatus.COMPLETED)
+            self, config, self._instanceId, JobStatus.COMPLETED
+        )
 
     def countInactive(self):
         """Count inactive (completed) jobs."""
@@ -284,7 +291,7 @@ class RepositoryAdapter(JobsBase):
             keyword=keyword,
             workspace=workspace,
             skip_reminders=skipReminders,
-            since=since
+            since=since,
         )
 
         # Convert to JobInfo objects
@@ -295,7 +302,7 @@ class RepositoryAdapter(JobsBase):
         db: DatabaseBase,
         _limit: int | None = None,
         useCp: bool = False,
-        filterWs: bool = False
+        filterWs: bool = False,
     ) -> list[JobInfo]:
         """
         Get sorted list of jobs from database with optional filters.
@@ -334,10 +341,7 @@ class RepositoryAdapter(JobsBase):
 
         # Use find_all which efficiently filters at the SQL level with indices
         jobs = self._repo.find_all(
-            status=status,
-            workspace=workspace,
-            since=since,
-            limit=_limit
+            status=status, workspace=workspace, since=since, limit=_limit
         )
 
         # For active jobs, we need to exclude completed ones

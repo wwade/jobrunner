@@ -3,6 +3,9 @@ import argparse
 import errno
 import hashlib
 import os
+import sys
+import tempfile
+import time
 from os.path import expanduser
 from subprocess import (
     DEVNULL,
@@ -12,9 +15,6 @@ from subprocess import (
     check_call,
     check_output,
 )
-import sys
-import tempfile
-import time
 from typing import IO, List, Optional, Tuple
 
 import dateutil.tz
@@ -79,10 +79,7 @@ def impl_main(args=None, _main_start=None):
     config = Config(options)
     timing.checkpoint("after Config")
 
-    jobrunner.logging.setup(
-        config.logDir,
-        _DEBUG_LOG_FILE_NAME,
-        debug=options.debug)
+    jobrunner.logging.setup(config.logDir, _DEBUG_LOG_FILE_NAME, debug=options.debug)
     timing.flush_buffered_checkpoints()
     timing.checkpoint("after logging setup")
 
@@ -122,9 +119,7 @@ def impl_main(args=None, _main_start=None):
         elif options.retry:
             oldJob = jobs.getJobMatch(options.retry, options.tw)
             if os.getcwd() != oldJob.pwd and oldJob.pwd:
-                sprint(
-                    "NOTE: Changing directory to %r to retry job." %
-                    oldJob.pwd)
+                sprint("NOTE: Changing directory to %r to retry job." % oldJob.pwd)
                 os.chdir(oldJob.pwd)
             sprint("retry job %r" % oldJob.cmdStr)
             cmd = oldJob.cmd
@@ -160,8 +155,13 @@ def impl_main(args=None, _main_start=None):
 
         job: JobInfo
         fd: int
-        job, fd = jobs.new(cmd, doIsolate, autoJob=options.auto_job, key=options.key,
-                           reminder=options.reminder)
+        job, fd = jobs.new(
+            cmd,
+            doIsolate,
+            autoJob=options.auto_job,
+            key=options.key,
+            reminder=options.reminder,
+        )
         job.resolve()
         job.genPersistKey()
         jobs.active[job.key] = job
@@ -304,7 +304,7 @@ def monitorForkedJob(job, jobs):
     return 0
 
 
-removeChars = frozenset("\x1B\x0d")
+removeChars = frozenset("\x1b\x0d")
 
 
 def safeWrite(fd, value):
@@ -357,87 +357,158 @@ class ExitCode(Exception):
 
 
 def addNonExecOptions(op):
-    op.add_argument("--count", action="store_true",
-                    help="Count jobs in inactive database")
+    op.add_argument(
+        "--count", action="store_true", help="Count jobs in inactive database"
+    )
     op.add_argument(
         "-l",
         "--list",
         action="append_const",
         const=True,
-        help="List active jobs, -ll to include active reminders")
+        help="List active jobs, -ll to include active reminders",
+    )
     op.add_argument(
         "--list-keys",
         action="store_true",
-        help="List keys for active jobs, one per line.")
-    op.add_argument("--dot", action="store_true",
-                    help="Show dependency graph for active jobs")
-    op.add_argument("--png", action="store_true",
-                    help="Create dependency graph svg for active jobs in " +
-                    expanduser("~/output/job.svg"))
-    op.add_argument("--svg", action="store_true",
-                    help="Create dependency graph png for active jobs in " +
-                    expanduser("~/output/job.svg"))
-    op.add_argument("-L", "--list-inactive", action="store_true",
-                    help="List inactive jobs")
-    op.add_argument("-W", "--watch", action="store_true",
-                    help="Watch for any job activity")
-    op.add_argument("--notifier", metavar="PROGRAM",
-                    help="Notify using PROGRAM on any job activity")
-    op.add_argument("-s", "--show", metavar="KEY", action="append",
-                    help="Get details for job specified by KEY")
-    op.add_argument("-F", "--find", metavar="KEYWORD", action="append",
-                    help="List jobs matching KEYWORD")
-    op.add_argument("--list-sequences", action="store_true",
-                    help="List all saved sequences")
-    op.add_argument("-K", "--last-key", action="store_true",
-                    help="Get the latest key")
-    op.add_argument("--index", "-n", action="append", type=int,
-                    help="Get log file name, by index, from recent jobs")
-    op.add_argument("--pid", metavar="KEY", action="append",
-                    help="Show pstree for job specified by KEY")
-    op.add_argument("-g", "--get-log", metavar="KEY", action="append",
-                    help="Get log file name for job specified by KEY")
-    op.add_argument("-G", "--get-all-logs", action="store_true",
-                    help="Get all log file names for running jobs")
+        help="List keys for active jobs, one per line.",
+    )
+    op.add_argument(
+        "--dot", action="store_true", help="Show dependency graph for active jobs"
+    )
+    op.add_argument(
+        "--png",
+        action="store_true",
+        help="Create dependency graph svg for active jobs in "
+        + expanduser("~/output/job.svg"),
+    )
+    op.add_argument(
+        "--svg",
+        action="store_true",
+        help="Create dependency graph png for active jobs in "
+        + expanduser("~/output/job.svg"),
+    )
+    op.add_argument(
+        "-L", "--list-inactive", action="store_true", help="List inactive jobs"
+    )
+    op.add_argument(
+        "-W", "--watch", action="store_true", help="Watch for any job activity"
+    )
+    op.add_argument(
+        "--notifier",
+        metavar="PROGRAM",
+        help="Notify using PROGRAM on any job activity",
+    )
+    op.add_argument(
+        "-s",
+        "--show",
+        metavar="KEY",
+        action="append",
+        help="Get details for job specified by KEY",
+    )
+    op.add_argument(
+        "-F",
+        "--find",
+        metavar="KEYWORD",
+        action="append",
+        help="List jobs matching KEYWORD",
+    )
+    op.add_argument(
+        "--list-sequences", action="store_true", help="List all saved sequences"
+    )
+    op.add_argument(
+        "-K", "--last-key", action="store_true", help="Get the latest key"
+    )
+    op.add_argument(
+        "--index",
+        "-n",
+        action="append",
+        type=int,
+        help="Get log file name, by index, from recent jobs",
+    )
+    op.add_argument(
+        "--pid",
+        metavar="KEY",
+        action="append",
+        help="Show pstree for job specified by KEY",
+    )
+    op.add_argument(
+        "-g",
+        "--get-log",
+        metavar="KEY",
+        action="append",
+        help="Get log file name for job specified by KEY",
+    )
+    op.add_argument(
+        "-G",
+        "--get-all-logs",
+        action="store_true",
+        help="Get all log file names for running jobs",
+    )
     op.add_argument("--info", action="store_true", help="Show DB info")
     op.add_argument(
         "--int",
         metavar="KEY",
         action="append",
-        help="Kill (INT) the specified job using its process group ID")
+        help="Kill (INT) the specified job using its process group ID",
+    )
     op.add_argument(
         "--stop",
         metavar="KEY",
         action="append",
-        help="Force job status 'stopped' for the job specified by KEY")
-    op.add_argument("--delete", metavar="KEY", action="append",
-                    help="Remove inactive job specified by KEY")
-    op.add_argument("--delete-sequence", metavar="NAME", action="append",
-                    help="Delete sequence specified by NAME")
-    op.add_argument("--prune", action="store_true",
-                    help="Prune inactive jobs and log files")
+        help="Force job status 'stopped' for the job specified by KEY",
+    )
+    op.add_argument(
+        "--delete",
+        metavar="KEY",
+        action="append",
+        help="Remove inactive job specified by KEY",
+    )
+    op.add_argument(
+        "--delete-sequence",
+        metavar="NAME",
+        action="append",
+        help="Delete sequence specified by NAME",
+    )
+    op.add_argument(
+        "--prune", action="store_true", help="Prune inactive jobs and log files"
+    )
     op.add_argument(
         "--prune-except",
         type=int,
         metavar="COUNT",
         action="store",
         help="Prune inactive jobs and log files, leaving the "
-        "last COUNT jobs in the database.")
-    op.add_argument("-p", "--since-checkpoint", action="store_true",
-                    help="Only display jobs since the checkpoint")
-    op.add_argument("-P", "--set-checkpoint", metavar="TIME", action="store",
-                    help="Set checkpoint for -p.  Use '.' for now")
+        "last COUNT jobs in the database.",
+    )
+    op.add_argument(
+        "-p",
+        "--since-checkpoint",
+        action="store_true",
+        help="Only display jobs since the checkpoint",
+    )
+    op.add_argument(
+        "-P",
+        "--set-checkpoint",
+        metavar="TIME",
+        action="store",
+        help="Set checkpoint for -p.  Use '.' for now",
+    )
     op.add_argument(
         "-a",
         "--activity",
         action="append_const",
         const=1,
         help="Display recent activity per workspace (repeat multiple "
-        "times for a longer activity window)")
-    op.add_argument("-A", "--activity-window", metavar="HOURS", type=float,
-                    action="store",
-                    help="Display recent activity per workspace within the "
-                    "specified window")
+        "times for a longer activity window)",
+    )
+    op.add_argument(
+        "-A",
+        "--activity-window",
+        metavar="HOURS",
+        type=float,
+        action="store",
+        help="Display recent activity per workspace within the specified window",
+    )
 
 
 def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
@@ -451,9 +522,12 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         return True
     if options.list:
         includeReminders = len(options.list) > 1
-        jobs.listActive(thisWs=options.tw, pane=options.tp,
-                        useCp=options.since_checkpoint,
-                        includeReminders=includeReminders)
+        jobs.listActive(
+            thisWs=options.tw,
+            pane=options.tp,
+            useCp=options.since_checkpoint,
+            includeReminders=includeReminders,
+        )
         return True
     elif options.list_keys:
         jobs.listActive(
@@ -461,7 +535,8 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
             pane=options.tp,
             useCp=options.since_checkpoint,
             includeReminders=False,
-            keysOnly=True)
+            keysOnly=True,
+        )
         timing.checkpoint("after listActive query")
         return True
     elif options.dot or options.png or options.svg:
@@ -470,7 +545,8 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
             jobs.inactive,
             filterWs=options.tw,
             filterPane=options.tp,
-            useCp=options.since_checkpoint)
+            useCp=options.since_checkpoint,
+        )
         LOG.debug("dot: %s", dot)
         if options.dot:
             sprint(dot)
@@ -486,20 +562,21 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         return True
     elif options.list_inactive:
         jobs.listInactive(
-            options.tw,
-            options.tp,
-            options.since_checkpoint,
-            limit=None)
+            options.tw, options.tp, options.since_checkpoint, limit=None
+        )
         return True
     elif options.count:
         sprint(jobs.countInactive())
         return True
     elif options.get_all_logs:
         logs = []
-        for job in jobs.filterJobs(jobs.active, limit=30,
-                                   filterWs=options.tw,
-                                   filterPane=options.tp,
-                                   useCp=options.since_checkpoint):
+        for job in jobs.filterJobs(
+            jobs.active,
+            limit=30,
+            filterWs=options.tw,
+            filterPane=options.tp,
+            useCp=options.since_checkpoint,
+        ):
             logs.append(job.logfile)
         sprint(" ".join(logs))
         return True
@@ -516,8 +593,9 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         return True
     elif options.find:
         for keyword in options.find:
-            matches = jobs.findJobsMatching(keyword, options.tw,
-                                            useCp=options.since_checkpoint)
+            matches = jobs.findJobsMatching(
+                keyword, options.tw, useCp=options.since_checkpoint
+            )
             if not matches:
                 sprint("No jobs matching %r" % keyword)
             else:
@@ -708,101 +786,160 @@ def parseArgs(args=None):
     op = argparse.ArgumentParser(
         prog=os.path.basename(prog) if prog else "job",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=DESC)
+        description=DESC,
+    )
     op.add_argument("program", nargs="?")
     op.add_argument("args", nargs=argparse.REMAINDER)
 
     addArgumentParserBaseFlags(op, _DEBUG_LOG_FILE_NAME)
 
     out = op.add_mutually_exclusive_group()
-    out.add_argument("--robot-format", dest="quiet", action="store_const",
-                     const="robot", help="Output job execution formatted for robots")
-    out.add_argument("-q", "--quiet", action="store_const", const="quiet",
-                     help="Do not print any messages")
+    out.add_argument(
+        "--robot-format",
+        dest="quiet",
+        action="store_const",
+        const="robot",
+        help="Output job execution formatted for robots",
+    )
+    out.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        const="quiet",
+        help="Do not print any messages",
+    )
     execMode = op.add_mutually_exclusive_group()
-    execMode.add_argument("-f", "--foreground", action="store_true",
-                          help="Do not fork, run in foreground.")
-    execMode.add_argument("--monitor", action="store_true",
-                          help="Run in the background, but monitor output")
-    op.add_argument("-c", "--command", metavar="CMD",
-                    help="Specify complete bash command to execute "
-                    "(argument to bash -c)")
-    op.add_argument("--retry", "-y", metavar="KEY", action="store",
-                    help="Retry job specified by KEY")
+    execMode.add_argument(
+        "-f",
+        "--foreground",
+        action="store_true",
+        help="Do not fork, run in foreground.",
+    )
+    execMode.add_argument(
+        "--monitor",
+        action="store_true",
+        help="Run in the background, but monitor output",
+    )
+    op.add_argument(
+        "-c",
+        "--command",
+        metavar="CMD",
+        help="Specify complete bash command to execute (argument to bash -c)",
+    )
+    op.add_argument(
+        "--retry",
+        "-y",
+        metavar="KEY",
+        action="store",
+        help="Retry job specified by KEY",
+    )
     op.add_argument(
         "-r",
         "--reminder",
         metavar="REMINDER",
         action="store",
-        help="Specify a reminder job (must be stopped manually with "
-        "--done).")
+        help="Specify a reminder job (must be stopped manually with --done).",
+    )
     op.add_argument(
         "--done",
         metavar="KEY",
         action="append",
-        help="Mark reminder as 'done' for the reminder specified by "
-        "KEY")
+        help="Mark reminder as 'done' for the reminder specified by KEY",
+    )
     op.add_argument(
         "-k",
         "--key",
         metavar="KEY",
-        help="Specify job key to use (must be unique among active jobs)")
+        help="Specify job key to use (must be unique among active jobs)",
+    )
     op.add_argument(
         "--sequence",
         "--seq",
         metavar="NAME",
         action="store",
         help="Record this job and its dependencies as a sequence that "
-        "can be replayed later with --retry NAME")
+        "can be replayed later with --retry NAME",
+    )
     op.add_argument(
         "-m",
         "--mail",
         metavar="KEY",
         action="append",
-        help="Send mail on job completion for job specified by KEY")
+        help="Send mail on job completion for job specified by KEY",
+    )
     op.add_argument(
         "-N",
         "--notify",
         action="store_true",
-        help="Send mail (notify) on job completion")
-    op.add_argument("-t", "--to", metavar="ADDRESS",
-                    help="Specify 'to' address for mail notification "
-                    "(default=%(default)s)",
-                    default=os.getenv("USER"))
-    op.add_argument("--cc", metavar="ADDRESS", action="append",
-                    help="Specify 'CC' address for mail notification")
-    op.add_argument("--tw", "--this-workspace", action="store_true",
-                    help="Filter by jobs in this workspace")
-    op.add_argument("--tp", "--this-pane", action="store_true",
-                    help="Filter by jobs in this tmux pane")
+        help="Send mail (notify) on job completion",
+    )
+    op.add_argument(
+        "-t",
+        "--to",
+        metavar="ADDRESS",
+        help="Specify 'to' address for mail notification (default=%(default)s)",
+        default=os.getenv("USER"),
+    )
+    op.add_argument(
+        "--cc",
+        metavar="ADDRESS",
+        action="append",
+        help="Specify 'CC' address for mail notification",
+    )
+    op.add_argument(
+        "--tw",
+        "--this-workspace",
+        action="store_true",
+        help="Filter by jobs in this workspace",
+    )
+    op.add_argument(
+        "--tp",
+        "--this-pane",
+        action="store_true",
+        help="Filter by jobs in this tmux pane",
+    )
     op.add_argument(
         "-b",
         "--blocked-by",
         metavar="KEY",
         action="append",
-        help="Specify that this job depends on the job specified by "
-        "KEY")
+        help="Specify that this job depends on the job specified by KEY",
+    )
     op.add_argument(
         "-B",
         "--blocked-by-success",
         metavar="KEY",
         action="append",
         help="Specify that this job depends on the successful execution "
-        "of the job specified by KEY")
-    op.add_argument("-w", "--wait", metavar="KEY", action="append",
-                    help="Wait for job specified by KEY to finish")
+        "of the job specified by KEY",
+    )
+    op.add_argument(
+        "-w",
+        "--wait",
+        metavar="KEY",
+        action="append",
+        help="Wait for job specified by KEY to finish",
+    )
     op.add_argument(
         "-i",
         "--isolate",
         action="store_true",
-        help="Isolate execution of the job using netns and isolate")
-    op.add_argument("--input", metavar="FILENAME", action="store",
-                    help="Specify input file (default='%(default)s')",
-                    default="/dev/null")
-    op.add_argument("--auto-job", action="store_true",
-                    help="Specify that this job is an automatic job (not user "
-                    "initiated).  This will stop it from being picked up as "
-                    "the implicit job key '.' when using -B")
+        help="Isolate execution of the job using netns and isolate",
+    )
+    op.add_argument(
+        "--input",
+        metavar="FILENAME",
+        action="store",
+        help="Specify input file (default='%(default)s')",
+        default="/dev/null",
+    )
+    op.add_argument(
+        "--auto-job",
+        action="store_true",
+        help="Specify that this job is an automatic job (not user "
+        "initiated).  This will stop it from being picked up as "
+        "the implicit job key '.' when using -B",
+    )
 
     addNonExecOptions(op)
 
@@ -844,11 +981,11 @@ def handleIsolate(cmd):
 
 
 def sendMailOrNotifyCmd(
-        args: Optional[List[str]],
-        notifyArg: List[str],
-        options: argparse.Namespace,
-        config: Config,
-        job: JobInfo,
+    args: Optional[List[str]],
+    notifyArg: List[str],
+    options: argparse.Namespace,
+    config: Config,
+    job: JobInfo,
 ) -> List[str]:
     cmd = []
     subj = "[job-status] "
@@ -872,9 +1009,9 @@ def sendMailOrNotifyCmd(
 
 
 def extendMailOrNotifyCmdLockRequired(
-        cmd: List[str],
-        jobs: JobsBase,
-        mailDeps: List[JobInfo],
+    cmd: List[str],
+    jobs: JobsBase,
+    mailDeps: List[JobInfo],
 ) -> Tuple[List[str], IO]:
     # Collect output files as attachments from dep jobs
     # pylint: disable=consider-using-with
@@ -894,8 +1031,12 @@ def extendMailOrNotifyCmdLockRequired(
         try:
             lines = autoDecode(out)
         except ValueError as err:
-            LOG.debug("error decoding output from log file %r for %s: %s",
-                      depJob.logfile, depJob, err)
+            LOG.debug(
+                "error decoding output from log file %r for %s: %s",
+                depJob.logfile,
+                depJob,
+                err,
+            )
             lines = f"{out[:50]}\n"
         safeWrite(tmp, lines)
         safeWrite(tmp, SPACER_EACH + "\n")
@@ -913,14 +1054,14 @@ def extendMailOrNotifyCmdLockRequired(
 
 
 def runJob(
-        args: List[str],
-        cmd: List[str],
-        options: argparse.Namespace,
-        config: Config,
-        jobs: JobsBase,
-        job: JobInfo,
-        fd: int,
-        doIsolate: bool,
+    args: List[str],
+    cmd: List[str],
+    options: argparse.Namespace,
+    config: Config,
+    jobs: JobsBase,
+    job: JobInfo,
+    fd: int,
+    doIsolate: bool,
 ) -> None:
     # pylint: disable=too-many-statements
     LOG.info("execute: %s", job.cmdStr)

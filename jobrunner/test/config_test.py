@@ -4,8 +4,8 @@ import os
 import tempfile
 import unittest
 
-from mock import MagicMock, patch
 import six
+from mock import MagicMock, patch
 
 from jobrunner import config
 
@@ -56,10 +56,17 @@ class TestRcParser(unittest.TestCase, TestMixin):
         cfgObj = self.config()
         self.assertEqual(os.path.join(HOME, "x/db/"), cfgObj.dbDir)
 
-    def assertCfg(self, cfgObj, domain=HOSTNAME,
-                  program="mail", reminderSummary=True,
-                  chatmailAtAll="none", chatmailReuseThreads=True,
-                  gChatUserHookDict=None, gChatUserIdDict=None):
+    def assertCfg(
+        self,
+        cfgObj,
+        domain=HOSTNAME,
+        program="mail",
+        reminderSummary=True,
+        chatmailAtAll="none",
+        chatmailReuseThreads=True,
+        gChatUserHookDict=None,
+        gChatUserIdDict=None,
+    ):
         self.assertEqual(domain, cfgObj.mailDomain)
         self.assertEqual(program, cfgObj.mailProgram)
         self.assertEqual(reminderSummary, cfgObj.uiWatchReminderSummary)
@@ -92,8 +99,11 @@ class TestRcParser(unittest.TestCase, TestMixin):
             tempFp.flush()
             cfgObj = self.config(tempFp)
             self.assertCfg(
-                cfgObj, domain="ex.com", program="mail-program",
-                reminderSummary=False, chatmailAtAll="all",
+                cfgObj,
+                domain="ex.com",
+                program="mail-program",
+                reminderSummary=False,
+                chatmailAtAll="all",
                 chatmailReuseThreads=False,
                 gChatUserHookDict={
                     "user1": "https://chat.googleapis.com/v1/spaces/something1",
@@ -132,8 +142,8 @@ class TestMalformedRcFile(unittest.TestCase, TestMixin):
             tempFp.write("[ui]\nwatch reminder=foo\n")
             tempFp.flush()
             pattern = (
-                r'RC file has invalid "ui.watch reminder" setting foo.\s*' +
-                r"Valid options: (full, summary|summary, full)"
+                r'RC file has invalid "ui.watch reminder" setting foo.\s*'
+                + r"Valid options: (full, summary|summary, full)"
             )
             with six.assertRaisesRegex(self, config.ConfigError, pattern):
                 self.config(tempFp)

@@ -10,7 +10,8 @@ def addArgumentParserBaseFlags(parser, logfileName):
     Provides ALL flags required by the Config class.
     """
     parser.add_argument(
-        "-V", "--version",
+        "-V",
+        "--version",
         help="Display version info",
         action="store_true",
     )
@@ -20,23 +21,34 @@ def addArgumentParserBaseFlags(parser, logfileName):
         dest="verbose",
         help="Increase verbosity (multiple times for more verbose)",
         action="append_const",
-        const=1)
+        const=1,
+    )
     parser.add_argument(
         "-d",
         "--state-dir",
         dest="stateDir",
         metavar="DIR",
         help="Specify state directory (default='%(default)s')",
-        default=os.getenv("JOBRUNNER_STATE_DIR", "~/.local/share/jobDb"))
-    parser.add_argument("--rc-file", dest="rcFile",
-                        help='Specify path to rc-file (default="%(default)s")',
-                        default="~/.config/jobrc")
+        default=os.getenv("JOBRUNNER_STATE_DIR", "~/.local/share/jobDb"),
+    )
+    parser.add_argument(
+        "--rc-file",
+        dest="rcFile",
+        help='Specify path to rc-file (default="%(default)s")',
+        default="~/.config/jobrc",
+    )
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="enable debug output to <state-dir>/log/%s.log" % logfileName)
-    parser.add_argument("--debugLocking", dest="debugLevel", action="append_const",
-                        const="lock", help="Debug database locking")
+        help="enable debug output to <state-dir>/log/%s.log" % logfileName,
+    )
+    parser.add_argument(
+        "--debugLocking",
+        dest="debugLevel",
+        action="append_const",
+        const="lock",
+        help="Debug database locking",
+    )
 
 
 def baseParsedArgsToArgList(argv, args):

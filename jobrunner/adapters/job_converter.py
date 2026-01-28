@@ -5,10 +5,58 @@ These functions enable the adapter pattern to bridge the old and new
 architectures during the migration period.
 """
 
+from __future__ import annotations
+
 # pylint: disable=protected-access
+from typing import Any, Callable, TypeVar
 
 from jobrunner.domain import Job, JobStatus
 from jobrunner.info import JobInfo
+
+T = TypeVar("T")
+
+
+def _typed_value(
+    value: Any,
+    expected_type: type[T],
+    default: T | Callable[[], T] | None = None,
+) -> T | None:
+    """Return value if it matches expected type, otherwise return default.
+
+    Args:
+        value: The value to check
+        expected_type: Expected type to check against
+        default: Default value or callable that returns default
+
+    Returns:
+        value if isinstance(value, expected_type), else default
+    """
+    if isinstance(value, expected_type):
+        return value
+    return default() if callable(default) else default
+
+
+def _attr_or_default(
+    obj: Any,
+    attr: str,
+    default: T | Callable[[], T] | None = None,
+    copy: bool = False,
+) -> T | None:
+    """Get attribute value or return default.
+
+    Args:
+        obj: Object to get attribute from
+        attr: Attribute name
+        default: Default value or callable that returns default
+        copy: If True and attribute exists, call .copy() on it
+
+    Returns:
+        Attribute value (optionally copied) or default
+    """
+    if hasattr(obj, attr):
+        value = getattr(obj, attr)
+        return value.copy() if copy else value
+    return default() if callable(default) else default
 
 
 def job_to_jobinfo(job: Job, parent=None) -> JobInfo:
@@ -101,27 +149,21 @@ def jobinfo_to_job(jobinfo: JobInfo) -> Job:
         status=status,
         rc=jobinfo._rc,
         pid=jobinfo.pid,
-        blocked=jobinfo._blocked if hasattr(jobinfo, "_blocked") else False,
+        blocked=_attr_or_default(jobinfo, "_blocked", False),
         # Context
-        workspace=jobinfo._workspace if isinstance(
-            jobinfo._workspace,
-            str) else None,
-        project=jobinfo._proj if isinstance(
-            jobinfo._proj,
-            str) else None,
+        workspace=_typed_value(jobinfo._workspace, str),
+        project=_typed_value(jobinfo._proj, str),
         host=jobinfo._host,
         user=jobinfo._user,
         env=jobinfo._env.copy() if jobinfo._env else {},
         # Dependencies
         depends_on=jobinfo._depends if jobinfo._depends else [],
-        all_deps=jobinfo._alldeps.copy() if hasattr(
-            jobinfo,
-            "_alldeps") else set(),
+        all_deps=_attr_or_default(jobinfo, "_alldeps", set, copy=True),
         # Metadata
         logfile=jobinfo.logfile,
-        auto_job=jobinfo._autoJob if hasattr(jobinfo, "_autoJob") else False,
-        mail_job=jobinfo._mailJob if hasattr(jobinfo, "_mailJob") else False,
-        isolate=jobinfo._isolate if hasattr(jobinfo, "_isolate") else False,
+        auto_job=_attr_or_default(jobinfo, "_autoJob", False),
+        mail_job=_attr_or_default(jobinfo, "_mailJob", False),
+        isolate=_attr_or_default(jobinfo, "_isolate", False),
         # Backward compatibility
         persist_key=jobinfo._persistKey,
         persist_key_generated=jobinfo._persistKeyGenerated,

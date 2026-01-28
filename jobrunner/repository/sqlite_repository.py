@@ -7,11 +7,11 @@ SQLite with a proper relational schema and indices for performance.
 
 from __future__ import annotations
 
-from datetime import datetime
 import json
 import logging
 import os
 import sqlite3
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from jobrunner import timing
@@ -76,8 +76,8 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         # This avoids running all the CREATE statements on every startup
         try:
             self._execute(
-                cursor,
-                "SELECT value FROM metadata WHERE key = 'schema_version'")
+                cursor, "SELECT value FROM metadata WHERE key = 'schema_version'"
+            )
             row = cursor.fetchone()
             if row and row[0] == SCHEMA_VERSION:
                 # Schema exists and is current version, skip initialization
@@ -88,7 +88,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
 
         # Slow path: Create schema (only runs on first use or version upgrade)
         # Main jobs table
-        self._execute(cursor, """
+        self._execute(
+            cursor,
+            """
             CREATE TABLE IF NOT EXISTS jobs (
                 key TEXT PRIMARY KEY,
                 uidx INTEGER NOT NULL,
@@ -117,38 +119,51 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
                 persist_key TEXT,
                 persist_key_generated TEXT
             )
-        """)
+        """,
+        )
 
         # Indices for fast queries
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_jobs_status "
-                      "ON jobs(status)")
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_jobs_workspace "
-                      "ON jobs(workspace)")
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_jobs_create_time "
-                      "ON jobs(create_time)")
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_jobs_stop_time "
-                      "ON jobs(stop_time)")
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_jobs_status_workspace "
-                      "ON jobs(status, workspace)")
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_jobs_status_create "
-                      "ON jobs(status, create_time)")
+        self._execute(
+            cursor, "CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)"
+        )
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_workspace ON jobs(workspace)",
+        )
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_create_time ON jobs(create_time)",
+        )
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_stop_time ON jobs(stop_time)",
+        )
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_status_workspace "
+            "ON jobs(status, workspace)",
+        )
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_status_create "
+            "ON jobs(status, create_time)",
+        )
 
         # Metadata table
-        self._execute(cursor, """
+        self._execute(
+            cursor,
+            """
             CREATE TABLE IF NOT EXISTS metadata (
                 key TEXT PRIMARY KEY,
                 value TEXT
             )
-        """)
+        """,
+        )
 
         # Sequence tables for recording and replaying job sequences
-        self._execute(cursor, """
+        self._execute(
+            cursor,
+            """
             CREATE TABLE IF NOT EXISTS sequence_steps (
                 name TEXT NOT NULL,
                 step_number INTEGER NOT NULL,
@@ -156,9 +171,12 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
                 created_at TEXT NOT NULL,
                 PRIMARY KEY (name, step_number)
             )
-        """)
+        """,
+        )
 
-        self._execute(cursor, """
+        self._execute(
+            cursor,
+            """
             CREATE TABLE IF NOT EXISTS sequence_dependencies (
                 name TEXT NOT NULL,
                 step_number INTEGER NOT NULL,
@@ -168,20 +186,25 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
                 FOREIGN KEY (name, step_number)
                     REFERENCES sequence_steps(name, step_number)
             )
-        """)
+        """,
+        )
 
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_sequence_steps_name "
-                      "ON sequence_steps(name)")
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_sequence_steps_name "
+            "ON sequence_steps(name)",
+        )
 
-        self._execute(cursor,
-                      "CREATE INDEX IF NOT EXISTS idx_sequence_steps_name_step "
-                      "ON sequence_steps(name, step_number)")
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_sequence_steps_name_step "
+            "ON sequence_steps(name, step_number)",
+        )
 
         # Initialize metadata if not present
         self._execute(
-            cursor,
-            "SELECT COUNT(*) FROM metadata WHERE key = 'schema_version'")
+            cursor, "SELECT COUNT(*) FROM metadata WHERE key = 'schema_version'"
+        )
         if cursor.fetchone()[0] == 0:
             self._init_metadata(cursor)
 
@@ -189,24 +212,36 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
 
     def _init_metadata(self, cursor):
         """Initialize metadata with default values."""
-        self._execute(cursor,
-                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
-                      ("schema_version", SCHEMA_VERSION))
-        self._execute(cursor,
-                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
-                      ("last_key", ""))
-        self._execute(cursor,
-                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
-                      ("last_job", ""))
-        self._execute(cursor,
-                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
-                      ("checkpoint", ""))
-        self._execute(cursor,
-                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
-                      ("recent_keys", "[]"))
-        self._execute(cursor,
-                      "INSERT INTO metadata (key, value) VALUES (?, ?)",
-                      ("current_index", "0"))
+        self._execute(
+            cursor,
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("schema_version", SCHEMA_VERSION),
+        )
+        self._execute(
+            cursor,
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("last_key", ""),
+        )
+        self._execute(
+            cursor,
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("last_job", ""),
+        )
+        self._execute(
+            cursor,
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("checkpoint", ""),
+        )
+        self._execute(
+            cursor,
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("recent_keys", "[]"),
+        )
+        self._execute(
+            cursor,
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("current_index", "0"),
+        )
 
     def _job_to_row(self, job: Job) -> tuple:
         """Convert Job to database row tuple."""
@@ -242,8 +277,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
     def _row_to_job(self, row: sqlite3.Row) -> Job:
         """Convert database row to Job object."""
         # Parse depends_on and derive all_deps from it
-        depends_on = (json.loads(row["depends_on_json"])
-                      if row["depends_on_json"] else [])
+        depends_on = (
+            json.loads(row["depends_on_json"]) if row["depends_on_json"] else []
+        )
         all_deps = set(depends_on) if depends_on else set()
 
         return Job(
@@ -254,12 +290,21 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             cmd=json.loads(row["cmd_json"]) if row["cmd_json"] else None,
             reminder=row["reminder"],
             pwd=row["pwd"],
-            create_time=datetime.fromisoformat(row["create_time"])
-            if row["create_time"] else None,
-            start_time=datetime.fromisoformat(row["start_time"])
-            if row["start_time"] else None,
-            stop_time=datetime.fromisoformat(row["stop_time"])
-            if row["stop_time"] else None,
+            create_time=(
+                datetime.fromisoformat(row["create_time"])
+                if row["create_time"]
+                else None
+            ),
+            start_time=(
+                datetime.fromisoformat(row["start_time"])
+                if row["start_time"]
+                else None
+            ),
+            stop_time=(
+                datetime.fromisoformat(row["stop_time"])
+                if row["stop_time"]
+                else None
+            ),
             status=JobStatus(row["status"]),
             rc=row["rc"],
             pid=row["pid"],
@@ -285,7 +330,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        self._execute(cursor, """
+        self._execute(
+            cursor,
+            """
             INSERT OR REPLACE INTO jobs (
                 key, uidx, prog, args_json, cmd_json, reminder, pwd,
                 create_time, start_time, stop_time, status, rc, pid, blocked,
@@ -294,7 +341,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
                 persist_key, persist_key_generated
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                       ?, ?, ?, ?, ?, ?, ?)
-        """, self._job_to_row(job))
+        """,
+            self._job_to_row(job),
+        )
 
         conn.commit()
 
@@ -451,11 +500,13 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         elif exclude_completed:
             # Use IN instead of != for better index usage
             query += " AND status IN (?, ?, ?)"
-            params.extend([
-                JobStatus.PENDING.value,
-                JobStatus.BLOCKED.value,
-                JobStatus.RUNNING.value,
-            ])
+            params.extend(
+                [
+                    JobStatus.PENDING.value,
+                    JobStatus.BLOCKED.value,
+                    JobStatus.RUNNING.value,
+                ]
+            )
         query += " ORDER BY create_time"
         self._execute(cursor, query, params)
         return [row[0] for row in cursor.fetchall()]
@@ -581,16 +632,19 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         cursor = conn.cursor()
 
         def set_meta(key: str, value: str):
-            self._execute(cursor,
-                          "INSERT OR REPLACE INTO metadata (key, value) "
-                          "VALUES (?, ?)",
-                          (key, value))
+            self._execute(
+                cursor,
+                "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
+                (key, value),
+            )
 
         set_meta("schema_version", metadata.schema_version)
         set_meta("last_key", metadata.last_key)
         set_meta("last_job", metadata.last_job)
-        set_meta("checkpoint",
-                 metadata.checkpoint.isoformat() if metadata.checkpoint else "")
+        set_meta(
+            "checkpoint",
+            metadata.checkpoint.isoformat() if metadata.checkpoint else "",
+        )
         set_meta("recent_keys", json.dumps(metadata.recent_keys))
 
         conn.commit()
@@ -602,14 +656,16 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         cursor = conn.cursor()
 
         self._execute(
-            cursor,
-            "SELECT value FROM metadata WHERE key = 'current_index'")
+            cursor, "SELECT value FROM metadata WHERE key = 'current_index'"
+        )
         row = cursor.fetchone()
         current = int(row[0]) if row else 0
 
-        self._execute(cursor,
-                      "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
-                      ("current_index", str(current + 1)))
+        self._execute(
+            cursor,
+            "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
+            ("current_index", str(current + 1)),
+        )
 
         conn.commit()
         return current
@@ -623,9 +679,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         if status is None:
             self._execute(cursor, "SELECT COUNT(*) FROM jobs")
         else:
-            self._execute(cursor,
-                          "SELECT COUNT(*) FROM jobs WHERE status = ?",
-                          (status.value,))
+            self._execute(
+                cursor, "SELECT COUNT(*) FROM jobs WHERE status = ?", (status.value,)
+            )
 
         row = cursor.fetchone()
         return row[0] if row else 0
@@ -662,9 +718,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        self._execute(cursor,
-                      "SELECT 1 FROM sequence_steps WHERE name = ? LIMIT 1",
-                      (name,))
+        self._execute(
+            cursor, "SELECT 1 FROM sequence_steps WHERE name = ? LIMIT 1", (name,)
+        )
         return cursor.fetchone() is not None
 
     @timing.timed_function
@@ -690,37 +746,41 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         cursor = conn.cursor()
 
         # Get next step number for this sequence
-        self._execute(cursor,
-                      "SELECT MAX(step_number) FROM sequence_steps "
-                      "WHERE name = ?",
-                      (name,))
+        self._execute(
+            cursor,
+            "SELECT MAX(step_number) FROM sequence_steps WHERE name = ?",
+            (name,),
+        )
         row = cursor.fetchone()
         next_step = 0 if row[0] is None else row[0] + 1
 
         # Insert step
         created_at = datetime.now().isoformat()
-        self._execute(cursor,
-                      "INSERT INTO sequence_steps "
-                      "(name, step_number, job_key, created_at) "
-                      "VALUES (?, ?, ?, ?)",
-                      (name, next_step, job_key, created_at))
+        self._execute(
+            cursor,
+            "INSERT INTO sequence_steps "
+            "(name, step_number, job_key, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (name, next_step, job_key, created_at),
+        )
 
         # Insert dependencies
         for dep_step, dep_type in dependencies:
-            self._execute(cursor,
-                          "INSERT INTO sequence_dependencies "
-                          "(name, step_number, dependency_step, "
-                          "dependency_type) "
-                          "VALUES (?, ?, ?, ?)",
-                          (name, next_step, dep_step, dep_type))
+            self._execute(
+                cursor,
+                "INSERT INTO sequence_dependencies "
+                "(name, step_number, dependency_step, "
+                "dependency_type) "
+                "VALUES (?, ?, ?, ?)",
+                (name, next_step, dep_step, dep_type),
+            )
 
         conn.commit()
         return next_step
 
     @timing.timed_function
     def get_sequence_steps(
-        self,
-        name: str
+        self, name: str
     ) -> List[Tuple[int, str, List[Tuple[int, str]]]]:
         """
         Get all steps in a sequence with their dependencies.
@@ -736,21 +796,25 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         cursor = conn.cursor()
 
         # Get all steps
-        self._execute(cursor,
-                      "SELECT step_number, job_key "
-                      "FROM sequence_steps WHERE name = ? "
-                      "ORDER BY step_number",
-                      (name,))
+        self._execute(
+            cursor,
+            "SELECT step_number, job_key "
+            "FROM sequence_steps WHERE name = ? "
+            "ORDER BY step_number",
+            (name,),
+        )
         steps = cursor.fetchall()
 
         result = []
         for step_num, job_key in steps:
             # Get dependencies for this step
-            self._execute(cursor,
-                          "SELECT dependency_step, dependency_type "
-                          "FROM sequence_dependencies "
-                          "WHERE name = ? AND step_number = ?",
-                          (name, step_num))
+            self._execute(
+                cursor,
+                "SELECT dependency_step, dependency_type "
+                "FROM sequence_dependencies "
+                "WHERE name = ? AND step_number = ?",
+                (name, step_num),
+            )
             deps = [(row[0], row[1]) for row in cursor.fetchall()]
             result.append((step_num, job_key, deps))
 
@@ -762,9 +826,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        self._execute(cursor,
-                      "SELECT DISTINCT name FROM sequence_steps "
-                      "ORDER BY name")
+        self._execute(
+            cursor, "SELECT DISTINCT name FROM sequence_steps ORDER BY name"
+        )
         return [row[0] for row in cursor.fetchall()]
 
     @timing.timed_function
@@ -773,12 +837,10 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        self._execute(cursor,
-                      "DELETE FROM sequence_dependencies WHERE name = ?",
-                      (name,))
-        self._execute(cursor,
-                      "DELETE FROM sequence_steps WHERE name = ?",
-                      (name,))
+        self._execute(
+            cursor, "DELETE FROM sequence_dependencies WHERE name = ?", (name,)
+        )
+        self._execute(cursor, "DELETE FROM sequence_steps WHERE name = ?", (name,))
 
         conn.commit()
 

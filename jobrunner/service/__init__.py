@@ -7,8 +7,9 @@ class _Registry(object):
 
     def register(self, identifier, obj):
         if "." not in identifier:
-            assert (identifier not in self._services
-                    or self._services[identifier] == obj)
+            assert (
+                identifier not in self._services or self._services[identifier] == obj
+            )
             self._services[identifier] = obj
         else:
             scope, key = identifier.split(".", 1)

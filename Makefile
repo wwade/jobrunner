@@ -11,10 +11,8 @@ in-venv:
 
 .PHONY: lint
 lint: in-venv
-	isort -c --diff $(FILES)
-	autopep8 --exit-code -ra --diff $(FILES)
-	pylint -d fixme $(FILES)
-	find jobrunner -type f -name "*.py" -not -name "compat.py" -print0 | xargs -0 flake8
+	ruff check $(FILES)
+	ruff format --check $(FILES)
 
 .PHONY: install
 install: in-venv

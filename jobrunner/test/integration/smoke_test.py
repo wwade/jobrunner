@@ -1,17 +1,17 @@
 import json
-from json import load
-from logging import getLogger
 import os
 import re
+import time
+from json import load
+from logging import getLogger
 from shlex import quote
 from subprocess import CalledProcessError, check_call
 from tempfile import NamedTemporaryFile
-import time
 from unittest import TestCase
 
-from pexpect import EOF
 import pytest
 import six
+from pexpect import EOF
 
 from jobrunner.utils import autoDecode
 
@@ -62,11 +62,14 @@ def testUnicodeSmoke2():
         unicodeCase()
 
 
-@pytest.mark.parametrize("cmd,expected", [
-    (["job"], r"^Error: Job database is empty$"),
-    (["job", "-g", "."], r"^Error: No job for key .\..$"),
-    (["job", "-g", "xxx"], r"^Error: No job for key .xxx.$"),
-])
+@pytest.mark.parametrize(
+    "cmd,expected",
+    [
+        (["job"], r"^Error: Job database is empty$"),
+        (["job", "-g", "."], r"^Error: No job for key .\..$"),
+        (["job", "-g", "xxx"], r"^Error: No job for key .xxx.$"),
+    ],
+)
 def testEmptyDb(cmd, expected):
     with getTestEnv():
         with pytest.raises(CalledProcessError) as error:
@@ -89,7 +92,17 @@ class SmokeTest(TestCase):
             run(["job", "-B.", "-c", "touch {}".format(notFound)])
             found = env.path("canaryFound")
             touchFound = "touch {}".format(found)
-            run(["job", "-c", touchFound, "-b", "waitFile1", "-B", "waitFile2", ])
+            run(
+                [
+                    "job",
+                    "-c",
+                    touchFound,
+                    "-b",
+                    "waitFile1",
+                    "-B",
+                    "waitFile2",
+                ]
+            )
             waitFor(lambda: touchFound in activeJobs(), failArg=False)
             time.sleep(1)
             print("write wait file 1")
@@ -272,8 +285,7 @@ class RunExecOptionsTest(TestCase):
             execute{sep}key=\1{sep}command=true\n  # actual job execution
             finish{sep}key=\1{sep}rc=0\n           # job finishes
             """
-            reg = re.compile(matchOut.format(sep=sep),
-                             re.MULTILINE | re.VERBOSE)
+            reg = re.compile(matchOut.format(sep=sep), re.MULTILINE | re.VERBOSE)
             six.assertRegex(self, out, reg)
 
     def testMonitor(self):
@@ -317,9 +329,11 @@ class RunExecOptionsTest(TestCase):
                 # Format: [{waiting_job_key}] dependent job failed: ...
                 # [{failed_job_key}] {cmd}
                 six.assertRegex(
-                    self, out,
-                    r"(?m)^\[\d+_true\] dependent job failed:.*\[" +
-                    re.escape(failKey) + r"\].*false"
+                    self,
+                    out,
+                    r"(?m)^\[\d+_true\] dependent job failed:.*\["
+                    + re.escape(failKey)
+                    + r"\].*false",
                 )
 
 
@@ -361,8 +375,16 @@ class RunMailTest(TestCase):
                 self.assertIn("me", args1)
                 # --to
                 # --cc
-                jobf("--rc-file", rcFile.name, "--mail", "true", "--to", "someone",
-                     "--cc", "another")
+                jobf(
+                    "--rc-file",
+                    rcFile.name,
+                    "--mail",
+                    "true",
+                    "--to",
+                    "someone",
+                    "--cc",
+                    "another",
+                )
                 args2 = self.getMailArgs(lastKey())
                 print(repr(args2))
                 self.assertIn("-s", args2)
@@ -399,6 +421,7 @@ class OtherCommandSmokeTest(TestCase):
         --debug
         --isolate
     """
+
     @staticmethod
     def testSmoke():
         with getTestEnv():
@@ -523,7 +546,7 @@ class RunNonExecOptionsTest(TestCase):
             [firstLog] = job("--get-log", firstKey).splitlines()
             self.assertEqual(file1, firstLog)
             [file2] = job("--index", "0").splitlines()
-            for (fileName, value) in ((file1, "first"), (file2, "second")):
+            for fileName, value in ((file1, "first"), (file2, "second")):
                 self.assertIn(value, encoding_open(fileName, "r").read())
             multiLogFiles = job("-g", firstKey, "-g", secondKey).split()
             self.assertEqual(len(multiLogFiles), 2)
@@ -541,12 +564,11 @@ class RunNonExecOptionsTest(TestCase):
             subEnv = dict(os.environ)
             subEnv.update({"INACTIVE_EXTRA_VERBOSE": "0123\x07123\n"})
             jobf("echo", "second", env=subEnv)
-            listInactiveExtraVerbose = job(
-                "-s", "echo second", "-vvv", env=subEnv)
+            listInactiveExtraVerbose = job("-s", "echo second", "-vvv", env=subEnv)
             LOG.debug("listInactiveExtraVerbose %s", listInactiveExtraVerbose)
             self.assertIn(
-                "INACTIVE_EXTRA_VERBOSE=0123\\x07123\\x0a",
-                listInactiveExtraVerbose)
+                "INACTIVE_EXTRA_VERBOSE=0123\\x07123\\x0a", listInactiveExtraVerbose
+            )
 
             # --show
             six.assertRegex(self, job("--show", secondKey), progEchoRe)
@@ -559,9 +581,7 @@ class RunNonExecOptionsTest(TestCase):
             #  --set-checkpoint
             job("--set-checkpoint", ".")
             # --since-checkpoint
-            self.assertIn(
-                "(None)", job(
-                    "--since-checkpoint", "--list-inactive"))
+            self.assertIn("(None)", job("--since-checkpoint", "--list-inactive"))
 
             # --prune-except
             job("--prune-except", "1")

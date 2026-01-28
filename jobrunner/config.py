@@ -80,8 +80,7 @@ def _getConfig(cfgParser, section, option, defaultValue=None):
 
 
 def _getEnumConfig(cfgParser, section, option, enum):
-    optionVal = _getConfig(
-        cfgParser, section, option, enum.defaultVal)
+    optionVal = _getConfig(cfgParser, section, option, enum.defaultVal)
     if optionVal not in list(enum.values()):
         raise ConfigError(
             'RC file has invalid "{section}.{option}" setting {optionVal}.  Valid '
@@ -89,7 +88,9 @@ def _getEnumConfig(cfgParser, section, option, enum):
                 section=section,
                 option=option,
                 optionVal=optionVal,
-                allowedVals=", ".join(list(enum.values()))))
+                allowedVals=", ".join(list(enum.values())),
+            )
+        )
 
     return optionVal
 
@@ -116,9 +117,9 @@ def _getBoolConfig(cfgParser, section, option, default):
         raise ConfigError(
             'RC file has invalid "{section}.{option}" setting {optionVal}.  Valid '
             "options: true, false".format(
-                section=section,
-                option=option,
-                optionVal=val))
+                section=section, option=option, optionVal=val
+            )
+        )
 
 
 class ConfigError(Exception):
@@ -144,7 +145,9 @@ class Config(object):
         if unknownSections:
             raise ConfigError(
                 "RC file has unknown configuration sections: {}".format(
-                    ", ".join(sorted(unknownSections))))
+                    ", ".join(sorted(unknownSections))
+                )
+            )
         for section in cfgSections:
             cfgValues = set(cfgParser.options(section))
             validSectionConfig = self.validConfig[section]
@@ -155,7 +158,9 @@ class Config(object):
                     raise ConfigError(
                         "RC file has unknown configuration options in "
                         'section "{}": {}'.format(
-                            section, ", ".join(sorted(unknownOptions))))
+                            section, ", ".join(sorted(unknownOptions))
+                        )
+                    )
 
     def __init__(self, options):
         stateDir = options.stateDir
@@ -173,20 +178,26 @@ class Config(object):
             cfgParser = six.moves.configparser.ConfigParser()
         cfgParser.read(rcFile)
         self._mailDomain = _getConfig(
-            cfgParser, "mail", "domain", os.getenv("HOSTNAME"))
+            cfgParser, "mail", "domain", os.getenv("HOSTNAME")
+        )
         self._mailProgram = _getConfig(cfgParser, "mail", "program", "mail")
 
         self._uiWatchReminder = _getEnumConfig(
-            cfgParser, "ui", "watch reminder", WATCH_REMINDER)
+            cfgParser, "ui", "watch reminder", WATCH_REMINDER
+        )
 
         self._chatmailAtAll = _getEnumConfig(
-            cfgParser, "chatmail", "at all", CHATMAIL_AT_ALL)
+            cfgParser, "chatmail", "at all", CHATMAIL_AT_ALL
+        )
         self._chatmailReuseThreads = _getBoolConfig(
-            cfgParser, "chatmail", "reuse threads", True)
+            cfgParser, "chatmail", "reuse threads", True
+        )
         self._gChatUserHooks = _getDictConfig(
-            cfgParser, "chatmail.google-chat-userhooks")
+            cfgParser, "chatmail.google-chat-userhooks"
+        )
         self._gchatUserIds = _getDictConfig(
-            cfgParser, "chatmail.google-chat-userids")
+            cfgParser, "chatmail.google-chat-userids"
+        )
 
         self._validateConfigParser(cfgParser)
 

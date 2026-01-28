@@ -3,10 +3,10 @@
 from __future__ import absolute_import, print_function
 
 import argparse
-from collections import defaultdict
 import json
 import os
 import sys
+from collections import defaultdict
 
 import requests
 import six
@@ -145,18 +145,27 @@ def parseArgs(args=None):
     ap = argparse.ArgumentParser(
         prog=os.path.basename(prog) if prog else None,
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=DESC)
+        description=DESC,
+    )
     addArgumentParserBaseFlags(ap, _DEBUG_LOG_FILE_NAME)
 
     ap.add_argument("-s", dest="subject")
     ap.add_argument("-c", dest="cc", action="append", default=[])
     ap.add_argument("-a", dest="attachment", action="append", default=[])
     ap.add_argument("-f", dest="inFile", action="store")
-    ap.add_argument("-T", "--new-thread", action="store_true",
-                    help="Do not re-use the previous chat thread for each hook")
-    ap.add_argument("--timeout", type=int, default=10,
-                    help="Specify timeout (in seconds) for REST API requests "
-                    "(default=%(default)s)")
+    ap.add_argument(
+        "-T",
+        "--new-thread",
+        action="store_true",
+        help="Do not re-use the previous chat thread for each hook",
+    )
+    ap.add_argument(
+        "--timeout",
+        type=int,
+        default=10,
+        help="Specify timeout (in seconds) for REST API requests "
+        "(default=%(default)s)",
+    )
     ap.add_argument("toAddr", metavar="to-addr", nargs="+")
 
     return ap.parse_args(args)
@@ -190,9 +199,11 @@ def main(args=None):
         subjectAndAts = " ".join(userAts + [subject])
         msg = subjectAndAts + msgBody
 
-        threadId = (threadCache.get(hook)
-                    if not opts.new_thread and config.chatmailReuseThreads
-                    else None)
+        threadId = (
+            threadCache.get(hook)
+            if not opts.new_thread and config.chatmailReuseThreads
+            else None
+        )
 
         newThreadId = _postToGChat(msg, hook, opts.timeout, threadId=threadId)
         threadCache.put(hook, newThreadId)

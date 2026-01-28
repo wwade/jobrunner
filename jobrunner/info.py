@@ -1,9 +1,9 @@
 import errno
+import os
+import string
 from functools import total_ordering
 from logging import getLogger
-import os
 from shlex import quote
-import string
 from typing import Any, Iterable, List, Optional, Sized
 
 import dateutil.tz
@@ -167,6 +167,7 @@ class JobInfo(object):
 
     def persistKeyGeneratedGet(self):
         return self._persistKeyGenerated
+
     persistKeyGenerated = property(persistKeyGeneratedGet)
 
     def wsBasename(self) -> Optional[str]:
@@ -203,12 +204,10 @@ class JobInfo(object):
         return cmp_(self.stopTime, other.stopTime)
 
     def cmpActive(self, other):
-        return self.cmpCommon(
-            other, [self.cmpCreate, self.cmpStart, self.cmpStop])
+        return self.cmpCommon(other, [self.cmpCreate, self.cmpStart, self.cmpStop])
 
     def cmpInactive(self, other):
-        return self.cmpCommon(
-            other, [self.cmpStop, self.cmpStart, self.cmpCreate])
+        return self.cmpCommon(other, [self.cmpStop, self.cmpStart, self.cmpCreate])
 
     def __eq__(self, other):
         return self.__cmp__(other) == 0
@@ -250,9 +249,9 @@ class JobInfo(object):
             return self._key
         self._hasTime = True
         keySource = self.prog if self.prog else self.reminder
-        self._key = (utcNow().strftime("%s") +
-                     str(self._uidx) + "_" +
-                     keyEscape(keySource))
+        self._key = (
+            utcNow().strftime("%s") + str(self._uidx) + "_" + keyEscape(keySource)
+        )
         doMsg(" - set key", self._key)
         robotInfo("new", {"key": self._key})
         return self._key
@@ -446,8 +445,7 @@ class JobInfo(object):
                 utils.STOP_ABORT: "Interrupted",
                 utils.STOP_DEPFAIL: "Dependent Job Failed",
             }
-            rcStatus = (" (" + xStatus[self.rc] +
-                        ")" if self.rc in xStatus else "")
+            rcStatus = " (" + xStatus[self.rc] + ")" if self.rc in xStatus else ""
             return "Finished" + rcStatus
         else:
             return "Running"
@@ -496,8 +494,9 @@ class JobInfo(object):
         except AttributeError:
             return "N/A"
 
-    def showInOrder(self, order: Iterable[str],
-                    level: Optional[Sized] = None) -> str:
+    def showInOrder(
+        self, order: Iterable[str], level: Optional[Sized] = None
+    ) -> str:
         longLine = max(len(k) for k in order)
         ret = utils.SPACER + "\n"
         for k in order:
@@ -553,9 +552,7 @@ class JobInfo(object):
             "User",
             "Host",
         ]
-        verb2 = [
-            "Environment"
-        ]
+        verb2 = ["Environment"]
 
         if level:
             if len(level) >= 1:
