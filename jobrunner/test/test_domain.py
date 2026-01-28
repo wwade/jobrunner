@@ -2,8 +2,8 @@
 Tests for domain models.
 """
 
-from datetime import datetime, timedelta
 import unittest
+from datetime import datetime, timedelta
 
 from dateutil.tz import tzutc
 

@@ -16,6 +16,7 @@ from jobrunner.domain import Job, JobStatus
 @dataclass
 class Metadata:
     """Database metadata."""
+
     schema_version: str
     last_key: str = ""
     last_job: str = ""

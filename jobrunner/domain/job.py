@@ -21,9 +21,10 @@ from .. import utils
 
 class JobStatus(Enum):
     """Job lifecycle states."""
-    PENDING = "pending"      # Created but not started
-    BLOCKED = "blocked"      # Waiting on dependencies
-    RUNNING = "running"      # Currently executing
+
+    PENDING = "pending"  # Created but not started
+    BLOCKED = "blocked"  # Waiting on dependencies
+    RUNNING = "running"  # Currently executing
     COMPLETED = "completed"  # Finished (any exit code)
 
 
@@ -228,8 +229,12 @@ class Job:  # pylint: disable=too-many-instance-attributes
             # Active: create, start, stop
             comparisons = [
                 cmp_optional(self.create_time, other.create_time),
-                cmp_optional(self.start_time, other.start_time,
-                             datetime.now(tzutc()), datetime.now(tzutc())),
+                cmp_optional(
+                    self.start_time,
+                    other.start_time,
+                    datetime.now(tzutc()),
+                    datetime.now(tzutc()),
+                ),
                 cmp_optional(self.stop_time, other.stop_time),
             ]
         else:

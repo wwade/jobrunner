@@ -32,7 +32,7 @@ def get_sequence_steps(env, sequence_name):
     cursor.execute(
         "SELECT step_number, job_key FROM sequence_steps "
         "WHERE name = ? ORDER BY step_number",
-        (sequence_name,)
+        (sequence_name,),
     )
     steps = cursor.fetchall()
 
@@ -43,7 +43,7 @@ def get_sequence_steps(env, sequence_name):
             "SELECT dependency_step, dependency_type "
             "FROM sequence_dependencies "
             "WHERE name = ? AND step_number = ?",
-            (sequence_name, step_num)
+            (sequence_name, step_num),
         )
         deps = [(row[0], row[1]) for row in cursor.fetchall()]
         result.append((step_num, job_key, deps))
@@ -157,10 +157,14 @@ class SequenceTest(TestCase):
 
             # Create step3 depending on both step1 and step2
             job(
-                "--sequence", "diamond",
-                "-B", step1_key,
-                "-B", step2_key,
-                "-c", "echo step3"
+                "--sequence",
+                "diamond",
+                "-B",
+                step1_key,
+                "-B",
+                step2_key,
+                "-c",
+                "echo step3",
             )
 
             # Verify sequence structure
@@ -168,10 +172,7 @@ class SequenceTest(TestCase):
             self.assertEqual(4, len(steps))
 
             # Build map of job_key -> (step_num, deps)
-            key_to_step = {
-                step[1]: (step[0], step[2])
-                for step in steps
-            }
+            key_to_step = {step[1]: (step[0], step[2]) for step in steps}
 
             # Verify step0 has no dependencies
             step0_num, step0_deps = key_to_step[step0_key]
@@ -198,24 +199,18 @@ class SequenceTest(TestCase):
             _, step3_deps = key_to_step[step3_key]
             # Sort dependencies for consistent comparison
             step3_deps_sorted = sorted(step3_deps)
-            expected_deps = sorted([
-                (step1_num, "success"),
-                (step2_num, "success")
-            ])
+            expected_deps = sorted([(step1_num, "success"), (step2_num, "success")])
             self.assertEqual(expected_deps, step3_deps_sorted)
 
             # Verify the diamond structure through commands
             self.assertEqual(
-                ["bash", "-c", "echo step0"],
-                get_job_cmd(env, step0_key)
+                ["bash", "-c", "echo step0"], get_job_cmd(env, step0_key)
             )
             self.assertEqual(
-                ["bash", "-c", "echo step1"],
-                get_job_cmd(env, step1_key)
+                ["bash", "-c", "echo step1"], get_job_cmd(env, step1_key)
             )
             self.assertEqual(
-                ["bash", "-c", "echo step2"],
-                get_job_cmd(env, step2_key)
+                ["bash", "-c", "echo step2"], get_job_cmd(env, step2_key)
             )
 
     def test_mixed_dependency_types(self):  # pylint: disable=too-many-locals
@@ -235,10 +230,14 @@ class SequenceTest(TestCase):
 
             # Create step3 with mixed dependencies
             job(
-                "--sequence", "mixed",
-                "-b", step1_key,  # completion dependency
-                "-B", step2_key,  # success dependency
-                "-c", "echo step3"
+                "--sequence",
+                "mixed",
+                "-b",
+                step1_key,  # completion dependency
+                "-B",
+                step2_key,  # success dependency
+                "-c",
+                "echo step3",
             )
 
             # Verify sequence structure
@@ -246,10 +245,7 @@ class SequenceTest(TestCase):
             self.assertEqual(4, len(steps))
 
             # Build map of job_key -> (step_num, deps)
-            key_to_step = {
-                step[1]: (step[0], step[2])
-                for step in steps
-            }
+            key_to_step = {step[1]: (step[0], step[2]) for step in steps}
 
             # Get step3 (the final step with mixed dependencies)
             # Find the step that's not step0, step1, or step2
@@ -263,10 +259,9 @@ class SequenceTest(TestCase):
 
             # Verify mixed dependency types
             step3_deps_sorted = sorted(step3_deps)
-            expected_deps = sorted([
-                (step1_num, "completion"),
-                (step2_num, "success")
-            ])
+            expected_deps = sorted(
+                [(step1_num, "completion"), (step2_num, "success")]
+            )
             self.assertEqual(expected_deps, step3_deps_sorted)
 
     def test_long_chain(self):
@@ -332,7 +327,7 @@ class SequenceTest(TestCase):
             with self.assertRaises(CalledProcessError) as error:
                 run(
                     ["job", "--sequence", "bad name", "-c", "echo test"],
-                    capture=True
+                    capture=True,
                 )
             output = autoDecode(error.exception.output)
             self.assertIn("can only contain", output.lower())
@@ -341,7 +336,7 @@ class SequenceTest(TestCase):
             with self.assertRaises(CalledProcessError) as error:
                 run(
                     ["job", "--sequence", "bad@name!", "-c", "echo test"],
-                    capture=True
+                    capture=True,
                 )
             output = autoDecode(error.exception.output)
             self.assertIn("can only contain", output.lower())
@@ -358,10 +353,7 @@ class SequenceTest(TestCase):
             # it will fail with "No job for key" error since it's not
             # recognized as a sequence
             with self.assertRaises(CalledProcessError) as error:
-                run(
-                    ["job", "--retry", "nonexistent_seq"],
-                    capture=True
-                )
+                run(["job", "--retry", "nonexistent_seq"], capture=True)
             # Error message should indicate the key doesn't exist
             output = autoDecode(error.exception.output).lower()
             self.assertIn("no job for key", output)
@@ -388,10 +380,7 @@ class SequenceTest(TestCase):
 
             # Try to replay - should fail with helpful error
             with self.assertRaises(CalledProcessError) as error:
-                run(
-                    ["job", "--retry", "test_missing"],
-                    capture=True
-                )
+                run(["job", "--retry", "test_missing"], capture=True)
             # Should mention the missing job
             output = autoDecode(error.exception.output)
             self.assertIn(first_job_key, output)

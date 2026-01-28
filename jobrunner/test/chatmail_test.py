@@ -3,9 +3,9 @@ from __future__ import absolute_import, division, print_function
 import re
 from unittest import TestCase
 
-from mock import ANY, MagicMock, call, patch
 import requests
 import six
+from mock import ANY, MagicMock, call, patch
 
 from jobrunner.config import CHATMAIL_AT_ALL
 from jobrunner.mail import chat
@@ -23,8 +23,8 @@ class ChatPostTest(TestCase):
         chat.requests.post = MagicMock(return_value=retMock)
         retMock.json.return_value = {"thread": {"name": "somethread"}}
         self.assertEqual(
-            chat._postToGChat("foo", "https://something", TIMEOUT),
-            "somethread")
+            chat._postToGChat("foo", "https://something", TIMEOUT), "somethread"
+        )
 
     def testBadRequestReturn(self):
         retMock = MagicMock(["json"])
@@ -38,8 +38,8 @@ class ChatPostTest(TestCase):
         for retVal in retValues:
             retMock.json.return_value = retVal
             self.assertEqual(
-                chat._postToGChat("foo", "https://something", TIMEOUT),
-                None)
+                chat._postToGChat("foo", "https://something", TIMEOUT), None
+            )
 
 
 @patch("jobrunner.mail.chat.ThreadIdCache._read", new=MagicMock())
@@ -113,21 +113,36 @@ class ChatTest(TestCase):
 
         mocks.configCls().gChatUserHook.return_value = hook
 
-        with patch("jobrunner.mail.chat._open",
-                   create=True, autospec=True) as openMock:
+        with patch(
+            "jobrunner.mail.chat._open", create=True, autospec=True
+        ) as openMock:
             # Mock inFile from -f option
             with openMock("mytext.txt") as opener:
                 opener.read.return_value = "a bunch of\ntext."
                 openMock.reset_mock()
-                ret = chat.main(["-s", "My subject", "-c", "user3", "-c", "user4",
-                                 "-a", "attachfile.txt",
-                                 "-f", "mytext.txt", "user1", "user2"])
+                ret = chat.main(
+                    [
+                        "-s",
+                        "My subject",
+                        "-c",
+                        "user3",
+                        "-c",
+                        "user4",
+                        "-a",
+                        "attachfile.txt",
+                        "-f",
+                        "mytext.txt",
+                        "user1",
+                        "user2",
+                    ]
+                )
                 openMock.assert_called_once_with("mytext.txt")
 
         self.assertEqual(ret, 0)
         mocks.postToGChat.assert_called_once_with(ANY, hook, TIMEOUT, threadId=None)
         self.assertPostTextMatchesRegexp(
-            r"My subject.*a bunch of\ntext.*attachfile.txt")
+            r"My subject.*a bunch of\ntext.*attachfile.txt"
+        )
 
     def testPipeContent(self, *mockArgs):
         mocks = ChatTest.Mocks(mockArgs)
@@ -142,10 +157,12 @@ class ChatTest(TestCase):
             ret = chat.main(["-s", "My subject", "user1"])
 
             self.assertEqual(ret, 0)
-            mocks.postToGChat.assert_called_once_with(ANY, hook, TIMEOUT,
-                                                      threadId=None)
+            mocks.postToGChat.assert_called_once_with(
+                ANY, hook, TIMEOUT, threadId=None
+            )
             self.assertPostTextMatchesRegexp(
-                r"\*My subject\*" + (r"\s*$" if tty else r".*a bunch of\ntext"))
+                r"\*My subject\*" + (r"\s*$" if tty else r".*a bunch of\ntext")
+            )
 
     def testCallWithMultipleHooks(self, *mockArgs):
         mocks = ChatTest.Mocks(mockArgs)
@@ -158,12 +175,14 @@ class ChatTest(TestCase):
         # pylint: disable-msg=unnecessary-lambda
         mocks.configCls().gChatUserHook = lambda k: hooks.get(k)
 
-        ret = chat.main(["-s", "My subject", "-c", "user3", "-c", "user4",
-                         "user1", "user2"])
+        ret = chat.main(
+            ["-s", "My subject", "-c", "user3", "-c", "user4", "user1", "user2"]
+        )
 
         self.assertEqual(ret, 0)
-        calls = [call(ANY, hook, TIMEOUT, threadId=None)
-                 for hook in set(hooks.values())]
+        calls = [
+            call(ANY, hook, TIMEOUT, threadId=None) for hook in set(hooks.values())
+        ]
         self.assertEqual(mocks.postToGChat.call_count, len(calls))
         mocks.postToGChat.assert_has_calls(calls, any_order=True)
 
@@ -174,13 +193,15 @@ class ChatTest(TestCase):
         mocks.configCls().gChatUserHook = lambda k: {"user1": hook}.get(k)
 
         with capturedOutput() as (_, err):
-            ret = chat.main(["-s", "My subject", "-c", "user3", "-c", "user4",
-                             "user1", "user2"])
+            ret = chat.main(
+                ["-s", "My subject", "-c", "user3", "-c", "user4", "user1", "user2"]
+            )
 
         self.assertEqual(ret, 1)
         self.assertEqual(mocks.postToGChat.call_count, 0)
-        self.assertMultilineRegexpMatches(err.getvalue(),
-                                          r"No Google Chat hook for user[234]")
+        self.assertMultilineRegexpMatches(
+            err.getvalue(), r"No Google Chat hook for user[234]"
+        )
 
     def testReuseThreads(self, *mockArgs):
         hook = "https://somehook"
@@ -190,22 +211,23 @@ class ChatTest(TestCase):
             mocks = ChatTest.Mocks(mockArgs)
             mocks.reset()
             mocks.configCls().gChatUserHook.return_value = hook
-            mocks.threadCacheRead.return_value = {
-                hook: threadId, "anotherhook": "x"}
+            mocks.threadCacheRead.return_value = {hook: threadId, "anotherhook": "x"}
             mocks.postToGChat.return_value = retThreadId
 
-            ret = chat.main(([] if reuseThreads else ["-T"]) +
-                            ["-s", "My subject", "user1"])
+            ret = chat.main(
+                ([] if reuseThreads else ["-T"]) + ["-s", "My subject", "user1"]
+            )
 
             self.assertEqual(ret, 0)
             mocks.postToGChat.assert_called_once_with(
-                ANY, hook, TIMEOUT,
-                threadId=threadId if reuseThreads else None)
+                ANY, hook, TIMEOUT, threadId=threadId if reuseThreads else None
+            )
             if threadId == retThreadId:
                 self.assertEqual(mocks.threadCacheWrite.call_count, 0)
             else:
                 mocks.threadCacheWrite.assert_called_once_with(
-                    {hook: retThreadId, "anotherhook": "x"})
+                    {hook: retThreadId, "anotherhook": "x"}
+                )
 
         _runTest(threadId, True)
         _runTest("a new thread", True)
@@ -227,8 +249,9 @@ class ChatTest(TestCase):
             ret = chat.main(["-s", "My subject"] + users)
 
             self.assertEqual(ret, 0)
-            mocks.postToGChat.assert_called_once_with(ANY, hook, TIMEOUT,
-                                                      threadId=None)
+            mocks.postToGChat.assert_called_once_with(
+                ANY, hook, TIMEOUT, threadId=None
+            )
             pattern = r"\*My subject\*"
             tags = []
             if expectAtAll:

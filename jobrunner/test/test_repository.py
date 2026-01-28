@@ -2,11 +2,11 @@
 Tests for repository layer.
 """
 
-from collections.abc import Iterable
-from datetime import datetime, timedelta
 import os
 import tempfile
 import unittest
+from collections.abc import Iterable
+from datetime import datetime, timedelta
 
 from dateutil.tz import tzutc
 
@@ -78,10 +78,18 @@ class TestSqliteJobRepository(unittest.TestCase):
         now = datetime.now(tzutc())
 
         job1 = Job(key="job1", uidx=1, status=JobStatus.RUNNING, create_time=now)
-        job2 = Job(key="job2", uidx=2, status=JobStatus.COMPLETED,
-                   create_time=now + timedelta(seconds=1))
-        job3 = Job(key="job3", uidx=3, status=JobStatus.PENDING,
-                   create_time=now + timedelta(seconds=2))
+        job2 = Job(
+            key="job2",
+            uidx=2,
+            status=JobStatus.COMPLETED,
+            create_time=now + timedelta(seconds=1),
+        )
+        job3 = Job(
+            key="job3",
+            uidx=3,
+            status=JobStatus.PENDING,
+            create_time=now + timedelta(seconds=2),
+        )
 
         self.repo.save(job1)
         self.repo.save(job2)
@@ -202,7 +210,8 @@ class TestSqliteJobRepository(unittest.TestCase):
         self.assertEqual(self.repo.count(JobStatus.COMPLETED), 1)
 
     def assertMatchingJobs(
-            self, expected: Iterable[str], matches: Iterable[Job]) -> None:
+        self, expected: Iterable[str], matches: Iterable[Job]
+    ) -> None:
         self.assertEqual(expected, [job.key for job in matches])
 
     def test_find_matching(self):
@@ -341,9 +350,7 @@ class TestSqliteJobRepositorySequences(unittest.TestCase):
     def test_add_sequence_step_and_is_sequence(self):
         """Test adding sequence step and checking existence."""
         step_num = self.repo.add_sequence_step(
-            name="test_seq",
-            job_key="job1",
-            dependencies=[]
+            name="test_seq", job_key="job1", dependencies=[]
         )
 
         self.assertEqual(0, step_num)
@@ -356,9 +363,7 @@ class TestSqliteJobRepositorySequences(unittest.TestCase):
 
         # Add second step with dependencies
         step_num = self.repo.add_sequence_step(
-            "seq",
-            "job2",
-            [(0, DEP_TYPE_SUCCESS)]
+            "seq", "job2", [(0, DEP_TYPE_SUCCESS)]
         )
 
         self.assertEqual(1, step_num)

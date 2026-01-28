@@ -7,12 +7,12 @@ logic for creating, starting, stopping, and querying jobs.
 
 from __future__ import annotations
 
-from datetime import datetime
-from hashlib import md5
 import logging
 import os
 import posixpath
 import tempfile
+from datetime import datetime
+from hashlib import md5
 from typing import List, Optional, Tuple
 
 from jobrunner.config import Config
@@ -117,7 +117,7 @@ class JobService:
             if not key:
                 key_source = cmd[0] if cmd else reminder
                 assert key_source is not None
-                key = f'{utcNow().strftime("%s")}{uidx}_{keyEscape(key_source)}'
+                key = f"{utcNow().strftime('%s')}{uidx}_{keyEscape(key_source)}"
 
             # Create job
             job = Job(
@@ -538,7 +538,8 @@ class JobService:
                         LOG.debug("Removed logfile %s", job.logfile)
                     except OSError as e:
                         LOG.warning(
-                            "Failed to remove logfile %s: %s", job.logfile, e)
+                            "Failed to remove logfile %s: %s", job.logfile, e
+                        )
 
                 # Delete job
                 self.repo.delete(job.key)

@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-from . import service
 from ..db import JobInfo
 from ..db.repository_adapter import RepositoryAdapter
+from . import service
 
 
 def registerServices(testing: bool = False) -> None:
