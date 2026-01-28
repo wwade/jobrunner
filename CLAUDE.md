@@ -203,8 +203,25 @@ class TestSqliteJobRepository(unittest.TestCase):
 
 **Profiling:**
 - Set `JOBRUNNER_PROFILE=1` environment variable to enable performance profiling
-- Outputs timing checkpoints to measure startup and query performance
-- Useful for identifying performance bottlenecks in database operations
+- Provides dual-layer timing instrumentation:
+  - **Startup timing**: Application initialization phases (plugins, config, database init, lock acquisition)
+  - **Database method timing**: High-level repository operations (find_active, find_completed, get_many, etc.)
+  - **SQL execution timing**: Individual SQL query execution time
+- Output locations:
+  - Early startup: stderr (before logging is initialized)
+  - After logging setup: `~/.local/share/jobDb/log/jobrunner-debug` (requires `--debug` flag)
+- Format: `TIMING: {label}: +{delta}ms (total: {total}ms)` where delta is time since last checkpoint
+- Useful for:
+  - Identifying performance bottlenecks in database operations
+  - Distinguishing SQL execution time from Python overhead (object conversion, iteration)
+  - Measuring impact of query optimizations
+  - Understanding application startup performance
+- Implementation details:
+  - Zero overhead when `JOBRUNNER_PROFILE` not set (checked at module import time)
+  - Uses `@timing.timed_function` decorator on repository methods
+  - Uses `timing.timed_section()` context manager for SQL execution
+  - See `jobrunner/timing.py` for profiling infrastructure
+  - See `jobrunner/repository/sqlite_repository.py` for database query instrumentation
 
 **Database Access:**
 - Always access via service registry: `service().db.jobs(config, plugins)`
