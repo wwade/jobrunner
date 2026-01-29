@@ -1,14 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
+from contextlib import contextmanager
 import logging
 import os
 import re
-import time
-from contextlib import contextmanager
 from shlex import quote
 from shutil import rmtree
 from subprocess import STDOUT, CalledProcessError, check_call, check_output
 from tempfile import mkdtemp
+import time
 
 import pexpect
 

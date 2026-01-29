@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
+from functools import cmp_to_key
+from hashlib import md5
 import json
 import logging
 import os
@@ -9,9 +12,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime
-from functools import cmp_to_key
-from hashlib import md5
 from typing import Optional, Tuple
 from uuid import uuid4
 

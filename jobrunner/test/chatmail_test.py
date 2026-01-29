@@ -3,9 +3,9 @@ from __future__ import absolute_import, division, print_function
 import re
 from unittest import TestCase
 
+from mock import ANY, MagicMock, call, patch
 import requests
 import six
-from mock import ANY, MagicMock, call, patch
 
 from jobrunner.config import CHATMAIL_AT_ALL
 from jobrunner.mail import chat

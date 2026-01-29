@@ -7,11 +7,11 @@ SQLite with a proper relational schema and indices for performance.
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
 import logging
 import os
 import sqlite3
-from datetime import datetime
 from typing import List, Optional, Tuple
 
 from jobrunner import timing

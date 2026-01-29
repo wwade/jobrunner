@@ -92,6 +92,10 @@ ignore = [
     "PLW2901",  # redefined-loop-name
 ]
 
+[tool.ruff.lint.isort]
+# Group imports by module name, not by import type (import vs from)
+force-sort-within-sections = true
+
 [tool.ruff.lint.per-file-ignores]
 "jobrunner/compat.py" = ["E", "W", "F"]  # Exempt compat.py like before
 

@@ -3,8 +3,8 @@ from __future__ import absolute_import, division, print_function
 import logging
 import os
 import re
-import sys
 from subprocess import CalledProcessError, check_output
+import sys
 from unittest import TestCase
 
 from pytest import mark

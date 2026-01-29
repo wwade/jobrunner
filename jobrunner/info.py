@@ -1,9 +1,9 @@
 import errno
-import os
-import string
 from functools import total_ordering
 from logging import getLogger
+import os
 from shlex import quote
+import string
 from typing import Any, Iterable, List, Optional, Sized
 
 import dateutil.tz

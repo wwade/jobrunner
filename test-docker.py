@@ -2,13 +2,13 @@
 
 import argparse
 import contextlib
+from dataclasses import dataclass
 import os
 import os.path
 import re
+from shlex import quote
 import subprocess
 import sys
-from dataclasses import dataclass
-from shlex import quote
 from typing import Iterable, List, Tuple
 
 
