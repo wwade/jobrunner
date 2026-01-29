@@ -457,8 +457,15 @@ class JobsBase(object):
             return
 
         # Pre-fetch all jobs to avoid N+1 queries when walking dependency trees
-        # Reuse cache from filterJobs to avoid duplicate repository calls
-        job_cache = {job.key: job for job in db.values(cache=cache)}
+        # When filters are active, use the filtered jobList to avoid a second query
+        # Otherwise, use db.values() to load all jobs for dependency resolution
+        if filterWs or filterPane or useCp:
+            # Build cache from already-filtered jobs to avoid second query
+            job_cache = {job.key: job for job in jobList}
+        else:
+            # No filters: load all jobs for complete dependency tree resolution
+            # Reuse cache from filterJobs to avoid duplicate repository calls
+            job_cache = {job.key: job for job in db.values(cache=cache)}
 
         hasDeps = False
         for job in jobList:
