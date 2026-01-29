@@ -23,7 +23,7 @@ from jobrunner.repository import SqliteJobRepository
 from jobrunner.service import service
 from jobrunner.utils import dateTimeFromJson, dateTimeToJson, workspaceIdentity
 
-from . import DatabaseBase, JobsBase, getLogParentDir
+from . import DatabaseBase, JobsBase, NoMatchingJobError, getLogParentDir
 
 
 class FakeDatabase(DatabaseBase):
@@ -296,6 +296,63 @@ class RepositoryAdapter(JobsBase):
 
         # Convert to JobInfo objects
         return [job_to_jobinfo(job, parent=self) for job in jobs]
+
+    def getJobMatch(self, key, thisWs, skipReminders=False):
+        """
+        Get a job by key or pattern.
+
+        This overrides the parent class implementation to use efficient
+        SQL queries instead of loading all jobs when key is None.
+
+        Args:
+            key: Job key, pattern, or None for most recent job
+            thisWs: If True, filter by current workspace
+            skipReminders: If True, exclude reminder jobs
+
+        Returns:
+            JobInfo object for the matching job
+
+        Raises:
+            NoMatchingJobError: If no job matches the criteria
+        """
+        # Fast path for key is None: use optimized find_latest
+        if key is None:
+            workspace = workspaceIdentity() if thisWs else None
+
+            # Try to find most recent non-completed, non-reminder job
+            job = self._repo.find_latest(
+                exclude_completed=True,
+                workspace=workspace,
+                skip_reminders=skipReminders,
+                skip_mail_jobs=True,
+            )
+            if job:
+                return job_to_jobinfo(job, parent=self)
+
+            # Try completed jobs with same filters
+            job = self._repo.find_latest(
+                exclude_completed=False,
+                workspace=workspace,
+                skip_reminders=skipReminders,
+                skip_mail_jobs=True,
+            )
+            if job and job.status == JobStatus.COMPLETED:
+                return job_to_jobinfo(job, parent=self)
+
+            # Try completed jobs without reminder filter
+            job = self._repo.find_latest(
+                exclude_completed=False,
+                workspace=workspace,
+                skip_reminders=False,
+                skip_mail_jobs=True,
+            )
+            if job and job.status == JobStatus.COMPLETED:
+                return job_to_jobinfo(job, parent=self)
+
+            raise NoMatchingJobError("Job database is empty")
+
+        # Fall back to parent implementation for other cases (key matching, etc.)
+        return super().getJobMatch(key, thisWs, skipReminders)
 
     def getDbSorted(
         self,

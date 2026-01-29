@@ -150,6 +150,56 @@ class TestSqliteJobRepository(unittest.TestCase):
         self.assertEqual(ws1_jobs[0].key, "job1")
         self.assertEqual(ws1_jobs[1].key, "job3")
 
+    def test_find_latest(self):
+        """Test finding most recent job."""
+        now = datetime.now(tzutc())
+
+        job1 = Job(
+            key="job1",
+            uidx=1,
+            status=JobStatus.COMPLETED,
+            create_time=now,
+        )
+        job2 = Job(
+            key="job2",
+            uidx=2,
+            status=JobStatus.RUNNING,
+            create_time=now + timedelta(seconds=1),
+            mail_job=False,
+        )
+        job3 = Job(
+            key="job3",
+            uidx=3,
+            status=JobStatus.PENDING,
+            create_time=now + timedelta(seconds=2),
+            reminder="test reminder",
+        )
+
+        self.repo.save(job1)
+        self.repo.save(job2)
+        self.repo.save(job3)
+
+        # Test finding latest active job
+        latest = self.repo.find_latest(exclude_completed=True)
+        self.assertIsNotNone(latest)
+        # job3 is most recent active, but let's test without skip_reminders
+        # so it should return job3
+        self.assertEqual(latest.key, "job3")
+
+        # Test finding latest active job, skipping reminders
+        latest = self.repo.find_latest(exclude_completed=True, skip_reminders=True)
+        self.assertIsNotNone(latest)
+        self.assertEqual(latest.key, "job2")
+
+        # Test finding latest job overall (including completed)
+        latest = self.repo.find_latest(exclude_completed=False)
+        self.assertIsNotNone(latest)
+        self.assertEqual(latest.key, "job3")
+
+        # Test finding latest with workspace filter
+        latest = self.repo.find_latest(workspace="/nonexistent")
+        self.assertIsNone(latest)
+
     def test_search_by_command(self):
         """Test searching by command."""
         job1 = Job(key="job1", uidx=1, cmd=["echo", "hello"])

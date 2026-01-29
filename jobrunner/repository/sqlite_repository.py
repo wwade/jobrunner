@@ -484,6 +484,65 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     @timing.timed_function
+    def find_latest(
+        self,
+        exclude_completed: bool = False,
+        workspace: Optional[str] = None,
+        skip_reminders: bool = False,
+        skip_mail_jobs: bool = False,
+    ) -> Optional[Job]:
+        """
+        Find the most recent job matching criteria.
+
+        This is optimized to use SQL LIMIT 1 instead of loading all jobs.
+
+        Args:
+            exclude_completed: If True, only search non-completed jobs
+            workspace: Optional workspace filter
+            skip_reminders: If True, exclude reminder jobs
+            skip_mail_jobs: If True, exclude mail jobs
+
+        Returns:
+            Most recent Job matching criteria, or None if no matches
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        query = "SELECT * FROM jobs WHERE 1=1"
+        params = []
+
+        if exclude_completed:
+            # Use IN instead of != for better index usage
+            query += " AND status IN (?, ?, ?)"
+            params.extend(
+                [
+                    JobStatus.PENDING.value,
+                    JobStatus.BLOCKED.value,
+                    JobStatus.RUNNING.value,
+                ]
+            )
+
+        if workspace is not None:
+            query += " AND workspace = ?"
+            params.append(workspace)
+
+        if skip_reminders:
+            query += " AND (reminder IS NULL OR reminder = '')"
+
+        if skip_mail_jobs:
+            query += " AND mail_job = 0"
+
+        query += " ORDER BY create_time DESC LIMIT 1"
+
+        self._execute(cursor, query, params)
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return self._row_to_job(row)
+
+    @timing.timed_function
     def get_keys(
         self,
         status: Optional[JobStatus] = None,
