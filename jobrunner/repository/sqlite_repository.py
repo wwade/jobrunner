@@ -22,7 +22,7 @@ from .interface import JobRepository, Metadata
 LOG = logging.getLogger(__name__)
 
 # Schema version for this implementation
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 
 
 class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-methods
@@ -147,6 +147,11 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             cursor,
             "CREATE INDEX IF NOT EXISTS idx_jobs_status_create "
             "ON jobs(status, create_time)",
+        )
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_status_stop "
+            "ON jobs(status, stop_time)",
         )
 
         # Metadata table
@@ -324,6 +329,58 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             persist_key_generated=row["persist_key_generated"],
         )
 
+    def _row_to_job_minimal(self, row: sqlite3.Row) -> Job:
+        """
+        Convert database row to minimal Job object for listing.
+
+        This skips expensive JSON parsing for fields not needed when displaying
+        jobs (args_json, env_json, depends_on_json) and sets other unused
+        fields to default values.
+
+        Used by find_completed(for_listing=True) to optimize job -L performance.
+        """
+        return Job(
+            key=row["key"],
+            uidx=row["uidx"],
+            prog=None,  # Not needed for listing
+            args=None,  # Not needed (cmd is sufficient)
+            cmd=json.loads(row["cmd_json"]) if row["cmd_json"] else None,
+            reminder=row["reminder"],
+            pwd=None,  # Not needed for listing
+            create_time=(
+                datetime.fromisoformat(row["create_time"])
+                if row["create_time"]
+                else None
+            ),
+            start_time=(
+                datetime.fromisoformat(row["start_time"])
+                if row["start_time"]
+                else None
+            ),
+            stop_time=(
+                datetime.fromisoformat(row["stop_time"])
+                if row["stop_time"]
+                else None
+            ),
+            status=JobStatus(row["status"]),
+            rc=row["rc"],
+            pid=None,  # Not needed for listing
+            blocked=False,  # Not needed for listing
+            workspace=None,  # Not needed for listing
+            project=None,  # Not needed for listing
+            host=None,  # Not needed for listing
+            user=None,  # Not needed for listing
+            env={},  # Skip expensive JSON parse
+            depends_on=[],  # Skip expensive JSON parse
+            all_deps=set(),  # Skip expensive JSON parse
+            logfile=None,  # Not needed for listing
+            auto_job=False,  # Not needed for listing
+            mail_job=False,  # Not needed for listing
+            isolate=False,  # Not needed for listing
+            persist_key=None,  # Not needed for listing
+            persist_key_generated=None,  # Not needed for listing
+        )
+
     @timing.timed_function
     def save(self, job: Job) -> None:
         """Save or update a job."""
@@ -462,12 +519,34 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self,
         workspace: Optional[str] = None,
         limit: Optional[int] = None,
+        for_listing: bool = False,
     ) -> List[Job]:
-        """Get completed jobs."""
+        """
+        Get completed jobs.
+
+        Args:
+            workspace: Filter by workspace (None = all workspaces)
+            limit: Maximum number of results (None = no limit)
+            for_listing: If True, only fetch fields needed for display
+                        (optimized for job -L performance)
+
+        Returns:
+            List of completed jobs, sorted by stop_time descending
+        """
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        query = "SELECT * FROM jobs WHERE status = ?"
+        # When listing, only select columns needed for display to avoid
+        # expensive JSON parsing of args_json, env_json, depends_on_json
+        if for_listing:
+            query = """
+                SELECT key, uidx, create_time, start_time, stop_time,
+                       status, rc, cmd_json, reminder
+                FROM jobs WHERE status = ?
+            """
+        else:
+            query = "SELECT * FROM jobs WHERE status = ?"
+
         params = [JobStatus.COMPLETED.value]
 
         if workspace is not None:
@@ -481,6 +560,10 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             params.append(limit)
 
         self._execute(cursor, query, params)
+
+        # Use minimal conversion when listing to skip expensive JSON parsing
+        if for_listing:
+            return [self._row_to_job_minimal(row) for row in cursor.fetchall()]
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     @timing.timed_function

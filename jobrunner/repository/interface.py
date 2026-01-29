@@ -116,6 +116,7 @@ class JobRepository(ABC):
         self,
         workspace: Optional[str] = None,
         limit: Optional[int] = None,
+        for_listing: bool = False,
     ) -> List[Job]:
         """
         Get completed jobs.
@@ -123,6 +124,8 @@ class JobRepository(ABC):
         Args:
             workspace: Filter by workspace (None = all workspaces)
             limit: Maximum number of results (None = no limit)
+            for_listing: If True, only fetch fields needed for display
+                        (optimized for job -L performance)
 
         Returns:
             List of completed jobs, sorted by stop_time descending

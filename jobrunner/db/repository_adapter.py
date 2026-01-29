@@ -14,6 +14,7 @@ import json
 import os
 import posixpath
 import tempfile
+from typing import Optional
 
 from jobrunner.adapters.job_converter import job_to_jobinfo, jobinfo_to_job
 from jobrunner.config import Config
@@ -23,7 +24,13 @@ from jobrunner.repository import SqliteJobRepository
 from jobrunner.service import service
 from jobrunner.utils import dateTimeFromJson, dateTimeToJson, workspaceIdentity
 
-from . import DatabaseBase, JobsBase, NoMatchingJobError, getLogParentDir
+from . import (
+    DatabaseBase,
+    JobsBase,
+    NoMatchingJobError,
+    ValuesCache,
+    getLogParentDir,
+)
 
 
 class FakeDatabase(DatabaseBase):
@@ -179,14 +186,34 @@ class FakeDatabase(DatabaseBase):
         special_count = len(self.special)
         return job_count + (special_count - 1)
 
-    def values(self):
-        """Return all JobInfo objects (bulk fetch to avoid N+1 queries)."""
+    def values(self, cache: Optional[ValuesCache] = None):
+        """
+        Return all JobInfo objects (bulk fetch to avoid N+1 queries).
+
+        Args:
+            cache: Optional ValuesCache for caching results within a single
+                   operation. If provided and has cached values, returns cached
+                   result. Otherwise queries repository and stores result in cache.
+        """
+        # Use provided cache if available
+        if cache is not None and cache.values is not None:
+            return cache.values
+
         repo: SqliteJobRepository = self._parent._repo
         if self._status_filter == JobStatus.COMPLETED:
-            jobs = repo.find_completed()
+            # Use for_listing=True to optimize performance by skipping
+            # expensive JSON parsing of args_json, env_json, depends_on_json
+            jobs = repo.find_completed(for_listing=True)
         else:
             jobs = repo.find_active()
-        return [job_to_jobinfo(job, parent=self._parent) for job in jobs]
+
+        result = [job_to_jobinfo(job, parent=self._parent) for job in jobs]
+
+        # Store in cache if provided
+        if cache is not None:
+            cache.values = result
+
+        return result
 
 
 class RepositoryAdapter(JobsBase):
@@ -360,6 +387,7 @@ class RepositoryAdapter(JobsBase):
         _limit: int | None = None,
         useCp: bool = False,
         filterWs: bool = False,
+        cache: Optional[ValuesCache] = None,
     ) -> list[JobInfo]:
         """
         Get sorted list of jobs from database with optional filters.
@@ -376,6 +404,7 @@ class RepositoryAdapter(JobsBase):
             _limit: Optional limit on number of results
             useCp: If True, filter by checkpoint time
             filterWs: If True, filter by current workspace
+            cache: Optional ValuesCache for caching db.values() within operation
 
         Returns:
             List of JobInfo objects sorted by creation time
@@ -391,27 +420,50 @@ class RepositoryAdapter(JobsBase):
             metadata = self._repo.get_metadata()
             since = metadata.checkpoint
 
-        # Determine status filter based on which database we're querying
-        # The "active" database contains all non-completed jobs
-        # The "inactive" database contains completed jobs
-        status = None if db.ident == "active" else JobStatus.COMPLETED
+        # Optimize: if no filters, use db.values() with cache to avoid
+        # duplicate repository calls within the same operation
+        if not workspace and not since and not _limit:
+            # Use cached values() - this avoids duplicate queries when listDb
+            # calls both getDbSorted() and db.values() for dependency tree
+            job_infos = list(db.values(cache=cache))
+        elif db.ident == "active":
+            if since:
+                # Use find_all when checkpoint filter is needed
+                jobs = self._repo.find_all(
+                    status=None, workspace=workspace, since=since, limit=_limit
+                )
+                # Exclude completed jobs
+                jobs = [job for job in jobs if job.status != JobStatus.COMPLETED]
+            else:
+                # Use find_active for better performance (filters at SQL level)
+                jobs = self._repo.find_active(workspace=workspace)
+                # Apply limit if needed
+                if _limit and len(jobs) > _limit:
+                    jobs = jobs[:_limit]
+            # Convert to JobInfo objects
+            job_infos = [job_to_jobinfo(job, parent=self) for job in jobs]
+        else:
+            if since:
+                # Use find_all when checkpoint filter is needed
+                jobs = self._repo.find_all(
+                    status=JobStatus.COMPLETED,
+                    workspace=workspace,
+                    since=since,
+                    limit=_limit,
+                )
+            else:
+                # Use find_completed for better performance
+                # for_listing=True optimizes for display by skipping expensive
+                # JSON parsing of args_json, env_json, depends_on_json
+                jobs = self._repo.find_completed(
+                    workspace=workspace, limit=_limit, for_listing=True
+                )
+            # Convert to JobInfo objects
+            job_infos = [job_to_jobinfo(job, parent=self) for job in jobs]
 
-        # Use find_all which efficiently filters at the SQL level with indices
-        jobs = self._repo.find_all(
-            status=status, workspace=workspace, since=since, limit=_limit
-        )
-
-        # For active jobs, we need to exclude completed ones
-        # (status=None in find_all means all statuses)
-        if db.ident == "active":
-            jobs = [job for job in jobs if job.status != JobStatus.COMPLETED]
-
-        # Convert to JobInfo objects
-        job_infos = [job_to_jobinfo(job, parent=self) for job in jobs]
-
-        # Already sorted by create_time in SQL query, but ensure ascending order
+        # Already sorted by create_time in SQL query for active jobs
+        # For completed jobs, sorted by stop_time DESC, so re-sort by create_time
         # to match parent behavior (parent does jobList.sort(reverse=False))
-        # The SQL query already orders by create_time ascending, so this is a no-op
         job_infos.sort(reverse=False)
 
         return job_infos
