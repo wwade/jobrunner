@@ -26,6 +26,20 @@ poetry install --all-extras
 poetry run ./format.sh
 ```
 
+### Benchmarking Performance Improvements
+
+When validating performance improvements, `hyperfine` is very useful.
+
+1. Install the original code in a virtualenv e.g. `/tmp/baseline`
+2. Install the updated code in a virtualenv e.g. `/tmp/newversion`
+3. Run `hyperfine` to compare:
+
+    hyperfine -w10 "/tmp/baseline/bin/job <ARGS>" "/tmp/newversion/bin/job <ARGS>"
+
+Example:
+
+    hyperfine -w10 "/tmp/baseline/bin/job --list-keys" "/tmp/newversion/bin/job --list-keys"
+
 ### Running Tests
 
 **Recommended: Full test suite (like CI)**
