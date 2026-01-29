@@ -330,9 +330,10 @@ class RepositoryAdapter(JobsBase):
 
         This overrides the parent class implementation to use efficient
         SQL queries instead of loading all jobs when key is None.
+        Also handles exact key matches efficiently to avoid duplicate queries.
 
         Args:
-            key: Job key, pattern, or None for most recent job
+            key: Job key, pattern, ".", or None for most recent job
             thisWs: If True, filter by current workspace
             skipReminders: If True, exclude reminder jobs
 
@@ -342,6 +343,23 @@ class RepositoryAdapter(JobsBase):
         Raises:
             NoMatchingJobError: If no job matches the criteria
         """
+        # Handle "." alias - get last job from metadata
+        if key == ".":
+            metadata = self._repo.get_metadata()
+            lastJob = metadata.last_job
+            if lastJob:
+                return self.getJobMatch(lastJob, thisWs, skipReminders)
+
+        # Fast path for exact key match - query database once
+        if key is not None and key != ".":
+            job = self._repo.get(key)
+            if job is not None:
+                # Found exact match - verify it passes filters
+                if skipReminders and job.reminder:
+                    pass  # Fall through to search logic
+                else:
+                    return job_to_jobinfo(job, parent=self)
+
         # Fast path for key is None: use optimized find_latest
         if key is None:
             workspace = workspaceIdentity() if thisWs else None
