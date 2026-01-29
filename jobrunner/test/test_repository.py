@@ -134,6 +134,112 @@ class TestSqliteJobRepository(unittest.TestCase):
         self.assertEqual(completed[0].key, "cjob3")
         self.assertEqual(completed[1].key, "cjob1")
 
+    def test_find_completed_for_listing(self):
+        """Test finding completed jobs with for_listing=True optimization."""
+        now = datetime.now(tzutc())
+
+        # Create a job with all fields populated
+        full_job = Job(
+            key="full_job",
+            uidx=1,
+            prog="echo",
+            args=["hello", "world"],
+            cmd=["echo", "hello", "world"],
+            reminder="test reminder",
+            pwd="/home/user",
+            create_time=now,
+            start_time=now + timedelta(seconds=1),
+            stop_time=now + timedelta(seconds=2),
+            status=JobStatus.COMPLETED,
+            rc=0,
+            pid=12345,
+            blocked=False,
+            workspace="/ws1",
+            project="test_project",
+            host="localhost",
+            user="testuser",
+            env={"PATH": "/usr/bin", "HOME": "/home/user"},
+            depends_on=["job1", "job2"],
+            logfile="/tmp/log.txt",
+            auto_job=True,
+            mail_job=False,
+            isolate=True,
+            persist_key="persist1",
+            persist_key_generated=False,
+        )
+
+        self.repo.save(full_job)
+
+        # Test for_listing=True returns minimal fields
+        listing_jobs = self.repo.find_completed(for_listing=True)
+        self.assertEqual(len(listing_jobs), 1)
+        listing_job = listing_jobs[0]
+
+        # Essential fields should be populated
+        self.assertEqual(listing_job.key, "full_job")
+        self.assertEqual(listing_job.uidx, 1)
+        self.assertEqual(listing_job.cmd, ["echo", "hello", "world"])
+        self.assertEqual(listing_job.reminder, "test reminder")
+        self.assertEqual(listing_job.create_time, now)
+        self.assertEqual(listing_job.start_time, now + timedelta(seconds=1))
+        self.assertEqual(listing_job.stop_time, now + timedelta(seconds=2))
+        self.assertEqual(listing_job.status, JobStatus.COMPLETED)
+        self.assertEqual(listing_job.rc, 0)
+
+        # Non-essential fields should be None/empty (optimization)
+        self.assertIsNone(listing_job.prog)
+        self.assertIsNone(listing_job.args)
+        self.assertIsNone(listing_job.pwd)
+        self.assertIsNone(listing_job.pid)
+        self.assertFalse(listing_job.blocked)
+        self.assertIsNone(listing_job.workspace)
+        self.assertIsNone(listing_job.project)
+        self.assertIsNone(listing_job.host)
+        self.assertIsNone(listing_job.user)
+        self.assertEqual(listing_job.env, {})
+        self.assertEqual(listing_job.depends_on, [])
+        self.assertEqual(listing_job.all_deps, set())
+        self.assertIsNone(listing_job.logfile)
+        self.assertFalse(listing_job.auto_job)
+        self.assertFalse(listing_job.mail_job)
+        self.assertFalse(listing_job.isolate)
+        self.assertIsNone(listing_job.persist_key)
+        # persist_key_generated is set by __post_init__ to persist_key or key
+        self.assertEqual(listing_job.persist_key_generated, "full_job")
+
+        # Test for_listing=False returns complete fields
+        complete_jobs = self.repo.find_completed(for_listing=False)
+        self.assertEqual(len(complete_jobs), 1)
+        complete_job = complete_jobs[0]
+
+        # All fields should be populated
+        self.assertEqual(complete_job.key, "full_job")
+        self.assertEqual(complete_job.prog, "echo")
+        self.assertEqual(complete_job.args, ["hello", "world"])
+        self.assertEqual(complete_job.cmd, ["echo", "hello", "world"])
+        self.assertEqual(complete_job.pwd, "/home/user")
+        self.assertEqual(complete_job.workspace, "/ws1")
+        self.assertEqual(
+            complete_job.env, {"PATH": "/usr/bin", "HOME": "/home/user"}
+        )
+        self.assertEqual(complete_job.depends_on, ["job1", "job2"])
+        self.assertTrue(complete_job.auto_job)
+        self.assertTrue(complete_job.isolate)
+
+        # Test that both modes return the same job keys
+        job2 = Job(
+            key="job2",
+            uidx=2,
+            cmd=["ls"],
+            status=JobStatus.COMPLETED,
+            stop_time=now + timedelta(seconds=3),
+        )
+        self.repo.save(job2)
+
+        listing_keys = [j.key for j in self.repo.find_completed(for_listing=True)]
+        complete_keys = [j.key for j in self.repo.find_completed(for_listing=False)]
+        self.assertEqual(listing_keys, complete_keys)
+
     def test_find_by_workspace(self):
         """Test filtering by workspace."""
         job1 = Job(key="job1", uidx=1, workspace="/ws1")

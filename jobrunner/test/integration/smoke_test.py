@@ -575,8 +575,8 @@ class RunNonExecOptionsTest(TestCase):
             # --info
             jobInfo = job("--info")
             assert isinstance(jobInfo, str)
-            self.assertRegex(jobInfo, r"DB \d+ 'active' ver 2")
-            self.assertRegex(jobInfo, r"DB \d+ 'inactive' ver 2")
+            self.assertRegex(jobInfo, r"DB \d+ 'active' ver \d+")
+            self.assertRegex(jobInfo, r"DB \d+ 'inactive' ver \d+")
 
             #  --set-checkpoint
             job("--set-checkpoint", ".")

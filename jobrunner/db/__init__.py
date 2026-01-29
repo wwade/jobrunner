@@ -48,6 +48,18 @@ class NoMatchingJobError(Exception):
     pass
 
 
+class ValuesCache:
+    """
+    Cache for db.values() results within a single operation.
+
+    This avoids duplicate repository calls when both getDbSorted() and
+    dependency tree operations need the full list of jobs.
+    """
+
+    def __init__(self):
+        self.values: Optional[list[JobInfo]] = None
+
+
 class DatabaseMeta(object):
     # pylint: disable=too-many-instance-attributes
     SV = "_schemaVersion_"
@@ -310,6 +322,9 @@ class JobsBase(object):
         _limit: int | None = None,
         useCp=False,
         filterWs=False,
+        cache: Optional[
+            ValuesCache
+        ] = None,  # Unused in base class, used by RepositoryAdapter override
     ) -> list[JobInfo]:
         cpUtc = None
         if useCp:
@@ -384,8 +399,16 @@ class JobsBase(object):
     def printDepTree(self, db, depends, job_cache=None):
         self.walkDepTree(self.printDepJob, db, depends, 1, job_cache=job_cache)
 
-    def filterJobs(self, db, limit, filterWs=False, filterPane=False, useCp=False):
-        jobList = self.getDbSorted(db, limit, useCp, filterWs)
+    def filterJobs(
+        self,
+        db,
+        limit,
+        filterWs=False,
+        filterPane=False,
+        useCp=False,
+        cache: Optional[ValuesCache] = None,
+    ):
+        jobList = self.getDbSorted(db, limit, useCp, filterWs, cache=cache)
         if filterPane:
             curPane = os.getenv("TMUX_PANE", None)
             if curPane:
@@ -416,7 +439,12 @@ class JobsBase(object):
                 sprint(key)
             return
 
-        jobList = self.filterJobs(db, limit, filterWs, filterPane, useCp)
+        # Create cache scoped to this operation to avoid duplicate repository calls
+        cache = ValuesCache()
+
+        jobList = self.filterJobs(
+            db, limit, filterWs, filterPane, useCp, cache=cache
+        )
 
         # Skip dependency tree operations when only listing keys
         if keysOnly:
@@ -429,8 +457,8 @@ class JobsBase(object):
             return
 
         # Pre-fetch all jobs to avoid N+1 queries when walking dependency trees
-        # This creates a local cache for this operation only
-        job_cache = {job.key: job for job in db.values()}
+        # Reuse cache from filterJobs to avoid duplicate repository calls
+        job_cache = {job.key: job for job in db.values(cache=cache)}
 
         hasDeps = False
         for job in jobList:
