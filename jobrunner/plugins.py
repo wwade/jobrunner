@@ -25,11 +25,11 @@ plugin at a possibly lower priority will get called instead.
 
 import importlib
 import logging
+from operator import attrgetter
 import pkgutil
 import socket
-import warnings
-from operator import attrgetter
 from typing import Tuple
+import warnings
 
 import jobrunner.plugin
 

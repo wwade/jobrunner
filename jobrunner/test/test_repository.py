@@ -2,11 +2,11 @@
 Tests for repository layer.
 """
 
+from collections.abc import Iterable
+from datetime import datetime, timedelta
 import os
 import tempfile
 import unittest
-from collections.abc import Iterable
-from datetime import datetime, timedelta
 
 from dateutil.tz import tzutc
 

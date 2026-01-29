@@ -1,4 +1,5 @@
 import collections
+from contextlib import contextmanager
 import datetime
 import errno
 import fcntl
@@ -9,7 +10,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import contextmanager
 from typing import Optional
 
 import chardet

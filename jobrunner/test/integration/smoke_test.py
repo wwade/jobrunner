@@ -1,17 +1,17 @@
 import json
-import os
-import re
-import time
 from json import load
 from logging import getLogger
+import os
+import re
 from shlex import quote
 from subprocess import CalledProcessError, check_call
 from tempfile import NamedTemporaryFile
+import time
 from unittest import TestCase
 
+from pexpect import EOF
 import pytest
 import six
-from pexpect import EOF
 
 from jobrunner.utils import autoDecode
 

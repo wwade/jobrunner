@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
+from contextlib import contextmanager
 import os
 import sys
-from contextlib import contextmanager
 
 from six.moves import StringIO
 

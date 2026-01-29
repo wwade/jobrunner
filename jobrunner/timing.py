@@ -1,11 +1,11 @@
 """Simple startup timing profiler for jobrunner."""
 
 # pylint: disable=global-statement
+from contextlib import contextmanager
+from functools import wraps
 import os
 import sys
 import time
-from contextlib import contextmanager
-from functools import wraps
 from typing import List, Optional, Tuple
 
 import jobrunner.logging

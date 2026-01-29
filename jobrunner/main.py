@@ -3,9 +3,6 @@ import argparse
 import errno
 import hashlib
 import os
-import sys
-import tempfile
-import time
 from os.path import expanduser
 from subprocess import (
     DEVNULL,
@@ -15,6 +12,9 @@ from subprocess import (
     check_call,
     check_output,
 )
+import sys
+import tempfile
+import time
 from typing import IO, List, Optional, Tuple
 
 import dateutil.tz

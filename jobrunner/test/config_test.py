@@ -4,8 +4,8 @@ import os
 import tempfile
 import unittest
 
-import six
 from mock import MagicMock, patch
+import six
 
 from jobrunner import config
 

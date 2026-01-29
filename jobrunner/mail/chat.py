@@ -3,10 +3,10 @@
 from __future__ import absolute_import, print_function
 
 import argparse
+from collections import defaultdict
 import json
 import os
 import sys
-from collections import defaultdict
 
 import requests
 import six

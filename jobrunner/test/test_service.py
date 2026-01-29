@@ -2,11 +2,11 @@
 Tests for service layer.
 """
 
+from argparse import Namespace
 import os
 import shutil
 import tempfile
 import unittest
-from argparse import Namespace
 from unittest import mock
 
 from jobrunner import plugins, utils

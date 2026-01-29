@@ -7,12 +7,12 @@ logic for creating, starting, stopping, and querying jobs.
 
 from __future__ import annotations
 
+from datetime import datetime
+from hashlib import md5
 import logging
 import os
 import posixpath
 import tempfile
-from datetime import datetime
-from hashlib import md5
 from typing import List, Optional, Tuple
 
 from jobrunner.config import Config

@@ -1,9 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
 import json
+from logging import getLogger
 import os
 import unittest
-from logging import getLogger
 
 import mock
 import six
