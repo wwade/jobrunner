@@ -192,6 +192,7 @@ class TestSqliteJobRepository(unittest.TestCase):
         self.assertIsNone(listing_job.pwd)
         self.assertIsNone(listing_job.pid)
         self.assertFalse(listing_job.blocked)
+        # workspace not included in for_listing query (not needed for job -L)
         self.assertIsNone(listing_job.workspace)
         self.assertIsNone(listing_job.project)
         self.assertIsNone(listing_job.host)
@@ -305,6 +306,102 @@ class TestSqliteJobRepository(unittest.TestCase):
         # Test finding latest with workspace filter
         latest = self.repo.find_latest(workspace="/nonexistent")
         self.assertIsNone(latest)
+
+    def test_find_recent_activity(self):
+        """Test finding recent activity for activity window display."""
+        now = datetime.now(tzutc())
+
+        # Create jobs with various properties
+        old_job = Job(
+            key="old_job",
+            uidx=1,
+            status=JobStatus.COMPLETED,
+            stop_time=now - timedelta(hours=5),
+            workspace="/ws1",
+            rc=0,
+        )
+        recent_job_ws1 = Job(
+            key="recent_job_ws1",
+            uidx=2,
+            status=JobStatus.COMPLETED,
+            stop_time=now - timedelta(hours=1),
+            workspace="/ws1",
+            rc=0,
+        )
+        recent_job_ws2 = Job(
+            key="recent_job_ws2",
+            uidx=3,
+            status=JobStatus.COMPLETED,
+            stop_time=now - timedelta(minutes=30),
+            workspace="/ws2",
+            rc=1,
+        )
+        auto_job = Job(
+            key="auto_job",
+            uidx=4,
+            status=JobStatus.COMPLETED,
+            stop_time=now - timedelta(minutes=15),
+            workspace="/ws1",
+            auto_job=True,
+            rc=0,
+        )
+        reminder_job = Job(
+            key="reminder_job",
+            uidx=5,
+            status=JobStatus.COMPLETED,
+            stop_time=now - timedelta(minutes=10),
+            workspace="/ws1",
+            reminder="test reminder",
+            rc=0,
+        )
+        special_status_job = Job(
+            key="special_status",
+            uidx=6,
+            status=JobStatus.COMPLETED,
+            stop_time=now - timedelta(minutes=5),
+            workspace="/ws2",
+            rc=-1000,  # STOP_STOP
+        )
+
+        self.repo.save(old_job)
+        self.repo.save(recent_job_ws1)
+        self.repo.save(recent_job_ws2)
+        self.repo.save(auto_job)
+        self.repo.save(reminder_job)
+        self.repo.save(special_status_job)
+
+        # Test 3 hour window (default for job -a)
+        recent = self.repo.find_recent_activity(3.0)
+
+        # Should get 2 jobs: recent_job_ws1 and recent_job_ws2
+        # Excludes: old_job (>3h), auto_job (auto), reminder_job (reminder),
+        #           special_status_job (special status)
+        self.assertEqual(len(recent), 2)
+        keys = {j.key for j in recent}
+        self.assertEqual(keys, {"recent_job_ws1", "recent_job_ws2"})
+
+        # CRITICAL: Verify workspace is preserved (regression test)
+        for job in recent:
+            self.assertIsNotNone(
+                job.workspace, f"Job {job.key} should have workspace field populated"
+            )
+            if job.key == "recent_job_ws1":
+                self.assertEqual(job.workspace, "/ws1")
+            elif job.key == "recent_job_ws2":
+                self.assertEqual(job.workspace, "/ws2")
+
+        # Test smaller window
+        recent = self.repo.find_recent_activity(1.0)
+        self.assertEqual(len(recent), 1)
+        self.assertEqual(recent[0].key, "recent_job_ws2")
+        self.assertEqual(recent[0].workspace, "/ws2")
+
+        # Test larger window
+        recent = self.repo.find_recent_activity(6.0)
+        # Should include old_job now, but still exclude auto/reminder/special
+        self.assertEqual(len(recent), 3)
+        keys = {j.key for j in recent}
+        self.assertEqual(keys, {"old_job", "recent_job_ws1", "recent_job_ws2"})
 
     def test_search_by_command(self):
         """Test searching by command."""
