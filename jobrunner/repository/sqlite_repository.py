@@ -7,7 +7,7 @@ SQLite with a proper relational schema and indices for performance.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
 import os
@@ -366,7 +366,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             rc=row["rc"],
             pid=None,  # Not needed for listing
             blocked=False,  # Not needed for listing
-            workspace=None,  # Not needed for listing
+            workspace=(
+                row["workspace"] if "workspace" in row.keys() else None
+            ),  # Use if available (needed for -a)
             project=None,  # Not needed for listing
             host=None,  # Not needed for listing
             user=None,  # Not needed for listing
@@ -565,6 +567,55 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         if for_listing:
             return [self._row_to_job_minimal(row) for row in cursor.fetchall()]
         return [self._row_to_job(row) for row in cursor.fetchall()]
+
+    @timing.timed_function
+    def find_recent_activity(self, hours: float) -> List[Job]:
+        """
+        Find recently completed jobs for activity window display.
+
+        Optimized query that filters at SQL level for jobs suitable for
+        activity display (excludes auto jobs, special status, reminders).
+
+        Args:
+            hours: Time window in hours (e.g., 3.0 for last 3 hours)
+
+        Returns:
+            List of completed jobs within time window, sorted by stop_time desc
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        # Calculate cutoff time
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
+
+        # Select only needed columns for activity display
+        # Exclude auto jobs, jobs with reminders, and special status codes
+        query = """
+            SELECT key, uidx, create_time, start_time, stop_time,
+                   status, rc, cmd_json, reminder, workspace
+            FROM jobs
+            WHERE status = ?
+              AND stop_time IS NOT NULL
+              AND stop_time >= ?
+              AND auto_job = 0
+              AND (reminder IS NULL OR reminder = '')
+              AND rc NOT IN (?, ?, ?, ?)
+            ORDER BY stop_time DESC
+        """
+
+        params = [
+            JobStatus.COMPLETED.value,
+            cutoff.isoformat(),
+            -1000,  # STOP_STOP
+            -1001,  # STOP_ABORT
+            -1002,  # STOP_DONE
+            -1003,  # STOP_DEPFAIL
+        ]
+
+        self._execute(cursor, query, params)
+
+        # Use minimal conversion for activity display
+        return [self._row_to_job_minimal(row) for row in cursor.fetchall()]
 
     @timing.timed_function
     def find_latest(

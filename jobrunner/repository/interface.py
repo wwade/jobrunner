@@ -132,6 +132,21 @@ class JobRepository(ABC):
         """
 
     @abstractmethod
+    def find_recent_activity(self, hours: float) -> List[Job]:
+        """
+        Find recently completed jobs for activity window display.
+
+        Optimized query that filters at SQL level for jobs suitable for
+        activity display (excludes auto jobs, special status, reminders).
+
+        Args:
+            hours: Time window in hours (e.g., 3.0 for last 3 hours)
+
+        Returns:
+            List of completed jobs within time window, sorted by stop_time desc
+        """
+
+    @abstractmethod
     def search_by_command(
         self,
         query: str,

@@ -10,11 +10,15 @@ while internally using the new SqliteJobRepository and JobService.
 
 from __future__ import annotations
 
+from datetime import datetime
+from functools import cmp_to_key
 import json
 import os
 import posixpath
 import tempfile
 from typing import Optional
+
+import dateutil.tz
 
 from jobrunner.adapters.job_converter import job_to_jobinfo, jobinfo_to_job
 from jobrunner.config import Config
@@ -22,7 +26,14 @@ from jobrunner.domain import Job, JobStatus
 from jobrunner.info import JobInfo
 from jobrunner.repository import SqliteJobRepository
 from jobrunner.service import service
-from jobrunner.utils import dateTimeFromJson, dateTimeToJson, workspaceIdentity
+from jobrunner.utils import (
+    cmp_,
+    dateTimeFromJson,
+    dateTimeToJson,
+    sprint,
+    utcNow,
+    workspaceIdentity,
+)
 
 from . import (
     DatabaseBase,
@@ -30,6 +41,8 @@ from . import (
     NoMatchingJobError,
     ValuesCache,
     getLogParentDir,
+    humanTimeDeltaSecs,
+    utils,
 )
 
 
@@ -521,3 +534,117 @@ class RepositoryAdapter(JobsBase):
             List of (step_number, job_key, dependencies) tuples
         """
         return self._repo.get_sequence_steps(name)
+
+    def activityWindow(self, options):
+        """
+        Display activity window with optimized SQL filtering.
+
+        This override uses find_recent_activity() to filter at the SQL level
+        instead of loading all completed jobs.
+        """
+        # pylint: disable=too-many-locals,too-many-branches
+
+        if options.activity:
+            activityLevel = len(options.activity)
+        else:
+            activityLevel = 1
+        tnow = datetime.now()
+        unow = utcNow()
+        perWs = {}
+        remind = {}
+
+        # Collect active jobs with reminders
+        for j in self.active.values():
+            if not j.reminder:
+                continue
+            if not j.startTime:
+                sprint("not started yet", str(j), j.workspace)
+                continue
+            remind.setdefault(j.workspace, []).append(j)
+
+        # Optimized path: Use repository query to filter at SQL level
+        if activityLevel == 1:
+            # Time window mode: Use configured window (default 3 hours)
+            window = options.activity_window or 3
+        else:
+            # "Today only" mode: Calculate hours since midnight local time
+            # Convert local midnight to UTC to find the actual cutoff
+            # tnow is local time, get midnight today in local time
+            local_midnight = tnow.replace(
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+                tzinfo=dateutil.tz.tzlocal(),
+            )
+            # Convert to UTC
+            utc_midnight = local_midnight.astimezone(dateutil.tz.tzutc())
+            # Calculate hours since midnight UTC
+            hours_since_midnight = (unow - utc_midnight).total_seconds() / 3600
+            # Add 1 hour buffer to handle edge cases
+            window = hours_since_midnight + 1
+
+        recent_jobs = self._repo.find_recent_activity(window)
+        today = [job_to_jobinfo(job, parent=self) for job in recent_jobs]
+
+        # For "today only" mode, apply exact date filter in Python
+        # (SQL filters by UTC window, but we need exact local date match)
+        if activityLevel > 1:
+            filtered = []
+            for j in today:
+                if not j.stopTime:
+                    continue
+                localTime = j.localTime(j.stopTime)
+                if (
+                    tnow.year == localTime.year
+                    and tnow.month == localTime.month
+                    and tnow.day == localTime.day
+                ):
+                    filtered.append(j)
+            today = filtered
+
+        # Sort and aggregate by workspace (same as base class)
+        today.sort()
+        for j in reversed(today):
+            wkspace = j.workspace
+
+            def _isPass(rc):
+                return rc == 0 or rc in utils.SPECIAL_STATUS
+
+            key = "pass" if _isPass(j.rc) else "fail"
+            if wkspace in perWs and key in perWs[wkspace]:
+                continue
+            perWs.setdefault(wkspace, {})[key] = j
+            age = int((unow - j.stopTime).total_seconds())
+            perWs[wkspace]["age"] = min(age, perWs[wkspace].get("age", float("inf")))
+
+        # Display results (same as base class)
+        def _byAge(refA, refB):
+            if refA not in perWs and refB not in perWs:
+                return cmp_(refA, refB)
+            elif refB not in perWs:
+                return -1
+            elif refA not in perWs:
+                return 1
+            else:
+                return cmp_(perWs[refA]["age"], perWs[refB]["age"])
+
+        sprint("-" * 75)
+        wsList = list(set(perWs.keys()).union(set(remind.keys())))
+        for wkspace in sorted(wsList, key=cmp_to_key(_byAge)):
+            if wkspace:
+                sprint(os.path.basename(wkspace) + ":")
+            else:
+                sprint("Outside of any workspace:")
+            for res in ["pass", "fail"]:
+                if wkspace in perWs and res in perWs[wkspace]:
+                    j = perWs[wkspace][res]
+                    diffTime = humanTimeDeltaSecs(unow, j.stopTime)
+                    sprint("  last %s, \033[97m%s\033[0m ago" % (res, diffTime))
+                    sprint("    " + str(j))
+            if wkspace in remind:
+                sprint("  reminders:")
+                for j in remind[wkspace]:
+                    sprint("    \033[92m%s\033[0m" % j.reminder)
+            sprint("")
+        sprint("-" * 75)
