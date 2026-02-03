@@ -172,8 +172,7 @@ class ChatTest(TestCase):
             "user3": "https://somehook3",
             "user4": "https://somehook1",  # Shared with user1
         }
-        # pylint: disable-msg=unnecessary-lambda
-        mocks.configCls().gChatUserHook = lambda k: hooks.get(k)
+        mocks.configCls().gChatUserHook = hooks.get
 
         ret = chat.main(
             ["-s", "My subject", "-c", "user3", "-c", "user4", "user1", "user2"]
@@ -189,8 +188,7 @@ class ChatTest(TestCase):
     def testCallWithMissingHook(self, *mockArgs):
         mocks = ChatTest.Mocks(mockArgs)
         hook = "https://somehook"
-        # pylint: disable-msg=unnecessary-lambda
-        mocks.configCls().gChatUserHook = lambda k: {"user1": hook}.get(k)
+        mocks.configCls().gChatUserHook = {"user1": hook}.get
 
         with capturedOutput() as (_, err):
             ret = chat.main(
