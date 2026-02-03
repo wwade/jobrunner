@@ -39,7 +39,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff (>=0.14.14,<0.15.0)",
+    "ruff (>=0.15.0,<0.16.0)",
     "mock==5.2.0",
     "pexpect==4.9.0",
     "pytest==8.4.2",
