@@ -370,34 +370,44 @@ class JobsBase(object):
         _ = name
         raise NotImplementedError
 
-    def walkDepTree(self, func, db, depends, depth, job_cache=None, **kwargs):
-        # If job_cache is provided, use it for lookups to avoid N+1 queries
-        # Otherwise fall back to db lookups (slower)
-        for dep in depends:
-            if job_cache is not None:
-                if dep not in job_cache:
-                    continue
-                j = job_cache[dep]
-            elif dep in db:
-                j = db[dep]
-            else:
-                continue
-            if not func(j, depth, **kwargs):
-                return False
-            if j.depends:
-                self.walkDepTree(
-                    func, db, j.depends, depth + 1, job_cache=job_cache, **kwargs
-                )
-        return True
-
     @staticmethod
-    def printDepJob(job, depth):
-        fmt = "%%-%ds->" % (depth * 2)
-        sprint(fmt % "", job)
-        return True
+    def _buildChildrenMap( jobCache ):
+        """Build parent_key -> [child_keys] map from job dependencies."""
+        children = {}
+        for job in jobCache.values():
+            if not job.depends:
+                continue
+            for dep in job.depends:
+                if dep in jobCache:
+                    children.setdefault( dep, [] ).append( job.key )
+        return children
 
-    def printDepTree(self, db, depends, job_cache=None):
-        self.walkDepTree(self.printDepJob, db, depends, 1, job_cache=job_cache)
+    def _renderTreeNode(
+        self, key, jobCache, childrenMap, prefix, isLast, isRoot,
+        ancestors=None,
+    ):
+        """Render a job and its children as a tree using box-drawing chars."""
+        if ancestors is None:
+            ancestors = set()
+        job = jobCache.get( key )
+        if job is None:
+            return
+        if isRoot:
+            sprint( job )
+        else:
+            connector = "\u2514\u2500\u2500 " if isLast else "\u251c\u2500\u2500 "
+            sprint( prefix + connector + str( job ) )
+        kids = childrenMap.get( key, [] )
+        if not kids or key in ancestors:
+            return
+        nextPrefix = prefix
+        if not isRoot:
+            nextPrefix += ( "    " if isLast else "\u2502   " )
+        for i, child in enumerate( kids ):
+            self._renderTreeNode(
+                child, jobCache, childrenMap, nextPrefix,
+                i == len( kids ) - 1, False, ancestors | {key},
+            )
 
     def filterJobs(
         self,
@@ -467,29 +477,43 @@ class JobsBase(object):
             # Reuse cache from filterJobs to avoid duplicate repository calls
             job_cache = {job.key: job for job in db.values(cache=cache)}
 
-        hasDeps = False
-        for job in jobList:
-            if not includeReminders and job.reminder:
-                continue
-            if job.depends:
-                hasDeps = self.walkDepTree(
-                    lambda j, d: d == 1, db, job.depends, 1, job_cache=job_cache
-                )
-        if hasDeps:
-            sprint(utils.SPACER)
-        for job in jobList:
-            if not includeReminders and job.reminder:
-                continue
-            if self.config.verbose:
-                sprint(job.detail(self.config.verbose[1:]))
-            elif db is self.active:
-                sprint(job)
+        # Filter out reminders for the display list
+        displayJobs = [
+            job for job in jobList
+            if includeReminders or not job.reminder
+        ]
+
+        if db is self.active and not self.config.verbose:
+            # Tree display for active jobs
+            childrenMap = self._buildChildrenMap( job_cache )
+            # A root is a job with no active parent
+            rootKeys = set()
+            displayKeys = {job.key for job in displayJobs}
+            for job in displayJobs:
+                hasActiveParent = False
                 if job.depends:
-                    self.printDepTree(db, job.depends, job_cache=job_cache)
-                if hasDeps:
-                    sprint(utils.SPACER)
-            else:
-                sprint(job)
+                    for dep in job.depends:
+                        if dep in job_cache and dep in displayKeys:
+                            hasActiveParent = True
+                            break
+                if not hasActiveParent:
+                    rootKeys.add( job.key )
+            for job in displayJobs:
+                if job.key not in rootKeys:
+                    continue
+                if job.key in childrenMap:
+                    self._renderTreeNode(
+                        job.key, job_cache, childrenMap,
+                        "", True, True,
+                    )
+                else:
+                    sprint( job )
+        else:
+            for job in displayJobs:
+                if self.config.verbose:
+                    sprint(job.detail(self.config.verbose[1:]))
+                else:
+                    sprint(job)
         if not jobList:
             sprint("(None)")
 
