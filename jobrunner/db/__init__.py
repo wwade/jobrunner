@@ -863,12 +863,17 @@ class JobsBase(object):
                 sprint("not started yet", str(j), j.workspace)
                 continue
             remind.setdefault(j.workspace, []).append(j)
+        cpUtc = None
+        if options.since_checkpoint:
+            cpUtc = self.inactive.checkpoint
         for j in self.inactive.values():
             if not j.stopTime or j.autoJob:
                 continue
             if j.rc in utils.SPECIAL_STATUS:
                 continue
             if j.reminder:
+                continue
+            if cpUtc and j.stopTime < cpUtc:
                 continue
             if activityLevel == 1:
                 # filter out jobs older than window

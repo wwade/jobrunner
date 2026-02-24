@@ -584,7 +584,11 @@ class RepositoryAdapter(JobsBase):
             # Add 1 hour buffer to handle edge cases
             window = hours_since_midnight + 1
 
-        recent_jobs = self._repo.find_recent_activity(window)
+        since = None
+        if options.since_checkpoint:
+            metadata = self._repo.get_metadata()
+            since = metadata.checkpoint
+        recent_jobs = self._repo.find_recent_activity(window, since=since)
         today = [job_to_jobinfo(job, parent=self) for job in recent_jobs]
 
         # For "today only" mode, apply exact date filter in Python

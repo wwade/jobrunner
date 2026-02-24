@@ -5,6 +5,8 @@ This module defines the abstract interface that all repository
 implementations must follow.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -132,7 +134,9 @@ class JobRepository(ABC):
         """
 
     @abstractmethod
-    def find_recent_activity(self, hours: float) -> List[Job]:
+    def find_recent_activity(
+        self, hours: float, since: datetime | None = None
+    ) -> list[Job]:
         """
         Find recently completed jobs for activity window display.
 
@@ -141,6 +145,8 @@ class JobRepository(ABC):
 
         Args:
             hours: Time window in hours (e.g., 3.0 for last 3 hours)
+            since: Optional checkpoint datetime; jobs stopped before this
+                   time are excluded regardless of the hours window
 
         Returns:
             List of completed jobs within time window, sorted by stop_time desc

@@ -569,7 +569,9 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     @timing.timed_function
-    def find_recent_activity(self, hours: float) -> List[Job]:
+    def find_recent_activity(
+        self, hours: float, since: datetime | None = None
+    ) -> list[Job]:
         """
         Find recently completed jobs for activity window display.
 
@@ -578,6 +580,8 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
 
         Args:
             hours: Time window in hours (e.g., 3.0 for last 3 hours)
+            since: Optional checkpoint datetime; jobs stopped before this
+                   time are excluded regardless of the hours window
 
         Returns:
             List of completed jobs within time window, sorted by stop_time desc
@@ -585,8 +589,12 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        # Calculate cutoff time
+        # Calculate cutoff time (naive UTC)
         cutoff = datetime.utcnow() - timedelta(hours=hours)
+        if since is not None:
+            # Normalize to naive UTC for comparison with cutoff
+            since_naive = since.replace(tzinfo=None) if since.tzinfo else since
+            cutoff = max(cutoff, since_naive)
 
         # Select only needed columns for activity display
         # Exclude auto jobs, jobs with reminders, and special status codes
