@@ -28,7 +28,7 @@ classifiers = [
     "Topic :: System :: Shells",
 ]
 dependencies = [
-    "chardet==5.2.0",
+    "chardet==6.0.0.post1",
     "dateutils==0.6.12",
     "requests==2.32.5",
     "six==1.17.0",
