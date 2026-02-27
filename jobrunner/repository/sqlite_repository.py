@@ -22,7 +22,7 @@ from .interface import JobRepository, Metadata
 LOG = logging.getLogger(__name__)
 
 # Schema version for this implementation
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 
 
 class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-methods
@@ -145,6 +145,15 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         )
         self._execute(
             cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_project ON jobs(project)",
+        )
+        self._execute(
+            cursor,
+            "CREATE INDEX IF NOT EXISTS idx_jobs_status_project "
+            "ON jobs(status, project)",
+        )
+        self._execute(
+            cursor,
             "CREATE INDEX IF NOT EXISTS idx_jobs_status_create "
             "ON jobs(status, create_time)",
         )
@@ -152,6 +161,35 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             cursor,
             "CREATE INDEX IF NOT EXISTS idx_jobs_status_stop "
             "ON jobs(status, stop_time)",
+        )
+        # Compound indices on (status, workspace/project, stop_time) were found
+        # to HURT performance: they cause N random main-table row lookups (one
+        # per index entry) which is slower than a sequential scan + sort.
+        # Drop them if present from an earlier schema version.
+        self._execute(cursor, "DROP INDEX IF EXISTS idx_jobs_status_project_stop")
+        self._execute(cursor, "DROP INDEX IF EXISTS idx_jobs_status_workspace_stop")
+
+        # Covering indices for the listing query (find_completed for_listing=True).
+        # By including all selected columns in the index, SQLite never needs to
+        # touch the main table — avoiding the expensive per-row random I/O that
+        # results from rows being ~1 page each (due to large env_json columns).
+        # Three variants cover the three filter combinations used by job -L:
+        #   (no filter), (workspace filter), (project filter).
+        listing_cols = "key, uidx, create_time, start_time, rc, cmd_json, reminder"
+        self._execute(
+            cursor,
+            f"CREATE INDEX IF NOT EXISTS idx_listing_stop "
+            f"ON jobs(status, stop_time, {listing_cols})",
+        )
+        self._execute(
+            cursor,
+            f"CREATE INDEX IF NOT EXISTS idx_listing_workspace_stop "
+            f"ON jobs(status, workspace, stop_time, {listing_cols})",
+        )
+        self._execute(
+            cursor,
+            f"CREATE INDEX IF NOT EXISTS idx_listing_project_stop "
+            f"ON jobs(status, project, stop_time, {listing_cols})",
         )
 
         # Metadata table
@@ -206,12 +244,18 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             "ON sequence_steps(name, step_number)",
         )
 
-        # Initialize metadata if not present
+        # Initialize metadata if not present, or update schema version on upgrade
         self._execute(
             cursor, "SELECT COUNT(*) FROM metadata WHERE key = 'schema_version'"
         )
         if cursor.fetchone()[0] == 0:
             self._init_metadata(cursor)
+        else:
+            self._execute(
+                cursor,
+                "UPDATE metadata SET value = ? WHERE key = 'schema_version'",
+                (SCHEMA_VERSION,),
+            )
 
         conn.commit()
 
@@ -538,8 +582,16 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        # When listing, only select columns needed for display to avoid
-        # expensive JSON parsing of args_json, env_json, depends_on_json
+        # for_listing=True: select only display columns and rely on covering
+        # indices (idx_listing_stop / _workspace_stop / _project_stop) which
+        # store all needed columns so SQLite never touches the main table rows.
+        # This avoids the ~200ms per-query cost of loading 1268 large main-table
+        # pages (each row is nearly one page because of the large env_json field).
+        #
+        # for_listing=False: SELECT * requires env_json which is not in any
+        # covering index, so fall back to a sequential status-only scan
+        # (INDEXED BY idx_jobs_status) rather than a compound index that would
+        # cause one random main-table lookup per matching row.
         if for_listing:
             query = """
                 SELECT key, uidx, create_time, start_time, stop_time,
@@ -547,7 +599,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
                 FROM jobs WHERE status = ?
             """
         else:
-            query = "SELECT * FROM jobs WHERE status = ?"
+            query = "SELECT * FROM jobs INDEXED BY idx_jobs_status WHERE status = ?"
 
         params = [JobStatus.COMPLETED.value]
 
