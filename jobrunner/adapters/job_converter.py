@@ -70,50 +70,56 @@ def job_to_jobinfo(job: Job, parent=None) -> JobInfo:
     Returns:
         Equivalent JobInfo instance
     """
-    # Create JobInfo with uidx and key
-    jobinfo = JobInfo(job.uidx, job.key)
+    # Bypass __init__ to avoid expensive one-time-use work:
+    # dict(os.environ) copies the full process environment, utcNow() creates
+    # a timestamp, and os.getenv() calls run -- all immediately overwritten below.
+    jobinfo = object.__new__(JobInfo)
 
-    # Copy command information
+    # Identity
+    jobinfo._uidx = job.uidx
+    jobinfo._key = job.key
+
+    # Command information
     jobinfo.prog = job.prog
     jobinfo.args = job.args
     jobinfo._cmd = job.cmd
     jobinfo.reminder = job.reminder
     jobinfo.pwd = job.pwd
 
-    # Copy timing
+    # Timing
     jobinfo._create = job.create_time
     jobinfo._start = job.start_time
     jobinfo._stop = job.stop_time
+    jobinfo._hasTime = False
 
-    # Copy status - convert JobStatus enum to stopped/active state
+    # Status
     jobinfo._rc = job.rc
     jobinfo.pid = job.pid
     jobinfo._blocked = job.blocked
 
-    # Copy context
+    # Context
     jobinfo._workspace = job.workspace
     jobinfo._proj = job.project
     jobinfo._host = job.host
     jobinfo._user = job.user
     jobinfo._env = job.env.copy() if job.env else {}
 
-    # Copy dependencies
+    # Dependencies
     jobinfo._depends = job.depends_on if job.depends_on else None
     jobinfo._alldeps = job.all_deps.copy() if job.all_deps else set()
 
-    # Copy metadata
+    # Metadata
     jobinfo.logfile = job.logfile
     jobinfo._autoJob = job.auto_job
     jobinfo._mailJob = job.mail_job
     jobinfo._isolate = job.isolate
 
-    # Copy persist key information
+    # Persist key
     jobinfo._persistKey = job.persist_key
     jobinfo._persistKeyGenerated = job.persist_key_generated
 
-    # Set parent if provided
-    if parent is not None:
-        jobinfo._parent = parent
+    # Parent
+    jobinfo._parent = parent
 
     return jobinfo
 
