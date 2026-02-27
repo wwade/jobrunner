@@ -129,7 +129,7 @@ class RunExecOptionsTest(TestCase):
         --key
         --state-dir
         --tw
-        --tp
+        --this-project
         --blocked-by
         --blocked-by-success
         --wait
@@ -185,9 +185,9 @@ class RunExecOptionsTest(TestCase):
             # Without a workspaceIdentity plugin, all workspaces should match.
             self.assertIn("[explicitTrue]", out)
 
-            # --tp
+            # --this-pane
             os.environ["TMUX_PANE"] = "pane2"
-            out = jobf("--tp", "-L")
+            out = jobf("--this-pane", "-L")
             self.assertIn("(None)", out)
 
             # --blocked-by

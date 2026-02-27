@@ -85,6 +85,7 @@ class JobRepository(ABC):
         self,
         status: Optional[JobStatus] = None,
         workspace: Optional[str] = None,
+        project: Optional[str] = None,
         since: Optional[datetime] = None,
         limit: Optional[int] = None,
     ) -> List[Job]:
@@ -94,6 +95,7 @@ class JobRepository(ABC):
         Args:
             status: Filter by status (None = all statuses)
             workspace: Filter by workspace (None = all workspaces)
+            project: Filter by project (None = all projects)
             since: Filter by create_time >= since (None = no time filter)
             limit: Maximum number of results (None = no limit)
 
@@ -102,12 +104,17 @@ class JobRepository(ABC):
         """
 
     @abstractmethod
-    def find_active(self, workspace: Optional[str] = None) -> List[Job]:
+    def find_active(
+        self,
+        workspace: Optional[str] = None,
+        project: Optional[str] = None,
+    ) -> List[Job]:
         """
         Get all non-completed jobs.
 
         Args:
             workspace: Filter by workspace (None = all workspaces)
+            project: Filter by project (None = all projects)
 
         Returns:
             List of active jobs, sorted by create_time
@@ -117,6 +124,7 @@ class JobRepository(ABC):
     def find_completed(
         self,
         workspace: Optional[str] = None,
+        project: Optional[str] = None,
         limit: Optional[int] = None,
         for_listing: bool = False,
     ) -> List[Job]:
@@ -125,6 +133,7 @@ class JobRepository(ABC):
 
         Args:
             workspace: Filter by workspace (None = all workspaces)
+            project: Filter by project (None = all projects)
             limit: Maximum number of results (None = no limit)
             for_listing: If True, only fetch fields needed for display
                         (optimized for job -L performance)

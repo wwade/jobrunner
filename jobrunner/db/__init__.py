@@ -325,6 +325,7 @@ class JobsBase(object):
         cache: Optional[
             ValuesCache
         ] = None,  # Unused in base class, used by RepositoryAdapter override
+        filterProj=False,
     ) -> list[JobInfo]:
         cpUtc = None
         if useCp:
@@ -332,6 +333,9 @@ class JobsBase(object):
         curWs = None
         if filterWs:
             curWs = utils.workspaceIdentity()
+        curProj = None
+        if filterProj:
+            curProj = utils.workspaceProject()
         jobList = []
         for k in db.keys():
             if db.filterJobs(k):
@@ -344,6 +348,8 @@ class JobsBase(object):
                     if not refTime or refTime < cpUtc:
                         continue
                 if filterWs and job.workspace != curWs:
+                    continue
+                if curProj and job.proj != curProj:
                     continue
                 jobList.append(job)
             if _limit and len(jobList) > _limit:
@@ -428,8 +434,11 @@ class JobsBase(object):
         filterPane=False,
         useCp=False,
         cache: Optional[ValuesCache] = None,
+        filterProj=False,
     ):
-        jobList = self.getDbSorted(db, limit, useCp, filterWs, cache=cache)
+        jobList = self.getDbSorted(
+            db, limit, useCp, filterWs, cache=cache, filterProj=filterProj
+        )
         if filterPane:
             curPane = os.getenv("TMUX_PANE", None)
             if curPane:
@@ -445,12 +454,19 @@ class JobsBase(object):
         useCp=False,
         includeReminders=False,
         keysOnly=False,
+        filterProj=False,
     ):
         # pylint: disable=too-many-branches
         # Optimize for keys-only listing when no filtering is needed
         # Only use fast path when we don't need to filter by workspace, pane, or
         # checkpoint
-        if keysOnly and not filterPane and not filterWs and not useCp:
+        if (
+            keysOnly
+            and not filterPane
+            and not filterWs
+            and not useCp
+            and not filterProj
+        ):
             # Use efficient path that only fetches keys, not full job objects
             keys = db.keys()
             if not keys:
@@ -464,7 +480,13 @@ class JobsBase(object):
         cache = ValuesCache()
 
         jobList = self.filterJobs(
-            db, limit, filterWs, filterPane, useCp, cache=cache
+            db,
+            limit,
+            filterWs,
+            filterPane,
+            useCp,
+            cache=cache,
+            filterProj=filterProj,
         )
 
         # Skip dependency tree operations when only listing keys
@@ -480,7 +502,7 @@ class JobsBase(object):
         # Pre-fetch all jobs to avoid N+1 queries when walking dependency trees
         # When filters are active, use the filtered jobList to avoid a second query
         # Otherwise, use db.values() to load all jobs for dependency resolution
-        if filterWs or filterPane or useCp:
+        if filterWs or filterPane or useCp or filterProj:
             # Build cache from already-filtered jobs to avoid second query
             job_cache = {job.key: job for job in jobList}
         else:
@@ -552,11 +574,22 @@ class JobsBase(object):
         return ret
 
     def makeDot(
-        self, active, inactive, filterWs=False, filterPane=False, useCp=False
+        self,
+        active,
+        inactive,
+        filterWs=False,
+        filterPane=False,
+        useCp=False,
+        filterProj=False,
     ):
         # pylint: disable=too-many-locals
         jobList = self.filterJobs(
-            active, limit=None, filterWs=filterWs, filterPane=filterPane, useCp=useCp
+            active,
+            limit=None,
+            filterWs=filterWs,
+            filterPane=filterPane,
+            useCp=useCp,
+            filterProj=filterProj,
         )
         dot = ""
         if not jobList:
@@ -589,7 +622,9 @@ class JobsBase(object):
     def countInactive(self):
         return len(self.inactive.db) - (len(self.inactive.special) - 1)
 
-    def listActive(self, thisWs, pane, useCp, includeReminders, keysOnly=False):
+    def listActive(
+        self, thisWs, pane, useCp, includeReminders, keysOnly=False, proj=False
+    ):
         self.listDb(
             self.active,
             None,
@@ -598,11 +633,19 @@ class JobsBase(object):
             useCp=useCp,
             includeReminders=includeReminders,
             keysOnly=keysOnly,
+            filterProj=proj,
         )
 
-    def listInactive(self, thisWs, pane, useCp, limit: Optional[int] = 5):
+    def listInactive(
+        self, thisWs, pane, useCp, limit: Optional[int] = 5, proj=False
+    ):
         self.listDb(
-            self.inactive, limit, filterWs=thisWs, filterPane=pane, useCp=useCp
+            self.inactive,
+            limit,
+            filterWs=thisWs,
+            filterPane=pane,
+            useCp=useCp,
+            filterProj=proj,
         )
 
     @staticmethod

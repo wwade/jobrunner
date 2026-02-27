@@ -506,6 +506,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         self,
         status: Optional[JobStatus] = None,
         workspace: Optional[str] = None,
+        project: Optional[str] = None,
         since: Optional[datetime] = None,
         limit: Optional[int] = None,
     ) -> List[Job]:
@@ -524,6 +525,10 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             query += " AND workspace = ?"
             params.append(workspace)
 
+        if project is not None:
+            query += " AND project = ?"
+            params.append(project)
+
         if since is not None:
             query += " AND create_time >= ?"
             params.append(since.isoformat())
@@ -538,7 +543,11 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         return [self._row_to_job(row) for row in cursor.fetchall()]
 
     @timing.timed_function
-    def find_active(self, workspace: Optional[str] = None) -> List[Job]:
+    def find_active(
+        self,
+        workspace: Optional[str] = None,
+        project: Optional[str] = None,
+    ) -> List[Job]:
         """Get all non-completed jobs."""
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -555,6 +564,10 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
             query += " AND workspace = ?"
             params.append(workspace)
 
+        if project is not None:
+            query += " AND project = ?"
+            params.append(project)
+
         query += " ORDER BY create_time"
 
         self._execute(cursor, query, params)
@@ -564,6 +577,7 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
     def find_completed(
         self,
         workspace: Optional[str] = None,
+        project: Optional[str] = None,
         limit: Optional[int] = None,
         for_listing: bool = False,
     ) -> List[Job]:
@@ -606,6 +620,10 @@ class SqliteJobRepository(JobRepository):  # pylint: disable=too-many-public-met
         if workspace is not None:
             query += " AND workspace = ?"
             params.append(workspace)
+
+        if project is not None:
+            query += " AND project = ?"
+            params.append(project)
 
         query += " ORDER BY stop_time DESC"
 
