@@ -524,7 +524,8 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         includeReminders = len(options.list) > 1
         jobs.listActive(
             thisWs=options.tw,
-            pane=options.tp,
+            pane=options.this_pane,
+            proj=options.this_project,
             useCp=options.since_checkpoint,
             includeReminders=includeReminders,
         )
@@ -532,7 +533,8 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
     elif options.list_keys:
         jobs.listActive(
             thisWs=options.tw,
-            pane=options.tp,
+            pane=options.this_pane,
+            proj=options.this_project,
             useCp=options.since_checkpoint,
             includeReminders=False,
             keysOnly=True,
@@ -544,7 +546,8 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
             jobs.active,
             jobs.inactive,
             filterWs=options.tw,
-            filterPane=options.tp,
+            filterPane=options.this_pane,
+            filterProj=options.this_project,
             useCp=options.since_checkpoint,
         )
         LOG.debug("dot: %s", dot)
@@ -562,7 +565,11 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
         return True
     elif options.list_inactive:
         jobs.listInactive(
-            options.tw, options.tp, options.since_checkpoint, limit=None
+            options.tw,
+            options.this_pane,
+            options.since_checkpoint,
+            proj=options.this_project,
+            limit=None,
         )
         return True
     elif options.count:
@@ -574,7 +581,8 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
             jobs.active,
             limit=30,
             filterWs=options.tw,
-            filterPane=options.tp,
+            filterPane=options.this_pane,
+            filterProj=options.this_project,
             useCp=options.since_checkpoint,
         ):
             logs.append(job.logfile)
@@ -893,10 +901,15 @@ def parseArgs(args=None):
         help="Filter by jobs in this workspace",
     )
     op.add_argument(
-        "--tp",
         "--this-pane",
         action="store_true",
         help="Filter by jobs in this tmux pane",
+    )
+    op.add_argument(
+        "--this-project",
+        "--tp",
+        action="store_true",
+        help="Filter by jobs in this project",
     )
     op.add_argument(
         "-b",

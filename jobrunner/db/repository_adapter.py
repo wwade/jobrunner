@@ -33,6 +33,7 @@ from jobrunner.utils import (
     sprint,
     utcNow,
     workspaceIdentity,
+    workspaceProject,
 )
 
 from . import (
@@ -419,6 +420,7 @@ class RepositoryAdapter(JobsBase):
         useCp: bool = False,
         filterWs: bool = False,
         cache: Optional[ValuesCache] = None,
+        filterProj: bool = False,
     ) -> list[JobInfo]:
         """
         Get sorted list of jobs from database with optional filters.
@@ -436,6 +438,7 @@ class RepositoryAdapter(JobsBase):
             useCp: If True, filter by checkpoint time
             filterWs: If True, filter by current workspace
             cache: Optional ValuesCache for caching db.values() within operation
+            filterProj: If True, filter by current project
 
         Returns:
             List of JobInfo objects sorted by creation time
@@ -445,6 +448,11 @@ class RepositoryAdapter(JobsBase):
         if filterWs:
             workspace = workspaceIdentity()
 
+        # Determine project filter
+        project = None
+        if filterProj:
+            project = workspaceProject()
+
         # Determine checkpoint filter
         since = None
         if useCp:
@@ -453,7 +461,7 @@ class RepositoryAdapter(JobsBase):
 
         # Optimize: if no filters, use db.values() with cache to avoid
         # duplicate repository calls within the same operation
-        if not workspace and not since and not _limit:
+        if not workspace and not project and not since and not _limit:
             # Use cached values() - this avoids duplicate queries when listDb
             # calls both getDbSorted() and db.values() for dependency tree
             job_infos = list(db.values(cache=cache))
@@ -461,13 +469,17 @@ class RepositoryAdapter(JobsBase):
             if since:
                 # Use find_all when checkpoint filter is needed
                 jobs = self._repo.find_all(
-                    status=None, workspace=workspace, since=since, limit=_limit
+                    status=None,
+                    workspace=workspace,
+                    project=project,
+                    since=since,
+                    limit=_limit,
                 )
                 # Exclude completed jobs
                 jobs = [job for job in jobs if job.status != JobStatus.COMPLETED]
             else:
                 # Use find_active for better performance (filters at SQL level)
-                jobs = self._repo.find_active(workspace=workspace)
+                jobs = self._repo.find_active(workspace=workspace, project=project)
                 # Apply limit if needed
                 if _limit and len(jobs) > _limit:
                     jobs = jobs[:_limit]
@@ -479,6 +491,7 @@ class RepositoryAdapter(JobsBase):
                 jobs = self._repo.find_all(
                     status=JobStatus.COMPLETED,
                     workspace=workspace,
+                    project=project,
                     since=since,
                     limit=_limit,
                 )
@@ -487,7 +500,10 @@ class RepositoryAdapter(JobsBase):
                 # for_listing=True optimizes for display by skipping expensive
                 # JSON parsing of args_json, env_json, depends_on_json
                 jobs = self._repo.find_completed(
-                    workspace=workspace, limit=_limit, for_listing=True
+                    workspace=workspace,
+                    project=project,
+                    limit=_limit,
+                    for_listing=True,
                 )
             # Convert to JobInfo objects
             job_infos = [job_to_jobinfo(job, parent=self) for job in jobs]
