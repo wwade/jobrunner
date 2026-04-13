@@ -43,7 +43,7 @@ dev = [
     "ruff (>=0.15.0,<0.16.0)",
     "mock==5.2.0",
     "pexpect==4.9.0",
-    "pytest==8.4.2",
+    "pytest==9.0.3",
     "pytest-retry==1.7.0",
     "dill==0.4.1",
 ]
