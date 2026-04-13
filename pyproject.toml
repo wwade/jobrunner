@@ -30,7 +30,8 @@ classifiers = [
 dependencies = [
     "chardet==5.2.0",
     "dateutils==0.6.12",
-    "requests==2.32.5",
+    "requests==2.32.5; python_version<'3.10'",
+    "requests==2.33.0; python_version>='3.10'",
     "six==1.17.0",
     "wrapt==2.1.2",
     "setuptools-scm==9.2.2",
