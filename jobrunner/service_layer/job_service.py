@@ -185,6 +185,8 @@ class JobService:
             if not job:
                 raise ValueError(f"Job {key} not found")
 
+            job.workspace = workspaceIdentity()
+            job.project = workspaceProject()
             job.status = JobStatus.RUNNING
             job.start_time = utcNow()
             job.pid = pid

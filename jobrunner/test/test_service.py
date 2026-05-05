@@ -94,6 +94,35 @@ class TestJobService(unittest.TestCase):
         self.assertEqual(updated.pid, 12345)
         self.assertIsNotNone(updated.start_time)
 
+    def test_start_job_resolves_workspace(self):
+        """Workspace/project are re-resolved at start time, not creation."""
+        job, fd = self.service.create_job(cmd=["sleep", "1"])
+        os.close(fd)
+
+        self.assertEqual(job.workspace, "MYWS")
+        self.assertEqual(job.project, "myProject")
+
+        # Simulate workspace context changing between creation and start
+        utils.MOD_STATE.plugins.workspaceIdentity.return_value = "OTHERWS"
+        utils.MOD_STATE.plugins.workspaceProject.return_value = (
+            "otherProject",
+            True,
+        )
+        try:
+            updated = self.service.start_job(job.key, pid=12345)
+            self.assertEqual(updated.workspace, "OTHERWS")
+            self.assertEqual(updated.project, "otherProject")
+
+            persisted = self.repo.get(job.key)
+            self.assertEqual(persisted.workspace, "OTHERWS")
+            self.assertEqual(persisted.project, "otherProject")
+        finally:
+            utils.MOD_STATE.plugins.workspaceIdentity.return_value = "MYWS"
+            utils.MOD_STATE.plugins.workspaceProject.return_value = (
+                "myProject",
+                True,
+            )
+
     def test_complete_job(self):
         """Test completing a job."""
         job, fd = self.service.create_job(cmd=["echo", "test"])
