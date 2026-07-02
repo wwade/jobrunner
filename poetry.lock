@@ -667,15 +667,15 @@ rich = ["rich"]
 
 [[package]]
 name = "setuptools-scm"
-version = "10.0.5"
+version = "10.1.1"
 description = "the blessed package to manage your versions by scm tags"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "python_version >= \"3.10\""
 files = [
-    {file = "setuptools_scm-10.0.5-py3-none-any.whl", hash = "sha256:f611037d8aae618221503b8fa89319f073438252ae3420e01c9ceec249131a0a"},
-    {file = "setuptools_scm-10.0.5.tar.gz", hash = "sha256:bbba8fe754516cdefd017f4456721775e6ef9662bd7887fb52ae26813d4838c3"},
+    {file = "setuptools_scm-10.1.1-py3-none-any.whl", hash = "sha256:4660e6a3b1764ff4b11188de93c26f02396ef294784a75e031e0a5f60c2379fe"},
+    {file = "setuptools_scm-10.1.1.tar.gz", hash = "sha256:c9eed4754da1a25016d49c1b3cd09c7c8e65f816b5afb8195bf2ac3c6748f23a"},
 ]
 
 [package.dependencies]
@@ -683,7 +683,7 @@ packaging = ">=20"
 setuptools = "*"
 tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 typing-extensions = {version = "*", markers = "python_version < \"3.11\""}
-vcs-versioning = ">=1.0.0.dev0"
+vcs-versioning = ">=2.0.0.dev0"
 
 [package.extras]
 rich = ["rich"]
@@ -811,21 +811,21 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 
 [[package]]
 name = "vcs-versioning"
-version = "1.1.1"
+version = "2.2.2"
 description = "the blessed package to manage your versions by vcs metadata"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.8"
 groups = ["main"]
 markers = "python_version >= \"3.10\""
 files = [
-    {file = "vcs_versioning-1.1.1-py3-none-any.whl", hash = "sha256:b541e2ba79fc6aaa3850f8a7f88af43d97c1c80649c01142ee4146eddbc599e4"},
-    {file = "vcs_versioning-1.1.1.tar.gz", hash = "sha256:fabd75a3cab7dd8ac02fe24a3a9ba936bf258667b5a62ed468c9a1da0f5775bc"},
+    {file = "vcs_versioning-2.2.2-py3-none-any.whl", hash = "sha256:fe7fb216f8780a5516e7864a9333aacb1b70015b087a9be3918da76ef2760808"},
+    {file = "vcs_versioning-2.2.2.tar.gz", hash = "sha256:4ac4ded78720cdb4d0291ae58ace87e1e9201912e1023f3029c6cce5c9152cfb"},
 ]
 
 [package.dependencies]
 packaging = ">=20"
 tomli = {version = ">=1", markers = "python_version < \"3.11\""}
-typing-extensions = {version = "*", markers = "python_version < \"3.11\""}
+typing-extensions = {version = ">=4.1", markers = "python_version < \"3.11\""}
 
 [[package]]
 name = "wrapt"
@@ -953,4 +953,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "f682ad34d5e38af1fefa4f67eb16eb0a28b7d36675dae93291ff361d287d52fd"
+content-hash = "21b3db829d8f45fb4fdc2c875e81956de635b55c9dc16a668b8ac2f671be834f"
