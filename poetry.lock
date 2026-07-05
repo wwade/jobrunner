@@ -667,22 +667,22 @@ rich = ["rich"]
 
 [[package]]
 name = "setuptools-scm"
-version = "10.1.2"
+version = "10.2.0"
 description = "the blessed package to manage your versions by scm tags"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.8"
 groups = ["main"]
 markers = "python_version >= \"3.10\""
 files = [
-    {file = "setuptools_scm-10.1.2-py3-none-any.whl", hash = "sha256:8bb17e208fb22ebc11e4eaf6d765955db1903eefd21a3f0ed5518fc3fb186e84"},
-    {file = "setuptools_scm-10.1.2.tar.gz", hash = "sha256:24079818acc46e99aae0d65b8d511fafe965970d9cbd060c7b9f7275ded520fb"},
+    {file = "setuptools_scm-10.2.0-py3-none-any.whl", hash = "sha256:6cc5ac7da8e54d74e43503be2fa023eb7a1ca820d5c318e6ae20efc48110d6c7"},
+    {file = "setuptools_scm-10.2.0.tar.gz", hash = "sha256:ec8ea1738b92e42146a46e29a0e9de9ad462744c63cf9778677b95dfd605adde"},
 ]
 
 [package.dependencies]
 packaging = ">=20"
 setuptools = "*"
 tomli = {version = ">=1", markers = "python_version < \"3.11\""}
-typing-extensions = {version = "*", markers = "python_version < \"3.11\""}
+typing-extensions = {version = ">=4.1", markers = "python_version < \"3.11\""}
 vcs-versioning = "==2.*"
 
 [package.extras]
@@ -953,4 +953,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "79b4ecc162bfe9ffab85eb13f408c1b70216c0965f6e04e1b909e4c8d089595f"
+content-hash = "d61bcc830cd111221c5987822e07391649783141b6d08fba36ba1e87481d4dcb"
