@@ -35,7 +35,7 @@ dependencies = [
     "requests==2.34.2; python_version>='3.10'",
     "six==1.17.0",
     "wrapt==2.2.2",
-    "setuptools-scm==9.2.2; python_version<'3.10'",
+    "setuptools-scm==10.2.0; python_version<'3.10'",
     "setuptools-scm==10.2.0; python_version>='3.10'",
     "importlib-metadata==8.7.1; python_version<'3.10'",
     "importlib-metadata==9.0.0; python_version>='3.10'",
