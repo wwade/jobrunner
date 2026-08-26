@@ -98,11 +98,19 @@ class TestJobProperties(unittest.TestCase):
     def testEnv(self):
         job = newJob(14, ["ls", "/tmp"])
         job.start(job.parent)
-        env = {"XY": "1", "VAL_WITH_NEWLINE": "first\nsecond"}
+        env = {
+            "XY": "1",
+            "VAL_WITH_NEWLINE": "first\nsecond",
+            "EDITOR": "vim",
+            "UNICODE_VAL": "café",
+        }
         setJobEnv(job, env)
         out = job.getEnvironment()
         self.assertIn("XY=1\n", out)
         self.assertIn("VAL_WITH_NEWLINE=first\\x0asecond", out)
+        # Regression for #42: printable values render as text, not hex escapes.
+        self.assertIn("EDITOR=vim\n", out)
+        self.assertIn("UNICODE_VAL=café\n", out)
         self.assertEqual(job.env("XY"), "1")
         self.assertIsNone(job.env("XYZ"))
         self.assertEqual(job.environ, env)
@@ -158,3 +166,14 @@ class TestInfoHelpers(unittest.TestCase):
         LOG.debug("exp [%r] %s", exp, exp)
         LOG.debug("out [%r] %s", out, out)
         assert exp == out
+
+    def testEscEnvNonAscii(self):
+        # Regression for #42: non-ASCII printable characters must render as
+        # themselves, not as hex escapes (e.g. "café", not "caf\\xe9").
+        for value in ["café", "naïve", "日本語", "Ω", "emoji😀"]:
+            self.assertEqual(value, info.JobInfo.escEnv(value))
+
+    def testEscEnvControlCharsStillEscaped(self):
+        # Non-printable/control characters remain hex-escaped even when mixed
+        # with non-ASCII printable text.
+        self.assertEqual("café\\x00\\x0a", info.JobInfo.escEnv("café\x00\n"))
