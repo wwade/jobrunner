@@ -395,25 +395,11 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "packaging"
-version = "26.0"
-description = "Core utilities for Python packages"
-optional = false
-python-versions = ">=3.8"
-groups = ["main", "dev"]
-markers = "python_version == \"3.9\""
-files = [
-    {file = "packaging-26.0-py3-none-any.whl", hash = "sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529"},
-    {file = "packaging-26.0.tar.gz", hash = "sha256:00243ae351a257117b6a241061796684b084ed1c516a08c48a3f7e147a9d80b4"},
-]
-
-[[package]]
-name = "packaging"
 version = "26.3"
 description = "Core utilities for Python packages"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "dev"]
-markers = "python_version >= \"3.10\""
 files = [
     {file = "packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"},
     {file = "packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"},
@@ -715,15 +701,15 @@ rich = ["rich"]
 
 [[package]]
 name = "setuptools-scm"
-version = "10.2.2"
+version = "10.2.3"
 description = "the blessed package to manage your versions by scm tags"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "python_version >= \"3.10\""
 files = [
-    {file = "setuptools_scm-10.2.2-py3-none-any.whl", hash = "sha256:509585ce0628ede1c64ab1e40e7464481fb880c80a388effce9067bf6b2142fe"},
-    {file = "setuptools_scm-10.2.2.tar.gz", hash = "sha256:36b5dcef6bbeee0bc76b7756d1b574b3762e2138611a4f18e898f22f1aaee462"},
+    {file = "setuptools_scm-10.2.3-py3-none-any.whl", hash = "sha256:7fcf8ff55c95eb8b572a23c81495e5559b9b90f3e82fcf0952bb76c37de27a81"},
+    {file = "setuptools_scm-10.2.3.tar.gz", hash = "sha256:f179ed3e2a63cf5823e5ee9aa9ca08386219400443a0553224d72dde3f206b44"},
 ]
 
 [package.dependencies]
@@ -859,30 +845,11 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 
 [[package]]
 name = "vcs-versioning"
-version = "2.2.2"
-description = "the blessed package to manage your versions by vcs metadata"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-markers = "python_version == \"3.9\""
-files = [
-    {file = "vcs_versioning-2.2.2-py3-none-any.whl", hash = "sha256:fe7fb216f8780a5516e7864a9333aacb1b70015b087a9be3918da76ef2760808"},
-    {file = "vcs_versioning-2.2.2.tar.gz", hash = "sha256:4ac4ded78720cdb4d0291ae58ace87e1e9201912e1023f3029c6cce5c9152cfb"},
-]
-
-[package.dependencies]
-packaging = ">=20"
-tomli = {version = ">=1", markers = "python_version < \"3.11\""}
-typing-extensions = {version = ">=4.1", markers = "python_version < \"3.11\""}
-
-[[package]]
-name = "vcs-versioning"
 version = "2.3.2"
 description = "the blessed package to manage your versions by vcs metadata"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "python_version >= \"3.10\""
 files = [
     {file = "vcs_versioning-2.3.2-py3-none-any.whl", hash = "sha256:df6cdf10eab8fc0cc41c8ab9d1f1ebdacab8489a4c46fbeb1e6e06823b74d31f"},
     {file = "vcs_versioning-2.3.2.tar.gz", hash = "sha256:24abddff97aecf44cf3fec727eae8d76d9c6f70f5acb39afc41f824d69f2aac5"},
@@ -1030,4 +997,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "ee12aa2790aa93602f8b7c2fbda16a1101106842821bf6b4391d7446075d8929"
+content-hash = "c72774712261f7e5dc007d2c2decfd45fff0184044dd1c30403f2babe1046109"
