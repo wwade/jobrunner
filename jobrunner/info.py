@@ -3,7 +3,6 @@ from functools import total_ordering
 from logging import getLogger
 import os
 from shlex import quote
-import string
 from typing import Any, Iterable, List, Optional, Sized
 
 import dateutil.tz
@@ -403,14 +402,12 @@ class JobInfo(object):
                 sprint("Remove logfile %r" % self.logfile)
             os.unlink(self.logfile)
 
-    isprint = set(string.printable) - set(string.whitespace) | {" "}
-
     @staticmethod
     def escEnv(value):
         ret = ""
         LOG.debug("value [%r]", value)
         for char in value:
-            if char in JobInfo.isprint:
+            if char.isprintable():
                 ret += char
             else:
                 ret += "\\x%02x" % ord(char)
