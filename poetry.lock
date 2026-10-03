@@ -701,15 +701,15 @@ rich = ["rich"]
 
 [[package]]
 name = "setuptools-scm"
-version = "10.2.3"
+version = "10.3.4"
 description = "the blessed package to manage your versions by scm tags"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "python_version >= \"3.10\""
 files = [
-    {file = "setuptools_scm-10.2.3-py3-none-any.whl", hash = "sha256:7fcf8ff55c95eb8b572a23c81495e5559b9b90f3e82fcf0952bb76c37de27a81"},
-    {file = "setuptools_scm-10.2.3.tar.gz", hash = "sha256:f179ed3e2a63cf5823e5ee9aa9ca08386219400443a0553224d72dde3f206b44"},
+    {file = "setuptools_scm-10.3.4-py3-none-any.whl", hash = "sha256:82f34c3e3084fc2b57d397200637cc13f2338004052d2fee47baa5f0e902464e"},
+    {file = "setuptools_scm-10.3.4.tar.gz", hash = "sha256:a69f28bfc245608781205e912faae437c2b2165773afa4e7b979d77447a69dd2"},
 ]
 
 [package.dependencies]
@@ -717,7 +717,7 @@ packaging = ">=20"
 setuptools = "*"
 tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 typing-extensions = {version = ">=4.1", markers = "python_version < \"3.11\""}
-vcs-versioning = ">=2.3.2.dev0,<3"
+vcs-versioning = ">=2.5.0.dev0,<3"
 
 [package.extras]
 rich = ["rich (>=13)"]
@@ -850,9 +850,28 @@ description = "the blessed package to manage your versions by vcs metadata"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
+markers = "python_version == \"3.9\""
 files = [
     {file = "vcs_versioning-2.3.2-py3-none-any.whl", hash = "sha256:df6cdf10eab8fc0cc41c8ab9d1f1ebdacab8489a4c46fbeb1e6e06823b74d31f"},
     {file = "vcs_versioning-2.3.2.tar.gz", hash = "sha256:24abddff97aecf44cf3fec727eae8d76d9c6f70f5acb39afc41f824d69f2aac5"},
+]
+
+[package.dependencies]
+packaging = ">=26.2"
+tomli = {version = ">=1", markers = "python_version < \"3.11\""}
+typing-extensions = {version = ">=4.1", markers = "python_version < \"3.11\""}
+
+[[package]]
+name = "vcs-versioning"
+version = "2.5.0"
+description = "the blessed package to manage your versions by vcs metadata"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "python_version >= \"3.10\""
+files = [
+    {file = "vcs_versioning-2.5.0-py3-none-any.whl", hash = "sha256:dbf44f6303dc817e5792cb7d0e9cc90e3046ee1e32eaa357b20ad368811313d0"},
+    {file = "vcs_versioning-2.5.0.tar.gz", hash = "sha256:956a796e31f80fe714d219d6d1df15a6bf247d10f6d851bf4b98279d0a42da55"},
 ]
 
 [package.dependencies]
@@ -997,4 +1016,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "93b5efaceb85a5bc750c585adee1fa904f72cdf36758da4beef63ee9ca21b8a5"
+content-hash = "200961726ca3b067e2afabadc4cfff6f5569a75f1a1969618b0b177ac73ed42b"
