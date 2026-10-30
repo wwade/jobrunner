@@ -388,7 +388,11 @@ def addNonExecOptions(op):
         + expanduser("~/output/job.svg"),
     )
     op.add_argument(
-        "-L", "--list-inactive", action="store_true", help="List inactive jobs"
+        "-L",
+        "--list-inactive",
+        action="count",
+        default=0,
+        help="List inactive jobs; -LL to list all (default: 10)",
     )
     op.add_argument(
         "-W", "--watch", action="store_true", help="Watch for any job activity"
@@ -564,12 +568,15 @@ def handleNonExecOptions(options: argparse.Namespace, jobs: JobsBase):
             sprint("Saved output to", fName)
         return True
     elif options.list_inactive:
+        limit = jobs.config.uiListInactiveLimit
+        if options.since_checkpoint or options.list_inactive > 1:
+            limit = None
         jobs.listInactive(
             options.tw,
             options.this_pane,
             options.since_checkpoint,
             proj=options.this_project,
-            limit=None,
+            limit=limit,
         )
         return True
     elif options.count:
