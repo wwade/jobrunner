@@ -521,6 +521,48 @@ class RunNonExecOptionsTest(TestCase):
         --activity-window
     """
 
+    def testListInactiveLimitOverride(self):
+        with getTestEnv():
+            with NamedTemporaryFile(mode="w") as rcFile:
+                rcFile.write("[ui]\nlist inactive = 5\n")
+                rcFile.flush()
+                markers = ["list_limit_{}".format(index) for index in range(11)]
+                for marker in markers:
+                    jobf("--rc-file", rcFile.name, "echo", marker)
+
+                limitedJobs = job("--rc-file", rcFile.name, "-L").splitlines()
+                allJobs = job("--rc-file", rcFile.name, "-LL").splitlines()
+
+                self.assertEqual(5, len(limitedJobs))
+                self.assertEqual(11, len(allJobs))
+                for marker in markers:
+                    self.assertIn(marker, "\n".join(allJobs))
+
+    def testListInactiveSinceCheckpoint(self):
+        with getTestEnv():
+            with NamedTemporaryFile(mode="w") as rcFile:
+                rcFile.write("[ui]\nlist inactive = 5\n")
+                rcFile.flush()
+                beforeMarkers = ["before_checkpoint_{}".format(i) for i in range(3)]
+                afterMarkers = ["after_checkpoint_{}".format(i) for i in range(8)]
+                for marker in beforeMarkers:
+                    jobf("--rc-file", rcFile.name, "echo", marker)
+                job("--rc-file", rcFile.name, "--set-checkpoint", ".")
+                for marker in afterMarkers:
+                    jobf("--rc-file", rcFile.name, "echo", marker)
+
+                limitedJobs = job("--rc-file", rcFile.name, "-L").splitlines()
+                sinceCheckpoint = job(
+                    "--rc-file", rcFile.name, "-p", "-L"
+                ).splitlines()
+
+                self.assertEqual(5, len(limitedJobs))
+                self.assertEqual(8, len(sinceCheckpoint))
+                for marker in beforeMarkers:
+                    self.assertNotIn(marker, "\n".join(sinceCheckpoint))
+                for marker in afterMarkers:
+                    self.assertIn(marker, "\n".join(sinceCheckpoint))
+
     def test(self):
         # pylint: disable=too-many-locals
         with getTestEnv():

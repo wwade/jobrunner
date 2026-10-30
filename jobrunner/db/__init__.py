@@ -352,7 +352,7 @@ class JobsBase(object):
                 if curProj and job.proj != curProj:
                     continue
                 jobList.append(job)
-            if _limit and len(jobList) > _limit:
+            if _limit is not None and len(jobList) >= _limit:
                 break
         jobList.sort(reverse=False)
         return jobList
@@ -499,23 +499,18 @@ class JobsBase(object):
                 sprint("(None)")
             return
 
-        # Pre-fetch all jobs to avoid N+1 queries when walking dependency trees
-        # When filters are active, use the filtered jobList to avoid a second query
-        # Otherwise, use db.values() to load all jobs for dependency resolution
-        if filterWs or filterPane or useCp or filterProj:
-            # Build cache from already-filtered jobs to avoid second query
-            job_cache = {job.key: job for job in jobList}
-        else:
-            # No filters: load all jobs for complete dependency tree resolution
-            # Reuse cache from filterJobs to avoid duplicate repository calls
-            job_cache = {job.key: job for job in db.values(cache=cache)}
-
         # Filter out reminders for the display list
         displayJobs = [
             job for job in jobList if includeReminders or not job.reminder
         ]
 
         if db is self.active and not self.config.verbose:
+            # Pre-fetch jobs to avoid N+1 queries when walking dependency trees.
+            # Filtered listings can reuse their results; otherwise load all jobs.
+            if filterWs or filterPane or useCp or filterProj:
+                job_cache = {job.key: job for job in jobList}
+            else:
+                job_cache = {job.key: job for job in db.values(cache=cache)}
             # Tree display for active jobs
             childrenMap = self._buildChildrenMap(job_cache)
             # A root is a job with no active parent

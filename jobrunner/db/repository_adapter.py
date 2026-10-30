@@ -461,7 +461,7 @@ class RepositoryAdapter(JobsBase):
 
         # Optimize: if no filters, use db.values() with cache to avoid
         # duplicate repository calls within the same operation
-        if not workspace and not project and not since and not _limit:
+        if not workspace and not project and not since and _limit is None:
             # Use cached values() - this avoids duplicate queries when listDb
             # calls both getDbSorted() and db.values() for dependency tree
             job_infos = list(db.values(cache=cache))
@@ -481,7 +481,7 @@ class RepositoryAdapter(JobsBase):
                 # Use find_active for better performance (filters at SQL level)
                 jobs = self._repo.find_active(workspace=workspace, project=project)
                 # Apply limit if needed
-                if _limit and len(jobs) > _limit:
+                if _limit is not None:
                     jobs = jobs[:_limit]
             # Convert to JobInfo objects
             job_infos = [job_to_jobinfo(job, parent=self) for job in jobs]

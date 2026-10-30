@@ -12,6 +12,8 @@ Sample rcfile:
     domain = example.com
     [ui]
     watch reminder = full|summary  # default=summary
+    # Number of inactive jobs to show with -L; use 0 to show all.
+    list inactive = 10
     [chatmail]
     at all = all|none|no id # default=none
     reuse threads = true|false # default true
@@ -122,6 +124,23 @@ def _getBoolConfig(cfgParser, section, option, default):
         )
 
 
+def _getIntConfig(cfgParser, section, option, default):
+    val = _getConfig(cfgParser, section, option, None)
+    if val is None:
+        return default
+    errorMessage = (
+        'RC file has invalid "{section}.{option}" setting {optionVal}. '
+        "Valid options: a non-negative integer"
+    ).format(section=section, option=option, optionVal=val)
+    try:
+        intVal = int(val)
+    except ValueError as error:
+        raise ConfigError(errorMessage) from error
+    if intVal < 0:
+        raise ConfigError(errorMessage)
+    return intVal
+
+
 class ConfigError(Exception):
     pass
 
@@ -136,7 +155,7 @@ class Config(object):
         "chatmail": {"at all", "reuse threads"},
         "chatmail.google-chat-userhooks": _VAR_OPTIONS,
         "chatmail.google-chat-userids": _VAR_OPTIONS,
-        "ui": {"watch reminder"},
+        "ui": {"watch reminder", "list inactive"},
     }
 
     def _validateConfigParser(self, cfgParser):
@@ -184,6 +203,10 @@ class Config(object):
 
         self._uiWatchReminder = _getEnumConfig(
             cfgParser, "ui", "watch reminder", WATCH_REMINDER
+        )
+        uiListInactiveLimit = _getIntConfig(cfgParser, "ui", "list inactive", 10)
+        self._uiListInactiveLimit = (
+            None if uiListInactiveLimit == 0 else uiListInactiveLimit
         )
 
         self._chatmailAtAll = _getEnumConfig(
@@ -239,6 +262,10 @@ class Config(object):
     @property
     def uiWatchReminderSummary(self):
         return self._uiWatchReminder == WATCH_REMINDER_SUMMARY
+
+    @property
+    def uiListInactiveLimit(self):
+        return self._uiListInactiveLimit
 
     @property
     def chatmailAtAll(self):

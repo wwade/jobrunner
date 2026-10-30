@@ -119,6 +119,8 @@ Sample rcfile:
     domain = example.com
     [ui]
     watch reminder = full|summary  # default=summary
+    # Number of inactive jobs to show with -L; use 0 to show all.
+    list inactive = 10
     [chatmail]
     at all = all|none|no id # default=none
     reuse threads = true|false # default true
